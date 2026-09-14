@@ -1,7 +1,12 @@
 """
 main.py – FastAPI 앱 생성 + 라우터 등록 + Lifespan
 """
+from services.startup_trace import trace_startup
+
+trace_startup("python.entry")
+trace_startup("import:services.hardware_info", "begin")
 from services.hardware_info import get_settings_hardware_info
+trace_startup("import:services.hardware_info", "end")
 
 import asyncio
 import os
@@ -10,25 +15,56 @@ import warnings
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
+trace_startup("import:uvicorn", "begin")
 import uvicorn
+trace_startup("import:uvicorn", "end")
+trace_startup("import:fastapi", "begin")
 from fastapi import FastAPI, Request
+trace_startup("import:fastapi", "end")
+trace_startup("import:fastapi.exceptions", "begin")
 from fastapi.exceptions import RequestValidationError
+trace_startup("import:fastapi.exceptions", "end")
+trace_startup("import:fastapi.middleware.cors", "begin")
 from fastapi.middleware.cors import CORSMiddleware
+trace_startup("import:fastapi.middleware.cors", "end")
+trace_startup("import:fastapi.responses", "begin")
 from fastapi.responses import FileResponse
+trace_startup("import:fastapi.responses", "end")
+trace_startup("import:fastapi.staticfiles", "begin")
 from fastapi.staticfiles import StaticFiles
+trace_startup("import:fastapi.staticfiles", "end")
+trace_startup("import:starlette.exceptions", "begin")
 from starlette.exceptions import HTTPException
+trace_startup("import:starlette.exceptions", "end")
 
+trace_startup("import:config", "begin")
 from config import KOKORO_CACHE_READY, LOGS_DIR, SETUP_DONE
+trace_startup("import:config", "end")
+trace_startup("import:logger", "begin")
 from logger import setup_logging, get_logger
+trace_startup("import:logger", "end")
+trace_startup("import:services.external_data.scheduler", "begin")
 from services.external_data.scheduler import (
     start_external_data_scheduler,
     stop_external_data_scheduler,
 )
+trace_startup("import:services.external_data.scheduler", "end")
+trace_startup("import:services.model_benchmark", "begin")
 from services.model_benchmark import BenchmarkGuard, shutdown as shutdown_model_benchmark
+trace_startup("import:services.model_benchmark", "end")
+trace_startup("import:services.runtime_settings", "begin")
 from services.runtime_settings import apply_runtime_settings
+trace_startup("import:services.runtime_settings", "end")
+trace_startup("import:services.startup_activity", "begin")
 from services.startup_activity import wait_for_chat_idle
+trace_startup("import:services.startup_activity", "end")
+trace_startup("import:routers.browser_extension", "begin")
 from routers.browser_extension import router as browser_extension_router
+trace_startup("import:routers.browser_extension", "end")
+trace_startup("import:routers.deps", "begin")
 from routers.deps import load_config_async
+trace_startup("import:routers.deps", "end")
+trace_startup("import:error_responses", "begin")
 from error_responses import (
     bind_request_id,
     http_exception_handler,
@@ -37,6 +73,7 @@ from error_responses import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
+trace_startup("import:error_responses", "end")
 
 APP_DIR = Path(__file__).parent
 
@@ -99,6 +136,7 @@ def initial_setup_message(message_key: str) -> str:
 # LOGGING  (앱 시작 시 1회 초기화)
 # ─────────────────────────────
 setup_logging()
+trace_startup("logging.ready")
 logger = get_logger(__name__)
 async def warmup_kokoro_tts(huggingface_token: str | None = None) -> bool:
     """Kokoro와 언어별 음성 파이프라인을 미리 준비한다."""
@@ -183,6 +221,7 @@ async def warmup_reranker_model() -> None:
 # ─────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    trace_startup("application.lifespan", "begin")
     await asyncio.to_thread(get_settings_hardware_info)
     # `python -m uvicorn main:app --reload` 같은 CLI 실행 경로에서는
     # uvicorn.run(log_config=None)이 적용되는 __main__ 블록을 안 타기 때문에,
@@ -366,6 +405,7 @@ async def lifespan(app: FastAPI):
     ))
     external_api_task = asyncio.create_task(external_api_server.serve())
 
+    trace_startup("application.lifespan", "end")
     yield
     await shutdown_model_benchmark()
 
@@ -467,35 +507,93 @@ async def health():
 # ─────────────────────────────
 # ROUTERS
 # ─────────────────────────────
+trace_startup("import:routers.model_storage", "begin")
 from routers.model_storage import router as model_storage_router
+trace_startup("import:routers.model_storage", "end")
+trace_startup("import:routers.setup", "begin")
 from routers.setup import router as setup_router
+trace_startup("import:routers.setup", "end")
+trace_startup("import:routers.chat", "begin")
 from routers.chat import router as chat_router
+trace_startup("import:routers.chat", "end")
+trace_startup("import:routers.history", "begin")
 from routers.history import router as history_router
+trace_startup("import:routers.history", "end")
+trace_startup("import:routers.prompts", "begin")
 from routers.prompts import router as prompts_router
+trace_startup("import:routers.prompts", "end")
+trace_startup("import:routers.images", "begin")
 from routers.images import router as images_router
+trace_startup("import:routers.images", "end")
+trace_startup("import:routers.backup", "begin")
 from routers.backup import router as backup_router
+trace_startup("import:routers.backup", "end")
+trace_startup("import:routers.stt", "begin")
 from routers.stt import router as stt_router
+trace_startup("import:routers.stt", "end")
+trace_startup("import:routers.scripts", "begin")
 from routers.scripts import router as scripts_router
+trace_startup("import:routers.scripts", "end")
+trace_startup("import:routers.pdf", "begin")
 from routers.pdf import router as pdf_router
+trace_startup("import:routers.pdf", "end")
+trace_startup("import:routers.document", "begin")
 from routers.document import router as document_router
+trace_startup("import:routers.document", "end")
+trace_startup("import:routers.web_document", "begin")
 from routers.web_document import router as web_document_router
+trace_startup("import:routers.web_document", "end")
+trace_startup("import:routers.memo", "begin")
 from routers.memo import router as memo_router
+trace_startup("import:routers.memo", "end")
+trace_startup("import:routers.quicknote", "begin")
 from routers.quicknote import router as quicknote_router
+trace_startup("import:routers.quicknote", "end")
+trace_startup("import:routers.project", "begin")
 from routers.project import router as project_router
+trace_startup("import:routers.project", "end")
+trace_startup("import:routers.files", "begin")
 from routers.files import router as files_router
+trace_startup("import:routers.files", "end")
+trace_startup("import:routers.system", "begin")
 from routers.system import router as system_router
+trace_startup("import:routers.system", "end")
+trace_startup("import:routers.mcp", "begin")
 from routers.mcp import router as mcp_router
+trace_startup("import:routers.mcp", "end")
+trace_startup("import:services.microsoft_workspace.tools", "begin")
 from services.microsoft_workspace.tools import register_microsoft_workspace_tools
+trace_startup("import:services.microsoft_workspace.tools", "end")
+trace_startup("import:routers.microsoft_workspace", "begin")
 from routers.microsoft_workspace import router as microsoft_workspace_router
+trace_startup("import:routers.microsoft_workspace", "end")
+trace_startup("import:routers.google_workspace_browser", "begin")
 from routers.google_workspace_browser import router as google_workspace_browser_router
+trace_startup("import:routers.google_workspace_browser", "end")
+trace_startup("import:routers.remember", "begin")
 from routers.remember import router as remember_router
+trace_startup("import:routers.remember", "end")
+trace_startup("import:routers.vocab", "begin")
 from routers.vocab import router as vocab_router
+trace_startup("import:routers.vocab", "end")
+trace_startup("import:routers.skills", "begin")
 from routers.skills import router as skills_router
+trace_startup("import:routers.skills", "end")
+trace_startup("import:routers.notifications", "begin")
 from routers.notifications import router as notifications_router
+trace_startup("import:routers.notifications", "end")
+trace_startup("import:routers.plugins", "begin")
 from routers.plugins import router as plugins_router
+trace_startup("import:routers.plugins", "end")
+trace_startup("import:routers.knowledge_collections", "begin")
 from routers.knowledge_collections import router as knowledge_collections_router
+trace_startup("import:routers.knowledge_collections", "end")
+trace_startup("import:routers.external_data", "begin")
 from routers.external_data import router as external_data_router
+trace_startup("import:routers.external_data", "end")
+trace_startup("import:routers.language_learning_profile", "begin")
 from routers.language_learning_profile import router as language_learning_profile_router
+trace_startup("import:routers.language_learning_profile", "end")
 
 app.include_router(setup_router, prefix="/api")
 app.include_router(model_storage_router, prefix="/api")
@@ -525,10 +623,14 @@ app.include_router(plugins_router, prefix="/api")
 app.include_router(knowledge_collections_router, prefix="/api")
 app.include_router(external_data_router, prefix="/api")
 app.include_router(language_learning_profile_router, prefix="/api")
+trace_startup("import:services.plugin_manager", "begin")
 from services.plugin_manager import plugin_api_dispatcher
+trace_startup("import:services.plugin_manager", "end")
 app.mount("/api/plugin-api", plugin_api_dispatcher)
 
+trace_startup("import:routers.tts", "begin")
 from routers.tts import router as tts_router
+trace_startup("import:routers.tts", "end")
 app.include_router(tts_router, prefix="/api")
 app.include_router(browser_extension_router, prefix="/api")
 
@@ -552,6 +654,7 @@ async def shutdown():
 
 # ─────────────────────────────
 if __name__ == "__main__":
+    trace_startup("uvicorn.run")
     uvicorn.run(
         "main:app",
         host="127.0.0.1",

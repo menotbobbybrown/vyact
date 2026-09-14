@@ -717,6 +717,7 @@ async function startServer() {
         ].join(path.delimiter),
         PYTHONPATH: serverAppDir,
         PYTHONUNBUFFERED: "1",
+        VYACT_STARTUP_TRACE: "1",
         // 설치된 앱 번들은 읽기 전용일 수 있으므로 __pycache__를 만들지 않는다.
         PYTHONDONTWRITEBYTECODE: "1",
         VYACT_SYSTEM_LANGUAGE: app.getLocale(),
@@ -730,19 +731,30 @@ async function startServer() {
     log(`Starting server: ${finalPython}`);
     sendLoadingStatus(getStartupTranslation().waitingForServer);
 
+    const pythonSpawnStartedAt = Date.now();
     serverProc = spawn(finalPython, ["-u", "main.py"], {
         cwd: serverAppDir,
         env,
         stdio: ["ignore", "pipe", "pipe"],
         ...platform.childProcessOptions,
     });
+    serverProc.once("spawn", () => {
+        log(`[startup-timing] stage=python.spawn pid=${serverProc.pid} elapsed_ms=${Date.now() - pythonSpawnStartedAt}`);
+    });
 
-    // 파이썬 서버는 이미 자체 FileHandler로 같은 로그 파일에 직접 기록한다.
-    // 여기서 stdout/stderr를 받아 같은 파일에 또 appendFileSync 하면 모든 로그가
-    // 두 번씩 쌓인다(PID까지 동일하게 중복). 그래서 파일에는 쓰지 않고,
-    // 디버깅용으로 Electron 콘솔에만 흘려보낸다.
-    const forwardServerOutput = (data, isError = false) => {
-        for (const line of data.toString().split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) {
+    // 일반 Python 로그는 자체 FileHandler가 기록하므로 중복 저장하지 않는다.
+    // 초기 import 진단은 FileHandler 이전에도 나오므로 Electron에서 저장한다.
+    const pendingServerOutput = ["", ""];
+    const forwardServerOutput = (data, isError = false, flush = false) => {
+        const streamIndex = isError ? 1 : 0;
+        const lines = (pendingServerOutput[streamIndex] + data).split(/\r?\n/);
+        pendingServerOutput[streamIndex] = flush ? "" : lines.pop();
+        for (const line of lines.map(value => value.trim()).filter(Boolean)) {
+            if (line.startsWith("[startup-timing]")) {
+                // These early diagnostics predate Python's FileHandler.
+                log(line);
+                continue;
+            }
             if (/MallocStackLogging: can't turn off malloc stack logging because it was not enabled\.$/.test(line)) {
                 continue;
             }
@@ -764,6 +776,10 @@ async function startServer() {
             }
         }
     };
+    serverProc.stdout.setEncoding("utf8");
+    serverProc.stderr.setEncoding("utf8");
+    serverProc.stdout.on("end", () => forwardServerOutput("", false, true));
+    serverProc.stderr.on("end", () => forwardServerOutput("", true, true));
     serverProc.stdout.on("data", (data) => forwardServerOutput(data));
     serverProc.stderr.on("data", (data) => forwardServerOutput(data, true));
 }
@@ -1024,6 +1040,7 @@ app.commandLine.appendSwitch("enable-speech-input");
 app.commandLine.appendSwitch("enable-web-speech-api");
 
 function restoreAndFocusMainWindow() {
+    if (isQuitting) return;
     if (!mainWindow || mainWindow.isDestroyed()) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -1105,6 +1122,7 @@ if (hasSingleInstanceLock) app.whenReady().then(() => {
 });
 
 let isQuitting = false;
+let shutdownComplete = false;
 function forceStopManagedModelRuntimes() {
     if (platform.isWindows) return;
     const managedProcesses = [
@@ -1128,7 +1146,7 @@ function forceStopManagedModelRuntimes() {
 }
 
 async function stopLocalRuntimes(forceAfterMs = 45000) {
-    if (!serverProc || serverProc.killed) return;
+    if (!serverProc || serverProc.exitCode !== null || serverProc.signalCode !== null) return;
     log("Shutting down local runtimes...");
     const serverExit = new Promise(resolve => serverProc.once("exit", resolve));
     void fetch("http://localhost:8000/api/shutdown", {
@@ -1151,16 +1169,27 @@ async function stopLocalRuntimes(forceAfterMs = 45000) {
 }
 
 app.on("before-quit", async event => {
-    if (isQuitting) return;
+    if (shutdownComplete) return;
     event.preventDefault();
+    if (isQuitting) return;
     isQuitting = true;
+    // Keep the process alive for cleanup, but dismiss the UI immediately.
+    for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) window.hide();
+    }
+    const shutdownStartedAt = Date.now();
     try {
+        log("[shutdown] 1/3 Waiting for pending Elasticsearch startup");
         await elasticsearchStartPromise?.catch(() => {});
+        log(`[shutdown] 2/3 Stopping backend and model runtimes elapsed_ms=${Date.now() - shutdownStartedAt}`);
         await stopLocalRuntimes();
+        log(`[shutdown] 3/3 Stopping owned Elasticsearch runtime elapsed_ms=${Date.now() - shutdownStartedAt}`);
         await runElasticsearchLifecycle("stop");
     } catch (error) {
         log(`Elasticsearch shutdown warning: ${error.message}`);
     } finally {
+        log(`[shutdown] Complete elapsed_ms=${Date.now() - shutdownStartedAt}`);
+        shutdownComplete = true;
         app.quit();
     }
 });
@@ -1230,7 +1259,7 @@ ipcMain.handle("download-app-update", async () => {
     return appUpdateState;
 });
 ipcMain.handle("install-app-update", async () => {
-    if (!app.isPackaged || !APP_UPDATE_SUPPORTED || appUpdateState.status !== "downloaded") return false;
+    if (isQuitting || !app.isPackaged || !APP_UPDATE_SUPPORTED || appUpdateState.status !== "downloaded") return false;
     updateAppUpdateState({status: "installing", error: undefined});
     log("Installing app update after local runtime shutdown...");
     isQuitting = true;
@@ -1240,6 +1269,7 @@ ipcMain.handle("install-app-update", async () => {
     } catch (error) {
         log(`Elasticsearch shutdown warning: ${error.message}`);
     }
+    shutdownComplete = true;
     autoUpdater.quitAndInstall(false, true);
     return true;
 });
