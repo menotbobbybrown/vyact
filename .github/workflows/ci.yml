@@ -183,7 +183,7 @@ jobs:
         working-directory: electron
         run: |
           npm ci
-          npm run build:linux
+          bash ../scripts/retry_network_command.sh npm run build:linux
 
       - name: Validate package artifacts
         run: |

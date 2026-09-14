@@ -21,7 +21,7 @@ github_api() {
   if [ -n "$token" ]; then
     headers+=(-H "Authorization: Bearer $token")
   fi
-  curl --fail --silent --show-error --location --retry 3 "${headers[@]}" "$1"
+  curl --fail --silent --show-error --location --connect-timeout 30 --retry 4 --retry-delay 3 --retry-max-time 300 "${headers[@]}" "$1"
 }
 
 RELEASE_JSON="$(github_api "$API_URL")"
@@ -44,7 +44,7 @@ fi
 ARCHIVE_PATH="$(mktemp "${TMPDIR:-/tmp}/vyact-python.XXXXXX.tar.gz")"
 trap 'rm -f "$ARCHIVE_PATH"' EXIT
 echo "Downloading bundled Python 3.12 runtime ($TARGET_OS)..."
-curl --fail --show-error --location "$ASSET_URL" --output "$ARCHIVE_PATH"
+curl --fail --show-error --location --connect-timeout 30 --retry 4 --retry-delay 3 --retry-max-time 600 "$ASSET_URL" --output "$ARCHIVE_PATH"
 rm -rf "$RUNTIME_DIR/python"
 tar -xzf "$ARCHIVE_PATH" -C "$RUNTIME_DIR"
 

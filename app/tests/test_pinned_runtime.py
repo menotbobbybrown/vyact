@@ -63,6 +63,7 @@ class PinnedRuntimeTests(unittest.TestCase):
 
     def test_download_rejects_wrong_checksum(self):
         class Response:
+            status_code = 200
             async def __aenter__(self): return self
             async def __aexit__(self, *args): pass
             def raise_for_status(self): pass
@@ -195,3 +196,16 @@ class CachedRuntimeTests(unittest.TestCase):
                 asyncio.run(runtime.install_pinned_components(['llama.cpp']))
                 download.assert_not_called()
                 self.assertEqual(json.loads((Path(directory) / 'installed-versions.json').read_text())['llama.cpp'], record)
+
+
+class InstallationDiagnosticsTests(unittest.TestCase):
+    def test_failure_records_component_target_platform_stage_and_traceback(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(runtime, "RUNTIME_ROOT", Path(directory)), \
+             patch.object(runtime, "_cached_runtime", new=AsyncMock(side_effect=OSError("permission denied"))), \
+             self.assertLogs(runtime.logger, level="INFO") as captured:
+            with self.assertRaises(OSError):
+                asyncio.run(runtime.install_pinned_components(["llama.cpp"]))
+        output = "\n".join(captured.output)
+        for evidence in ("platform=", "target=b10809", "component=llama.cpp", "stage=cache_check", "Traceback", "permission denied"):
+            self.assertIn(evidence, output)

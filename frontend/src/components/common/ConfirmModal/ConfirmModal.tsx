@@ -58,7 +58,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         >
                             {isLoadingOption && <LoaderCircle className="confirm-modal-spinner"
                                                               aria-hidden="true" size={16}/>}
-                            {isLoadingOption ? loadingLabel || opt.label : opt.label}
+                            <span className="confirm-modal-btn-label">
+                                {isLoadingOption ? loadingLabel || opt.label : opt.label}
+                            </span>
                         </button>
                         );
                     })}

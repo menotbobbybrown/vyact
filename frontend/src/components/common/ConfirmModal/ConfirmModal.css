@@ -76,8 +76,8 @@
 }
 
 .confirm-modal-actions.horizontal .confirm-modal-btn {
-    flex: 1;
-    white-space: nowrap;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .confirm-modal-btn {
@@ -120,7 +120,14 @@
     border-color: var(--button-primary-hover);
 }
 
+.confirm-modal-btn-label {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 .confirm-modal-spinner {
+    flex-shrink: 0;
     animation: confirm-modal-spin 0.8s linear infinite;
 }
 

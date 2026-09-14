@@ -10,12 +10,14 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import time
 import uuid
 import zipfile
 from pathlib import Path
 
 import httpx
 
+from logger import get_logger
 from config import INSTALL_DIR, get_log_file
 from services.install_commands import run_install_command
 from services.shutdown_guard import protected
@@ -24,6 +26,7 @@ RUNTIME_ROOT = INSTALL_DIR / "runtime"
 VERSION_MANIFEST = Path(__file__).with_name("runtime_versions.json")
 BUNDLED_RUNTIME_DIR = Path(__file__).resolve().parents[2] / "linux-runtime"
 _install_lock = asyncio.Lock()
+logger = get_logger(__name__)
 
 
 def runtime_manifest() -> dict:
@@ -136,16 +139,20 @@ def pinned_updates(components: list[str]) -> list[dict]:
 
 
 async def _download(asset: dict, destination: Path) -> None:
+    logger.info("[runtime_install] download started asset=%s", asset["url"].split("?")[0])
     digest = hashlib.sha256()
     async with httpx.AsyncClient(follow_redirects=True, timeout=60) as client:
         async with client.stream("GET", asset["url"]) as response:
+            logger.info("[runtime_install] download HTTP status=%s", response.status_code)
             response.raise_for_status()
             with destination.open("wb") as output:
                 async for chunk in response.aiter_bytes():
                     output.write(chunk)
                     digest.update(chunk)
     if digest.hexdigest() != asset["sha256"]:
+        logger.error("[runtime_install] checksum mismatch expected=%s actual=%s", asset["sha256"], digest.hexdigest())
         raise RuntimeError("Runtime archive checksum mismatch")
+    logger.info("[runtime_install] download verified bytes=%s", destination.stat().st_size)
 
 
 def _extract(archive: Path, destination: Path) -> None:
@@ -284,16 +291,23 @@ async def reuse_pinned_components(components: list[str]) -> None:
 @protected("installation")
 async def install_pinned_components(components: list[str]) -> None:
     async with _install_lock:
-        manifest = runtime_manifest()
-        root = RUNTIME_ROOT / "versions"
-        root.mkdir(parents=True, exist_ok=True)
+        started = time.monotonic()
+        component = ""
+        stage = "prepare"
+        logger.info("[runtime_install] started components=%s platform=%s os=%s python=%s", components, platform_key(), platform.release(), platform.python_version())
         records = {}
         created = []
         try:
+            manifest = runtime_manifest()
+            root = RUNTIME_ROOT / "versions"
+            root.mkdir(parents=True, exist_ok=True)
             for component in components:
+                stage = "cache_check"
                 spec = manifest[component]
+                logger.info("[runtime_install] component=%s target=%s", component, spec["version"])
                 cached = await _cached_runtime(component, spec["version"])
                 if cached:
+                    logger.info("[runtime_install] cached runtime reused component=%s version=%s", component, spec["version"])
                     records[component] = cached
                     continue
                 folder = root / f"{component}-{spec['version']}-{uuid.uuid4().hex}"
@@ -315,8 +329,10 @@ async def install_pinned_components(components: list[str]) -> None:
                     archive = Path(temporary) / asset["url"].rsplit("/", 1)[-1]
                     bundle_spec = _read_records(BUNDLED_RUNTIME_DIR / "runtime-versions.json").get(component, {})
                     use_bundle = platform.system() == "Linux" and bundle_spec.get("version") == spec["version"]
+                    stage = "download"
                     if not use_bundle:
                         await _download(asset, archive)
+                    stage = "install_or_extract"
                     if component == "omlx":
                         python = folder / "bin" / "python"
                         commands = [
@@ -341,14 +357,19 @@ async def install_pinned_components(components: list[str]) -> None:
                         executable = matches[0]
                         executable.chmod(executable.stat().st_mode | 0o111)
                         if platform.system() == "Linux" and component == "llama.cpp" and not use_bundle:
+                            stage = "linux_dependencies"
                             await _install_linux_dependencies(manifest, Path(temporary), executable)
+                stage = "executable_check"
                 if not executable.is_file():
                     raise RuntimeError(f"Missing installed executable for {component}")
                 if await run_install_command([str(executable), "--version"], get_log_file("event"), env=runtime_environment(executable)):
                     raise RuntimeError(f"Pinned {component} executable failed its startup check")
                 records[component] = {"version": spec["version"], "executable": str(executable.relative_to(RUNTIME_ROOT))}
+            stage = "activate"
             _publish(records)
+            logger.info("[runtime_install] completed components=%s elapsed=%.2fs", components, time.monotonic() - started)
         except BaseException:
+            logger.exception("[runtime_install] failed component=%s stage=%s elapsed=%.2fs; previous active runtime preserved", component, stage, time.monotonic() - started)
             for folder in created:
                 shutil.rmtree(folder, ignore_errors=True)
             raise

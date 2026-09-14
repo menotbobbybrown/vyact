@@ -120,14 +120,24 @@ if [ -z "$RUN_ID" ]; then
   exit 1
 fi
 
+FAILED_PLATFORMS=()
 echo "Building the macOS release DMG..."
-printf '1\n' | bash "$ROOT_DIR/build_release_dmg.sh"
+if ! printf '1\n' | bash "$ROOT_DIR/build_release_dmg.sh"; then
+  FAILED_PLATFORMS+=("macOS")
+  echo "macOS build failed; continuing with the other platforms." >&2
+fi
 
 echo "Building the Windows installer on macOS..."
-printf '1\n' | bash "$ROOT_DIR/build_win_on_mac.sh"
+if ! printf '1\n' | bash "$ROOT_DIR/build_win_on_mac.sh"; then
+  FAILED_PLATFORMS+=("Windows")
+  echo "Windows build failed; continuing to collect Linux results." >&2
+fi
 
 echo "Waiting for GitHub Actions run $RUN_ID..."
-gh run watch "$RUN_ID" --exit-status
+if ! gh run watch "$RUN_ID" --exit-status; then
+  FAILED_PLATFORMS+=("GitHub Actions")
+  echo "GitHub Actions failed or could not be monitored. Inspect: gh run view $RUN_ID --log-failed" >&2
+fi
 
 LINUX_DOWNLOAD_DIR="$(mktemp -d)"
 cleanup() {
@@ -136,12 +146,20 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Downloading Linux packages from artifact $LINUX_ARTIFACT_NAME..."
-gh run download "$RUN_ID" \
+if ! gh run download "$RUN_ID" \
   --name "$LINUX_ARTIFACT_NAME" \
-  --dir "$LINUX_DOWNLOAD_DIR"
+  --dir "$LINUX_DOWNLOAD_DIR"; then
+  FAILED_PLATFORMS+=("Linux artifact download")
+fi
 
 mkdir -p "$DIST_DIR"
 find "$LINUX_DOWNLOAD_DIR" -type f \( -name '*.AppImage' -o -name '*.deb' -o -name 'latest-linux.yml' \) -exec cp {} "$DIST_DIR/" \;
+
+if [ "${#FAILED_PLATFORMS[@]}" -gt 0 ]; then
+  echo "Release incomplete. Failed stages: ${FAILED_PLATFORMS[*]}" >&2
+  echo "Successful artifacts remain in $DIST_DIR. Linux run: $RUN_ID" >&2
+  exit 1
+fi
 
 shopt -s nullglob
 DMG_FILES=("$DIST_DIR"/*.dmg)

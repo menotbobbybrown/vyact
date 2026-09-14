@@ -1011,7 +1011,7 @@ async def choose_vyact_runtime_startup(body: dict):
         await apply_startup_runtime_choice(bool(body.get("update")))
         return {"status": "ready"}
     except Exception as error:
-        logger.warning("[runtime_update] startup choice failed: %s", error)
+        logger.exception("[runtime_update] startup choice failed: %s", error)
         raise HTTPException(500, str(error)) from error
 
 
