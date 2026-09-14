@@ -2,6 +2,7 @@
 routers/files.py – 일반 파일 업로드 (zip / pdf / docx / txt 등)
 첨부된 파일은 ES에 인덱싱하지 않고 context_docs로 LLM에 직접 전달하는 용도.
 """
+from services.shutdown_guard import protected
 import shutil
 import tempfile
 import unicodedata
@@ -133,6 +134,7 @@ def _build_zip_response(zip_path: Path, original_name: str, saved_name: str, mem
 
 
 @router.post("/files/upload")
+@protected("saving")
 async def upload_file(file: UploadFile = File(...), skip_parse: bool = False):
     """
     파일 업로드 엔드포인트.

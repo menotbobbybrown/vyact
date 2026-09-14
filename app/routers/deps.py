@@ -1,6 +1,7 @@
 """
 routers/deps.py – 라우터 공통 유틸
 """
+from services.shutdown_guard import protected
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,6 +50,7 @@ async def load_config_async() -> dict:
     return {"type": "vyact", "model": "", "vyact_config": {}}
 
 
+@protected("saving")
 async def save_config_async(cfg: dict):
     """ES system_settings에 config 저장."""
     try:
@@ -88,6 +90,7 @@ async def load_ui_language_async() -> str | None:
     return None
 
 
+@protected("saving")
 async def save_ui_language_async(language: str) -> bool:
     """ES system_settings에 UI 언어를 독립 문서로 저장한다."""
     # 설치 완료 전에는 클라이언트가 localStorage에 언어를 보관하고,
@@ -131,6 +134,7 @@ async def load_ui_theme_async() -> str | None:
     return None
 
 
+@protected("saving")
 async def save_ui_theme_async(theme: str) -> bool:
     """ES system_settings에 UI 테마를 독립 문서로 저장한다."""
     if not SETUP_DONE.exists():

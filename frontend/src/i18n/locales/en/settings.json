@@ -103,6 +103,16 @@
     "deleteFailed": "Unable to delete the plugin."
   },
   "general": {
+    "shutdownBlockedTitle": "Cannot quit yet",
+    "shutdownBlockedDescription": "Interrupting the operations below could leave data or installation files incomplete. Quit again after they finish.",
+    "shutdownReasons": {
+      "restore": "Restoring a backup",
+      "saving": "Saving files or settings",
+      "installation": "Installing or updating",
+      "storage": "Moving model storage",
+      "runtime": "Starting a model runtime",
+      "unavailable": "Unable to verify that quitting is safe. Check the app status and try again."
+    },
     "voicePreviewSamples": {"en": "Hello. This is a voice preview.", "ko": "안녕하세요. 음성 미리듣기입니다.", "ja": "こんにちは。これは音声のプレビューです。", "zh": "你好。这是语音试听。", "th": "สวัสดี นี่คือตัวอย่างเสียง", "vi": "Xin chào. Đây là bản nghe thử giọng nói.", "es": "Hola. Esta es una muestra de voz.", "fr": "Bonjour. Ceci est un aperçu de la voix.", "hi": "नमस्ते। यह आवाज़ का नमूना है।", "it": "Ciao. Questa è un’anteprima della voce.", "pt": "Olá. Esta é uma prévia da voz."},
     "language": "Language",
     "theme": "Theme",

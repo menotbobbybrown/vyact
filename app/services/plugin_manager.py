@@ -4,6 +4,7 @@ Plugins are ZIP archives containing ``vyact-plugin.json`` at their root.  A
 plugin may register internal LLM tools and MCP catalog entries without running
 a separate MCP server.
 """
+from services.shutdown_guard import create_install_process, protected
 import asyncio
 import hashlib
 import importlib.util
@@ -164,6 +165,7 @@ def _deactivate_plugin_runtime(plugin_id: str, manifest: dict[str, Any]) -> None
             sys.modules.pop(module_name, None)
 
 
+@protected("installation")
 async def _install_plugin_dependencies(plugin_dir: Path) -> None:
     requirements_file = plugin_dir / REQUIREMENTS_NAME
     if not requirements_file.is_file() or not requirements_file.read_text("utf-8").strip():
@@ -174,7 +176,7 @@ async def _install_plugin_dependencies(plugin_dir: Path) -> None:
     temporary_dependencies_dir = plugin_dir / f"{PLUGIN_DEPENDENCIES_DIR_NAME}.installing"
     shutil.rmtree(temporary_dependencies_dir, ignore_errors=True)
     temporary_dependencies_dir.mkdir()
-    process = await asyncio.create_subprocess_exec(
+    process = await create_install_process(
         sys.executable,
         "-m",
         "pip",
@@ -552,6 +554,7 @@ async def shutdown_loaded_plugins() -> None:
             logger.warning("[plugins] shutdown failed for %s: %s", plugin_id, error)
 
 
+@protected("installation")
 async def install_plugin_archive(content: bytes) -> dict[str, Any]:
     if not content or len(content) > MAX_PLUGIN_ARCHIVE_BYTES:
         raise ValueError("플러그인 ZIP은 비어 있지 않아야 하며 50MB 이하여야 합니다.")
@@ -584,6 +587,7 @@ async def install_plugin_archive(content: bytes) -> dict[str, Any]:
     return manifest
 
 
+@protected("installation")
 async def uninstall_plugin(plugin_id: str) -> dict[str, Any]:
     if not PLUGIN_ID_PATTERN.fullmatch(plugin_id):
         raise ValueError("올바르지 않은 플러그인 id입니다.")

@@ -4,6 +4,7 @@ services/code_tools.py — 코드 분석 tool (폴더 첨부 시 활성화)
 사용자가 채팅에 폴더를 첨부하면, LLM이 해당 폴더 내 파일을 탐색·읽기·수정·검색할 수 있도록
 내부 tool을 등록한다. 폴더 경로는 요청별 ContextVar로 관리된다.
 """
+from services.shutdown_guard import protected
 import fnmatch
 import difflib
 import json
@@ -228,6 +229,7 @@ def finalize_code_change_tracking() -> dict | None:
     return {"files": files, "additions": total_additions, "deletions": total_deletions, "undoToken": undo_token}
 
 
+@protected("saving")
 def undo_code_changes(
         undo_token: str, folder_id: str | None = None, relative_path: str | None = None,
 ) -> dict:
@@ -518,6 +520,7 @@ def _try_indent_correction(
 
 
 @localized_code_tool
+@protected("saving")
 async def _edit_file(folder_id: str, path: str, old_string: str, new_string: str) -> str:
     folder, error = _resolve_folder(folder_id)
     if error:
@@ -575,6 +578,7 @@ async def _edit_file(folder_id: str, path: str, old_string: str, new_string: str
 
 
 @localized_code_tool
+@protected("saving")
 async def _create_file(folder_id: str, path: str, content: str = "") -> str:
     folder, error = _resolve_folder(folder_id)
     if error:
@@ -598,6 +602,7 @@ async def _create_file(folder_id: str, path: str, content: str = "") -> str:
 
 
 @localized_code_tool
+@protected("saving")
 async def _apply_patch(folder_id: str, patch: str) -> str:
     """Apply a validated unified diff atomically enough to avoid partial patch failures."""
     folder, error = _resolve_folder(folder_id)
@@ -778,6 +783,7 @@ async def _list_tasks(folder_id: str) -> str:
 
 
 @localized_code_tool
+@protected("saving")
 async def _run_task(folder_id: str, working_directory: str, task: str) -> str:
     folder, error = _resolve_folder(folder_id)
     if error:
@@ -804,6 +810,7 @@ async def _run_task(folder_id: str, working_directory: str, task: str) -> str:
 
 
 @localized_code_tool
+@protected("saving")
 async def _run_project_check(folder_id: str, check: str, working_directory: str = ".") -> str:
     """Run a conventional check only when declared by the project configuration."""
     folder, error = _resolve_folder(folder_id)
@@ -848,6 +855,7 @@ async def _git_diff(folder_id: str, path: str = "") -> str:
 
 
 @localized_code_tool
+@protected("saving")
 async def _move_file(folder_id: str, source: str, destination: str) -> str:
     folder, error = _resolve_folder(folder_id)
     if error:
@@ -871,6 +879,7 @@ async def _move_file(folder_id: str, source: str, destination: str) -> str:
 
 
 @localized_code_tool
+@protected("saving")
 async def _delete_file(folder_id: str, path: str) -> str:
     folder, error = _resolve_folder(folder_id)
     if error:

@@ -77,6 +77,16 @@
     }
   },
   "general": {
+    "shutdownBlockedTitle": "Aún no se puede salir",
+    "shutdownBlockedDescription": "Interrumpir estas operaciones podría dejar datos o archivos de instalación incompletos. Vuelve a salir cuando terminen.",
+    "shutdownReasons": {
+      "restore": "Restaurando una copia de seguridad",
+      "saving": "Guardando archivos o ajustes",
+      "installation": "Instalando o actualizando",
+      "storage": "Moviendo el almacenamiento de modelos",
+      "runtime": "Iniciando el entorno de ejecución del modelo",
+      "unavailable": "No se pudo comprobar si es seguro salir. Revisa el estado de la aplicación e inténtalo de nuevo."
+    },
     "voicePreviewSamples": {"en": "Hello. This is a voice preview.", "ko": "안녕하세요. 음성 미리듣기입니다.", "ja": "こんにちは。これは音声のプレビューです。", "zh": "你好。这是语音试听。", "th": "สวัสดี นี่คือตัวอย่างเสียง", "vi": "Xin chào. Đây là bản nghe thử giọng nói.", "es": "Hola. Esta es una muestra de voz.", "fr": "Bonjour. Ceci est un aperçu de la voix.", "hi": "नमस्ते। यह आवाज़ का नमूना है।", "it": "Ciao. Questa è un’anteprima della voce.", "pt": "Olá. Esta é uma prévia da voz."},
     "language": "Idioma",
     "theme": "Tema",

@@ -3,6 +3,13 @@ const {contextBridge, ipcRenderer} = require("electron");
 // 렌더러에서 사용할 수 있는 시스템 API 브릿지
 // 추후 음성인식, 시스템 자동화 등 여기서 확장
 contextBridge.exposeInMainWorld("ragAPI", {
+    getShutdownNotice: () => ipcRenderer.invoke("get-shutdown-notice"),
+    dismissShutdownNotice: () => ipcRenderer.invoke("dismiss-shutdown-notice"),
+    onShutdownBlocked: (callback) => {
+        const handler = (_event, reasons) => callback(reasons);
+        ipcRenderer.on("shutdown-blocked", handler);
+        return () => ipcRenderer.removeListener("shutdown-blocked", handler);
+    },
     openExternal: (url) => ipcRenderer.invoke("open-external", url),
     checkAppUpdate: () => ipcRenderer.invoke("check-app-update"),
     downloadAppUpdate: () => ipcRenderer.invoke("download-app-update"),

@@ -1,4 +1,5 @@
 """Persist subprocess diagnostics for setup and runtime installation."""
+from services.shutdown_guard import create_install_process, create_download_process
 import asyncio
 import codecs
 import json
@@ -12,7 +13,7 @@ logger = get_logger(__name__)
 
 async def run_install_command(
     command: list[str], log_file: Path, *, cwd: str | None = None,
-    env: dict[str, str] | None = None,
+    env: dict[str, str] | None = None, interrupt_safe: bool = False,
 ) -> int:
     log_file.parent.mkdir(parents=True, exist_ok=True)
     command_text = json.dumps(command, ensure_ascii=False)
@@ -25,7 +26,8 @@ async def run_install_command(
         record(f"Command: {command_text}; cwd: {cwd or Path.cwd()}")
         process = None
         try:
-            process = await asyncio.create_subprocess_exec(
+            launch = create_download_process if interrupt_safe else create_install_process
+            process = await launch(
                 *command, stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
                 cwd=cwd, env=env,

@@ -77,6 +77,16 @@
     }
   },
   "general": {
+    "shutdownBlockedTitle": "ยังไม่สามารถออกได้",
+    "shutdownBlockedDescription": "การขัดจังหวะการทำงานด้านล่างอาจทำให้ข้อมูลหรือไฟล์ติดตั้งไม่สมบูรณ์ โปรดออกอีกครั้งเมื่อการทำงานเสร็จสิ้น",
+    "shutdownReasons": {
+      "restore": "กำลังกู้คืนข้อมูลสำรอง",
+      "saving": "กำลังบันทึกไฟล์หรือการตั้งค่า",
+      "installation": "กำลังติดตั้งหรืออัปเดต",
+      "storage": "กำลังย้ายที่เก็บโมเดล",
+      "runtime": "กำลังเริ่มรันไทม์โมเดล",
+      "unavailable": "ไม่สามารถตรวจสอบได้ว่าการออกปลอดภัยหรือไม่ โปรดตรวจสอบสถานะแอปแล้วลองอีกครั้ง"
+    },
     "voicePreviewSamples": {"en": "Hello. This is a voice preview.", "ko": "안녕하세요. 음성 미리듣기입니다.", "ja": "こんにちは。これは音声のプレビューです。", "zh": "你好。这是语音试听。", "th": "สวัสดี นี่คือตัวอย่างเสียง", "vi": "Xin chào. Đây là bản nghe thử giọng nói.", "es": "Hola. Esta es una muestra de voz.", "fr": "Bonjour. Ceci est un aperçu de la voix.", "hi": "नमस्ते। यह आवाज़ का नमूना है।", "it": "Ciao. Questa è un’anteprima della voce.", "pt": "Olá. Esta é uma prévia da voz."},
     "language": "ภาษา",
     "theme": "ธีม",

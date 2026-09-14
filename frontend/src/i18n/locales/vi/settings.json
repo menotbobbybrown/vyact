@@ -77,6 +77,16 @@
     }
   },
   "general": {
+    "shutdownBlockedTitle": "Chưa thể thoát",
+    "shutdownBlockedDescription": "Việc ngắt các thao tác dưới đây có thể khiến dữ liệu hoặc tệp cài đặt không hoàn chỉnh. Hãy thoát lại sau khi các thao tác hoàn tất.",
+    "shutdownReasons": {
+      "restore": "Đang khôi phục bản sao lưu",
+      "saving": "Đang lưu tệp hoặc cài đặt",
+      "installation": "Đang cài đặt hoặc cập nhật",
+      "storage": "Đang di chuyển nơi lưu trữ mô hình",
+      "runtime": "Đang khởi động môi trường chạy mô hình",
+      "unavailable": "Không thể xác minh việc thoát có an toàn hay không. Hãy kiểm tra trạng thái ứng dụng rồi thử lại."
+    },
     "voicePreviewSamples": {"en": "Hello. This is a voice preview.", "ko": "안녕하세요. 음성 미리듣기입니다.", "ja": "こんにちは。これは音声のプレビューです。", "zh": "你好。这是语音试听。", "th": "สวัสดี นี่คือตัวอย่างเสียง", "vi": "Xin chào. Đây là bản nghe thử giọng nói.", "es": "Hola. Esta es una muestra de voz.", "fr": "Bonjour. Ceci est un aperçu de la voix.", "hi": "नमस्ते। यह आवाज़ का नमूना है।", "it": "Ciao. Questa è un’anteprima della voce.", "pt": "Olá. Esta é uma prévia da voz."},
     "language": "Ngôn ngữ",
     "theme": "Giao diện",

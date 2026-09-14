@@ -1,4 +1,5 @@
 """Managed Apple Silicon MLX-VLM model downloads and OpenAI-compatible runtime."""
+from services.shutdown_guard import create_install_process, protected, atomic_write_text, guard
 import asyncio
 import hashlib
 import json
@@ -75,6 +76,7 @@ def is_apple_silicon() -> bool:
     return platform.system() == "Darwin" and platform.machine().lower() in {"arm64", "aarch64"}
 
 
+@protected("installation")
 async def install_missing_omlx_runtime():
     if not is_apple_silicon():
         raise RuntimeError("oMLX requires Apple Silicon")
@@ -86,7 +88,7 @@ async def install_missing_omlx_runtime():
         from services.vyact_runtime import RuntimePackageManagerMissingError
         raise RuntimePackageManagerMissingError("Homebrew is required to install oMLX")
     for command in get_omlx_install_commands(brew):
-        process = await asyncio.create_subprocess_exec(
+        process = await create_install_process(
             *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
         )
         assert process.stdout is not None
@@ -246,7 +248,7 @@ def download_mlx_model(
         raise RuntimeError("The downloaded repository is not a complete MLX model")
     existing_manifest = _read_model_manifest(destination / MLX_MODEL_MANIFEST)
     effective_role = "model" if role == "model" or existing_manifest.get("role") == "model" else role
-    (destination / MLX_MODEL_MANIFEST).write_text(json.dumps({
+    atomic_write_text(destination / MLX_MODEL_MANIFEST, json.dumps({
         **existing_manifest,
         "repository": repository,
         "revision": revision,
@@ -276,6 +278,7 @@ def get_mlx_downloaded_bytes(repository: str) -> int:
     return downloaded_bytes
 
 
+@protected("saving")
 def associate_mlx_mtp_model(model_path: Path, mtp_repository: str, mtp_path: Path) -> None:
     manifest_path = model_path / MLX_MODEL_MANIFEST
     manifest = _read_model_manifest(manifest_path)
@@ -287,6 +290,7 @@ def associate_mlx_mtp_model(model_path: Path, mtp_repository: str, mtp_path: Pat
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
+@protected("saving")
 def associate_mlx_specprefill_model(model_path: Path, repository: str, draft_path: Path) -> None:
     manifest_path = model_path / MLX_MODEL_MANIFEST
     manifest = _read_model_manifest(manifest_path)
@@ -300,6 +304,7 @@ def associate_mlx_specprefill_model(model_path: Path, repository: str, draft_pat
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
+@protected("saving")
 def associate_mlx_dflash2_model(model_path: Path, repository: str, companion_path: Path) -> None:
     manifest_path = model_path / MLX_MODEL_MANIFEST
     manifest = _read_model_manifest(manifest_path)
@@ -311,6 +316,7 @@ def associate_mlx_dflash2_model(model_path: Path, repository: str, companion_pat
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
+@protected("saving")
 def associate_mlx_bundled_dflash2_model(model_path: Path) -> None:
     draft_path = model_path / "dflash"
     if not _is_complete_mlx_model(draft_path):
@@ -346,6 +352,7 @@ def _remove_empty_mlx_parent_directories(start: Path) -> None:
         current = current.parent
 
 
+@protected("saving")
 def delete_downloaded_mlx_model(model_path: str) -> None:
     """Delete one validated MLX repository and its unreferenced companions."""
     destination = get_downloaded_mlx_model_path(model_path)
@@ -397,6 +404,7 @@ def _wait_for_process_exit(pid: int, timeout_seconds: float) -> bool:
     return False
 
 
+@protected("runtime")
 def stop_mlx_runtime() -> None:
     global _active_dflash2_model, _mlx_runtime_process
     _active_dflash2_model = None
@@ -840,25 +848,26 @@ def start_mlx_model(
         raise RuntimeError("MLX models require Apple Silicon")
     from services.vyact_runtime import stop_runtime
 
-    stop_runtime()
-    stop_mlx_runtime()
-    MLX_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = get_log_file("omlx")
-    command, environment, speculative_mode = _build_omlx_server_command(
-        model_path, context_size, enable_mtp, debug_logging,
-    )
-    logger.info("[omlx] loading model=%s context=%s speculative_mode=%s", model_path, context_size, speculative_mode)
-    model_id = model_path.relative_to(get_mlx_models_dir()).as_posix()
-    with log_path.open("ab") as log_file:
-        process = subprocess.Popen(
-            command,
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-            env=environment,
+    with guard.operation("runtime"):
+        stop_runtime()
+        stop_mlx_runtime()
+        MLX_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+        log_path = get_log_file("omlx")
+        command, environment, speculative_mode = _build_omlx_server_command(
+            model_path, context_size, enable_mtp, debug_logging,
         )
-    _mlx_runtime_process = process
-    MLX_RUNTIME_PID_FILE.write_text(str(process.pid), encoding="utf-8")
+        logger.info("[omlx] loading model=%s context=%s speculative_mode=%s", model_path, context_size, speculative_mode)
+        model_id = model_path.relative_to(get_mlx_models_dir()).as_posix()
+        with log_path.open("ab") as log_file:
+            process = subprocess.Popen(
+                command,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                env=environment,
+            )
+        _mlx_runtime_process = process
+        MLX_RUNTIME_PID_FILE.write_text(str(process.pid), encoding="utf-8")
     deadline = time.monotonic() + 180
     health_url = f"http://127.0.0.1:{VYACT_RUNTIME_PORT}/v1/models"
     try:

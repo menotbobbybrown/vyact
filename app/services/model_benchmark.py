@@ -46,6 +46,9 @@ class BenchmarkGuard:
 
     async def __call__(self, scope, receive, send):
         global active_requests
+        if scope["type"] == "http" and scope.get("path") in ("/api/shutdown", "/api/shutdown/prepare"):
+            await self.app(scope, receive, send)
+            return
         guarded = scope["type"] == "http" and scope.get("method") not in ("GET", "HEAD", "OPTIONS")
         storage = scope.get("path", "").startswith("/api/vyact/model-storage")
         if guarded and model_storage.active_move and not storage:

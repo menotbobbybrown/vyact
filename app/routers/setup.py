@@ -1,6 +1,7 @@
 """
 routers/setup.py – 설치 / 모델 / Provider / 상태
 """
+from services.shutdown_guard import create_install_process, protected
 from services.model_storage import download_operation, get_models_dir
 from services.log_viewer import stream_logs
 from services import model_benchmark
@@ -909,6 +910,7 @@ async def install_vyact_runtime(include_omlx: bool = Query(False)):
 
 @router.post("/vyact/runtime/update")
 async def update_vyact_runtime():
+    @protected("installation")
     async def stream():
         from services.runtime_startup import get_runtime_update_commands
 
@@ -917,7 +919,7 @@ async def update_vyact_runtime():
             yield sse("패키지 관리자를 통한 런타임 업데이트를 지원하지 않는 환경입니다.", "error", 0)
             return
         for command in commands:
-            process = await asyncio.create_subprocess_exec(
+            process = await create_install_process(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,

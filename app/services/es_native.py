@@ -32,6 +32,7 @@ from config import INSTALL_DIR
 from config.models import ES_VERSION, ES_DOWNLOAD_BASE, ES_ARTIFACTS
 from services.db import ES_PORT, ES_TRANSPORT_PORT
 from services.es_lifecycle import ElasticsearchLifecycle
+from services.shutdown_guard import protected
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -75,6 +76,7 @@ def _es_plugin_binary() -> Path:
     return ES_HOME / "bin" / "elasticsearch-plugin"
 
 
+@protected("installation")
 def _write_es_config():
     """elasticsearch.yml 에 vyact 설정 주입."""
     cfg = ES_HOME / "config" / "elasticsearch.yml"
@@ -140,8 +142,11 @@ async def _download(url: str, dest: Path) -> AsyncGenerator[tuple, None]:
     yield (55, "다운로드 완료", "ok")
 
 
+@protected("installation")
 def _extract(archive: Path, kind: str):
     """zip/tar.gz 를 INSTALL_DIR 에 풀면 elasticsearch-<ver>/ 폴더가 생긴다."""
+    if ES_HOME.exists():
+        shutil.rmtree(ES_HOME)
     if kind == "zip":
         with zipfile.ZipFile(archive) as z:
             z.extractall(INSTALL_DIR)
@@ -150,6 +155,7 @@ def _extract(archive: Path, kind: str):
             t.extractall(INSTALL_DIR)
 
 
+@protected("installation")
 async def _start_es_background():
     """Start ES under the desktop session; never register login autostart."""
     lifecycle = ElasticsearchLifecycle(INSTALL_DIR, ES_PORT)
@@ -190,8 +196,6 @@ async def install_native_es() -> AsyncGenerator[tuple, None]:
         yield (58, "압축 해제 중...", "info")
         try:
             # 중단된 압축 해제 결과는 완전한 설치로 간주하지 않는다.
-            if ES_HOME.exists():
-                shutil.rmtree(ES_HOME)
             await asyncio.get_event_loop().run_in_executor(None, _extract, archive, kind)
             if not _es_binary().exists():
                 raise RuntimeError("Elasticsearch binary is missing after extraction")

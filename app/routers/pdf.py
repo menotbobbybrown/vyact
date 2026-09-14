@@ -2,6 +2,7 @@
 routers/pdf.py – PDF 생성 엔드포인트
 HTML → Playwright → PDF 파이프라인
 """
+from services.shutdown_guard import atomic_write_bytes, atomic_write_text
 import asyncio
 import base64
 import json
@@ -545,7 +546,7 @@ async def _call_llm_for_pages(
     for img in images:
         tmp_fn = f"pdf_tmp_{uuid.uuid4().hex[:8]}.{img.filename.split('.')[-1]}"
         tmp_path = FILES_DIR / tmp_fn
-        tmp_path.write_bytes(base64.b64decode(img.data))
+        atomic_write_bytes(tmp_path, base64.b64decode(img.data))
         attachments.append({"type": "image", "filename": tmp_fn, "_tmp": True})
 
     language_names = {
@@ -1372,7 +1373,7 @@ async def generate_pdf(req: PdfGenerateRequest):
             page_data = prepare_presentation(page_data)
             html_content = _build_html(page_data, req.images, req.style, aspect_ratio)
             html_path = FILES_DIR / f"pdf_tmp_{uid}.html"
-            html_path.write_text(html_content, encoding="utf-8")
+            atomic_write_text(html_path, html_content, encoding="utf-8")
             logger.info("[pdf] step7 HTML 완료 (%d bytes)", len(html_content))
 
             # ── Step 8: 선택한 출력 형식으로 렌더링 ──
@@ -1397,7 +1398,7 @@ async def generate_pdf(req: PdfGenerateRequest):
             for img in req.images:
                 ext = img.filename.rsplit(".", 1)[-1] if "." in img.filename else "jpg"
                 img_fn = f"pdf_{uid}_{img.index}.{ext}"
-                (IMAGES_DIR / img_fn).write_bytes(base64.b64decode(img.data))
+                atomic_write_bytes(IMAGES_DIR / img_fn, base64.b64decode(img.data))
                 saved_image_filenames.append(img_fn)
 
             conv_id = req.conv_id or str(uuid.uuid4())

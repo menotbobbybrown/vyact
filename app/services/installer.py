@@ -1,6 +1,7 @@
 """
 installer.py - RAG Agent 설치 관리 서비스
 """
+from services.shutdown_guard import create_install_process, protected
 import asyncio
 import os
 import platform
@@ -61,10 +62,11 @@ class Installer:
         cmd: list[str],
         log: bool = False,
         env: dict[str, str] | None = None,
+        interrupt_safe: bool = False,
     ) -> int:
         """Always retain diagnostics, including failures of prerequisite checks."""
         return await run_install_command(
-            cmd, self.log_file, cwd=str(self.install_dir), env=env,
+            cmd, self.log_file, cwd=str(self.install_dir), env=env, interrupt_safe=interrupt_safe,
         )
 
     async def check_docker(self) -> tuple[bool, str]:
@@ -89,6 +91,7 @@ class Installer:
         """Docker 설치+실행 여부를 부작용 없이 확인 (모듈 함수 위임)."""
         return await is_docker_available()
 
+    @protected("installation")
     async def setup_venv(self):
         if platform.system() == "Windows":
             python_path = self.venv_dir / "Scripts" / "python.exe"
@@ -108,6 +111,7 @@ class Installer:
         logger.info("Virtual environment ready")
         return True, "Virtual environment ready"
 
+    @protected("installation")
     async def install_python_packages(self) -> tuple[bool, str]:
         """가상환경에 Python 패키지 설치 (Windows/Linux/macOS 지원)"""
 
@@ -144,7 +148,7 @@ class Installer:
         logger.info(f"실행 명령어 : {' '.join(cmd)}")
 
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await create_install_process(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -221,6 +225,7 @@ class Installer:
         logger.info("UniDic dictionary installed")
         return True, "UniDic dictionary installed"
 
+    @protected("installation")
     async def install_unidic_dictionary_with_progress(self) -> AsyncGenerator[tuple[int, str], None]:
         """UniDic 다운로드 출력에서 진행률을 추출해 전달한다."""
         python_exe = self._get_venv_python()
@@ -233,7 +238,7 @@ class Installer:
             return
 
         logger.info("=== UniDic dictionary installation started ===")
-        proc = await asyncio.create_subprocess_exec(
+        proc = await create_install_process(
             str(python_exe), "-m", "unidic", "download",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
@@ -264,6 +269,7 @@ class Installer:
         logger.info("UniDic dictionary installed")
         yield 100, "UniDic dictionary installed"
 
+    @protected("installation")
     async def install_playwright(self) -> tuple[bool, str]:
         """Playwright 브라우저 설치"""
 
@@ -308,6 +314,7 @@ class Installer:
             logger.exception("Playwright installation failed")
             return False, "Playwright installation failed"
 
+    @protected("installation")
     async def install_espeak(self) -> tuple[bool, str]:
         """espeak-ng 설치 (Kokoro TTS G2P 의존성)"""
         logger.info("=== espeak-ng 설치 확인 ===")
@@ -413,6 +420,7 @@ print('kokoro all voices ready')
                 [str(python_exe), "-c", script],
                 log=True,
                 env=download_env,
+                interrupt_safe=True,
             )
             if rc != 0:
                 logger.warning("Kokoro model download failed")
@@ -423,6 +431,7 @@ print('kokoro all voices ready')
             logger.warning(f"Kokoro model download error: {e}")
             return False, f"Kokoro model download failed: {e}"
 
+    @protected("installation")
     async def start_elasticsearch(self) -> tuple[bool, str]:
         compose_file = self.app_dir / "docker-compose.yml"
         lifecycle = ElasticsearchLifecycle(self.install_dir, os.environ.get("ES_PORT", "9251"))

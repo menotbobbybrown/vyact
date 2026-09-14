@@ -1,4 +1,5 @@
 """Persistent location of managed GGUF/MLX models, independent of app data."""
+from services.shutdown_guard import protected
 import hashlib
 import json
 import os
@@ -64,6 +65,7 @@ def get_mlx_models_dir() -> Path:
     return get_models_dir() / "mlx"
 
 
+@protected("saving")
 def save_models_dir(path: Path) -> None:
     STORAGE_CONFIG.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(prefix=".model-storage-", dir=STORAGE_CONFIG.parent)
@@ -123,6 +125,7 @@ def plan_move(raw_path: str) -> dict:
     return {**plan, "same": False, "total_bytes": total, "file_count": sum(path.is_file() for path in files)}
 
 
+@protected("storage")
 def copy_models(plan: dict, progress: Callable[..., None]) -> list[Path]:
     """Copy and verify before switching the pointer; never remove source on failure."""
     source, destination = Path(plan["source"]), Path(plan["destination"])
@@ -176,6 +179,7 @@ def remove_copies(created: list[Path]) -> None:
             pass
 
 
+@protected("storage")
 def clean_source(plan: dict, created: list[Path]) -> bool:
     """Only remove files copied by this job, leaving unexpected new files intact."""
     source, destination = Path(plan["source"]), Path(plan["destination"])

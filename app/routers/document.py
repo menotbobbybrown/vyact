@@ -6,6 +6,7 @@ GET  /api/document/files          → 저장된 파일 목록 (rag_files 기준)
 GET  /api/document/files/{file_id} → 원본 파일 다운로드
 DELETE /api/document/files/{file_id} → 원본 파일 + ES 청크 삭제
 """
+from services.shutdown_guard import protected
 import asyncio
 import hashlib
 import io
@@ -125,6 +126,7 @@ async def _noop_progress(_stage: str, _percent: int, _details: dict | None = Non
     return None
 
 
+@protected("saving")
 async def _index_saved_document(
     tmp: Path,
     filename: str,
@@ -519,6 +521,7 @@ async def download_selected_files(request: SelectedDocumentsDownloadRequest):
 
 
 @router.delete("/document/files")
+@protected("saving")
 async def delete_all_files():
     """모든 원본 파일과 문서 청크 및 파일 메타데이터를 삭제한다."""
     es = get_es()
@@ -586,6 +589,7 @@ async def download_file(file_id: str):
 # ─────────────────────────────
 
 @router.delete("/document/files/{file_id}")
+@protected("saving")
 async def delete_file(file_id: str):
     """원본 파일 삭제 + ES 청크 삭제 + rag_files 메타 삭제"""
     es = get_es()

@@ -1,4 +1,5 @@
 """Google Workspace browser APIs used by the chat input side panel."""
+from services.shutdown_guard import atomic_write_bytes
 import asyncio
 import base64
 import hashlib
@@ -674,7 +675,7 @@ def _persist_knowledge_inline_images(source_id: str, html_body: str) -> tuple[st
         filename = f"{hashlib.sha256(raw_data).hexdigest()}{extension}"
         file_path = image_dir / filename
         if not file_path.exists():
-            file_path.write_bytes(raw_data)
+            atomic_write_bytes(file_path, raw_data)
         image = {"filename": filename, "mime_type": mime_type, "path": str(file_path)}
         if image not in images:
             images.append(image)

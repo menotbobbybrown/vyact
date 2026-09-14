@@ -1,6 +1,7 @@
 """
 routers/images.py – 이미지 업로드 / 생성
 """
+from services.shutdown_guard import protected
 import asyncio
 import unicodedata
 import uuid
@@ -26,6 +27,7 @@ class ImageGenerateRequest(BaseModel):
 
 
 @router.post("/images/upload")
+@protected("saving")
 async def upload_image(file: UploadFile = File(...)):
     try:
         if not file.content_type.startswith("image/"):
@@ -51,6 +53,7 @@ async def get_image(filename: str):
 
 
 @router.post("/audio/upload")
+@protected("saving")
 async def upload_audio(file: UploadFile = File(...)):
     allowed_extensions = {".mp3", ".wav", ".flac", ".m4a"}
     original_name = Path(unicodedata.normalize("NFC", file.filename or "audio.wav")).name

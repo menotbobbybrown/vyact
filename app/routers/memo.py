@@ -6,6 +6,7 @@ GET    /api/memo/{id}     → 메모 상세
 PUT    /api/memo/{id}     → 메모 수정
 DELETE /api/memo/{id}     → 메모 삭제
 """
+from services.shutdown_guard import protected
 import shutil
 import unicodedata
 import uuid
@@ -120,6 +121,7 @@ async def list_memos(size: int = 50, from_: int = 0):
 # POST /api/memo
 # ─────────────────────────────
 @router.post("/memo")
+@protected("saving")
 async def create_memo(body: MemoBody):
     es = get_es()
     try:
@@ -169,6 +171,7 @@ async def get_memo(memo_id: str):
 
 
 @router.post("/memo/{memo_id}/attachments")
+@protected("saving")
 async def upload_memo_attachment(memo_id: str, file: UploadFile = File(...)):
     """메모 전용 첨부를 저장하고 본문 삽입에 사용할 URL을 반환한다."""
     attachment_dir = _attachment_dir(memo_id)
@@ -207,6 +210,7 @@ async def get_memo_attachment(memo_id: str, stored_name: str):
 
 
 @router.post("/memo/{memo_id}/attachments/cleanup")
+@protected("saving")
 async def cleanup_memo_attachments(memo_id: str, body: MemoBody):
     """편집 취소 시 원래 본문에 없는, 이번 편집에서 업로드된 첨부를 정리한다."""
     _cleanup_unreferenced_attachments(memo_id, body.content_html)
@@ -217,6 +221,7 @@ async def cleanup_memo_attachments(memo_id: str, body: MemoBody):
 # PUT /api/memo/{id}
 # ─────────────────────────────
 @router.put("/memo/{memo_id}")
+@protected("saving")
 async def update_memo(memo_id: str, body: MemoBody):
     es = get_es()
     try:
@@ -261,6 +266,7 @@ async def update_memo(memo_id: str, body: MemoBody):
 # DELETE /api/memo/{id}
 # ─────────────────────────────
 @router.delete("/memo/{memo_id}")
+@protected("saving")
 async def delete_memo(memo_id: str):
     es = get_es()
     try:

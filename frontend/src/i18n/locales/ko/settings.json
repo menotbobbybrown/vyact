@@ -132,6 +132,16 @@
     "deleteFailed": "플러그인 삭제에 실패했습니다."
   },
   "general": {
+    "shutdownBlockedTitle": "지금은 종료할 수 없습니다",
+    "shutdownBlockedDescription": "아래 작업을 중단하면 데이터나 설치 파일이 불완전해질 수 있습니다. 작업이 끝난 뒤 다시 종료해 주세요.",
+    "shutdownReasons": {
+      "restore": "백업 복원 중",
+      "saving": "파일 또는 설정 저장 중",
+      "installation": "설치 또는 업데이트 중",
+      "storage": "모델 저장 위치 이동 중",
+      "runtime": "모델 런타임 시작 중",
+      "unavailable": "종료 안전성을 확인할 수 없습니다. 앱 상태를 확인한 뒤 다시 시도해 주세요."
+    },
     "voicePreviewSamples": {"en": "Hello. This is a voice preview.", "ko": "안녕하세요. 음성 미리듣기입니다.", "ja": "こんにちは。これは音声のプレビューです。", "zh": "你好。这是语音试听。", "th": "สวัสดี นี่คือตัวอย่างเสียง", "vi": "Xin chào. Đây là bản nghe thử giọng nói.", "es": "Hola. Esta es una muestra de voz.", "fr": "Bonjour. Ceci est un aperçu de la voix.", "hi": "नमस्ते। यह आवाज़ का नमूना है।", "it": "Ciao. Questa è un’anteprima della voce.", "pt": "Olá. Esta é uma prévia da voz."},
     "language": "언어",
     "theme": "테마",

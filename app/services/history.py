@@ -1,6 +1,7 @@
 """
 history.py – 대화 히스토리 CRUD
 """
+from services.shutdown_guard import protected
 from datetime import datetime, timezone
 import re
 
@@ -65,6 +66,7 @@ async def create_conversation_stub(conv_id: str, title: str, project_id: str | N
         await es.close()
 
 
+@protected("saving")
 async def save_conversation(conv_id: str, messages: list[dict], title: str = "", project_id: str | None = None) -> str:
     es = get_es()
     try:
@@ -216,6 +218,7 @@ async def get_conversation(conv_id: str) -> dict | None:
         await es.close()
 
 
+@protected("saving")
 async def delete_conversation(conv_id: str):
     es = get_es()
     try:
@@ -272,6 +275,7 @@ def _delete_conv_files(messages: list[dict]):
                     pass
 
 
+@protected("saving")
 async def clear_conversation_messages(conv_id: str):
     """방과 제목은 유지하고 messages만 비운다."""
     es = get_es()
@@ -328,6 +332,7 @@ async def set_conversation_project(conv_id: str, project_id: str | None):
         await es.close()
 
 
+@protected("saving")
 async def _delete_conversations_by_query(query: dict) -> None:
     """주어진 범위의 대화와 대화에 종속된 파일/검색 청크를 함께 삭제한다."""
     es = get_es()

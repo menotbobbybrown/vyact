@@ -77,6 +77,16 @@
     }
   },
   "general": {
+    "shutdownBlockedTitle": "現在は終了できません",
+    "shutdownBlockedDescription": "以下の処理を中断すると、データやインストールファイルが不完全になる可能性があります。処理完了後に再度終了してください。",
+    "shutdownReasons": {
+      "restore": "バックアップを復元中",
+      "saving": "ファイルまたは設定を保存中",
+      "installation": "インストールまたは更新中",
+      "storage": "モデルの保存先を移動中",
+      "runtime": "モデルランタイムを起動中",
+      "unavailable": "安全に終了できるか確認できません。アプリの状態を確認してから再試行してください。"
+    },
     "voicePreviewSamples": {"en": "Hello. This is a voice preview.", "ko": "안녕하세요. 음성 미리듣기입니다.", "ja": "こんにちは。これは音声のプレビューです。", "zh": "你好。这是语音试听。", "th": "สวัสดี นี่คือตัวอย่างเสียง", "vi": "Xin chào. Đây là bản nghe thử giọng nói.", "es": "Hola. Esta es una muestra de voz.", "fr": "Bonjour. Ceci est un aperçu de la voix.", "hi": "नमस्ते। यह आवाज़ का नमूना है।", "it": "Ciao. Questa è un’anteprima della voce.", "pt": "Olá. Esta é uma prévia da voz."},
     "language": "言語",
     "theme": "テーマ",

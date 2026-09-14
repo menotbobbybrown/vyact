@@ -3,6 +3,7 @@ routers/backup.py – ES 전체 인덱스 백업 / 복원
 - include_files=True 시 원본 문서 파일도 zip에 포함
 - 복원 시 zip이면 ES 복원 + 원본 파일 복구
 """
+from services.shutdown_guard import protected
 import asyncio
 import copy
 import io
@@ -402,6 +403,7 @@ async def export_backup(req: ExportRequest = None):
 
 
 @router.post("/backup/import")
+@protected("restore")
 async def import_backup(
     file: UploadFile = File(...),
     indices: Optional[str] = Form(None),

@@ -1,4 +1,5 @@
 """Model storage relocation jobs survive a closed modal or disconnected client."""
+from services.shutdown_guard import protected
 import asyncio
 import json
 import urllib.error
@@ -49,6 +50,7 @@ async def _restore(config: dict) -> None:
     await warm_loaded_vyact_model(model_id, runtime=vyact_config.get("runtime", "gguf"))
 
 
+@protected("storage")
 async def _move(plan: dict) -> None:
     config = None
     restore = False
@@ -123,6 +125,7 @@ async def storage_plan(req: StorageRequest):
 
 
 @router.post("/vyact/model-storage/move")
+@protected("storage")
 async def storage_move(req: StorageRequest):
     global _move_task
     with model_storage.operation_lock:

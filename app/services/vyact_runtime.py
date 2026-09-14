@@ -4,6 +4,7 @@ The desktop product deliberately does not use Docker for its default local
 runtime.  In particular, a macOS container cannot use llama.cpp's Metal
 backend, while a native llama-server can.
 """
+from services.shutdown_guard import protected
 import asyncio
 import hashlib
 import json
@@ -174,6 +175,7 @@ def get_native_update_commands() -> list[list[str]]:
     return []
 
 
+@protected("installation")
 async def install_missing_runtime():
     """Install only absent components, yielding user-visible command progress."""
     if runtime_is_available():
@@ -283,6 +285,7 @@ def uncache_downloaded_model(relative_path: str) -> None:
         _downloaded_models_cache = frozenset(current)
 
 
+@protected("saving")
 def delete_downloaded_model(relative_path: str) -> None:
     """Delete one validated, non-active GGUF model from managed storage."""
     model_path = get_downloaded_model_path(relative_path)
@@ -331,6 +334,7 @@ def get_cached_mtp_sidecar(model_path: Path) -> Path | None:
     return get_downloaded_model_path(candidates[0])
 
 
+@protected("saving")
 def associate_dflash2_model(model_path: Path, dflash2_path: Path) -> None:
     relative_dflash2 = dflash2_path.resolve().relative_to(get_models_dir().resolve()).as_posix()
     mapping_path = model_path.with_suffix(model_path.suffix + ".dflash2.json")
@@ -495,6 +499,7 @@ def _process_has_exited(pid: int) -> bool:
     return False
 
 
+@protected("runtime")
 def stop_runtime() -> None:
     """Stop only the llama-swap process recorded by Vyact.
 
@@ -577,6 +582,7 @@ def start_single_model(
     vision_projector_path = get_cached_vision_projector(model_path)
     log_path = get_log_file("llama-swap")
 
+    @protected("runtime")
     def launch(acceleration: str | None) -> tuple[str, subprocess.Popen]:
         stop_runtime()
         model_key = write_single_model_config(
@@ -702,6 +708,7 @@ def stop_all_vyact_runtimes() -> None:
     stop_mlx_runtime()
 
 
+@protected("saving")
 def write_single_model_config(
         model_path: Path, context_size: int, mtp_model_path: Path | None = None,
         vision_projector_path: Path | None = None, *,

@@ -11,6 +11,9 @@ interface AppUpdateState {
 
 interface Window {
     ragAPI?: {
+        getShutdownNotice?: () => Promise<string[] | null>;
+        dismissShutdownNotice?: () => Promise<void>;
+        onShutdownBlocked?: (callback: (reasons: string[]) => void) => () => void;
         openExternal?: (url: string) => Promise<void>;
         checkAppUpdate?: () => Promise<AppUpdateState>;
         downloadAppUpdate?: () => Promise<AppUpdateState>;

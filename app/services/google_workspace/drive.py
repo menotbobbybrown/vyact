@@ -1,4 +1,5 @@
 """Google Drive API 도구."""
+from services.shutdown_guard import atomic_write_bytes
 import mimetypes
 from pathlib import Path
 from typing import Any
@@ -195,7 +196,7 @@ async def download_drive_file(file_id: str = "", **_) -> str:
         while save_path.exists():
             save_path = downloads_dir / f"{stem} ({i}){suffix}"
             i += 1
-    save_path.write_bytes(content if isinstance(content, bytes) else content.encode("utf-8"))
+    atomic_write_bytes(save_path, content if isinstance(content, bytes) else content.encode("utf-8"))
     logger.info("[drive] 다운로드 완료: %s → %s", file_id, save_path)
     return f"다운로드 완료\n파일: {save_path.name}\n위치: {save_path}"
 

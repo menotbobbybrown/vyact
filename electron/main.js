@@ -26,6 +26,8 @@ const LOGS_DIR = path.join(INSTALL_DIR, "logs");
 const SERVER_PORT = 8000;
 const ES_PORT = Number(process.env.ES_PORT || 9251);
 const ES_SESSION = crypto.randomUUID();
+const SHUTDOWN_TOKEN = crypto.randomUUID();
+const SHUTDOWN_CHECK_TIMEOUT_MS = 5000;
 const AUTO_START_DELAY_SECONDS = 15;
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/vyact/vyact/releases/latest";
 const GITHUB_RELEASES_URL = "https://github.com/vyact/vyact/releases";
@@ -41,6 +43,8 @@ let floatingBrowserView = null;
 let floatingBrowserOpen = false;
 let floatingBrowserBounds = {x: 640, y: 120, width: 540, height: 620, toolbarHeight: 52, footerHeight: 0};
 let serverProc = null;
+let serverSetupInProgress = false;
+let shutdownNotice = null;
 let serverModuleLoadingCompletedAt = null;
 let elasticsearchStartPromise = null;
 let appUpdateState = {
@@ -618,6 +622,16 @@ async function stopExistingServerBeforeDesktopStart() {
 }
 
 async function startServer() {
+    if (isQuitting) return;
+    serverSetupInProgress = true;
+    try {
+        await prepareAndStartServer();
+    } finally {
+        serverSetupInProgress = false;
+    }
+}
+
+async function prepareAndStartServer() {
     log("Starting server process");
 
     if (!fs.existsSync(INSTALL_DIR)) fs.mkdirSync(INSTALL_DIR, {recursive: true});
@@ -723,6 +737,7 @@ async function startServer() {
         PYTHONDONTWRITEBYTECODE: "1",
         VYACT_SYSTEM_LANGUAGE: app.getLocale(),
         VYACT_ES_SESSION: ES_SESSION,
+        VYACT_SHUTDOWN_TOKEN: SHUTDOWN_TOKEN,
         VYACT_BROWSER_CONTROL_URL: `http://127.0.0.1:${browserControlPort}`,
         VYACT_BROWSER_CONTROL_TOKEN: BROWSER_CONTROL_TOKEN,
     };
@@ -1053,7 +1068,6 @@ app.commandLine.appendSwitch("enable-speech-input");
 app.commandLine.appendSwitch("enable-web-speech-api");
 
 function restoreAndFocusMainWindow() {
-    if (isQuitting) return;
     if (!mainWindow || mainWindow.isDestroyed()) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -1106,6 +1120,7 @@ if (hasSingleInstanceLock) app.whenReady().then(() => {
     //    실시간으로 화면에 표시된다. (예전엔 창 생성 전에 의존성 확인을 끝내버려서
     //    그 단계의 진행 상황을 사용자가 전혀 볼 수 없었다.)
     setTimeout(() => {
+        if (isQuitting) return;
         void createWindow().then(() => {
             // 로딩 화면이 한 번 그려진 다음에만 동기식 설치 작업을 시작한다.
             setTimeout(() => {
@@ -1126,6 +1141,7 @@ if (hasSingleInstanceLock) app.whenReady().then(() => {
                     if (isQuitting) return;
                     await startBrowserControlServer();
                     await stopExistingServerBeforeDesktopStart();
+                    if (isQuitting) return;
                     await startServer();
                     waitForServerAndLoad();
                 })().catch(showStartupError);
@@ -1136,76 +1152,157 @@ if (hasSingleInstanceLock) app.whenReady().then(() => {
 
 let isQuitting = false;
 let shutdownComplete = false;
-function forceStopManagedModelRuntimes() {
-    if (platform.isWindows) return;
+function forceStopManagedModelRuntimes(interruptiblePids = []) {
+    // These cache-download groups were admitted and reported by our backend.
+    for (const pid of interruptiblePids) {
+        if (!Number.isSafeInteger(pid) || pid <= 1) throw new Error("Invalid download process PID");
+        if (platform.isWindows) {
+            execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], {windowsHide: true});
+        } else {
+            try { process.kill(-pid, "SIGKILL"); }
+            catch (error) { if (error.code !== "ESRCH") throw error; }
+        }
+    }
     const managedProcesses = [
-        {pidFile: path.join(INSTALL_DIR, "runtime", "omlx.pid"), markers: ["omlx"]},
-        {pidFile: path.join(INSTALL_DIR, "runtime", "mlx-vlm.pid"), markers: ["mlx_vlm.server", "mlx_lm.server"]},
-        {pidFile: path.join(INSTALL_DIR, "runtime", "llama-swap.pid"), markers: ["llama-swap"]},
+        {pidFile: "omlx.pid", markers: ["omlx"]},
+        {pidFile: "mlx-vlm.pid", markers: ["mlx_vlm.server", "mlx_lm.server"]},
+        {pidFile: "llama-swap.pid", markers: ["llama-swap"]},
     ];
     for (const {pidFile, markers} of managedProcesses) {
-        try {
-            const pidText = fs.readFileSync(pidFile, "utf8").trim();
-            if (!/^\d+$/.test(pidText)) continue;
-            const pid = Number(pidText);
-            const command = execFileSync("ps", ["-p", String(pid), "-o", "command="], {encoding: "utf8"});
-            if (!markers.some(marker => command.includes(marker))) continue;
-            process.kill(pid, "SIGKILL");
-            log(`Force-stopped managed model runtime (pid=${pid})`);
-        } catch {
-            // The process may already have exited during graceful shutdown.
+        const filename = path.join(INSTALL_DIR, "runtime", pidFile);
+        if (!fs.existsSync(filename)) continue;
+        const pidText = fs.readFileSync(filename, "utf8").trim();
+        if (!/^\d+$/.test(pidText) || Number(pidText) <= 1) continue;
+        const pid = Number(pidText);
+        if (platform.isWindows) {
+            // CIM is available on Windows versions where WMIC has been removed.
+            const command = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
+                `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}').CommandLine`,
+            ], {encoding: "utf8", windowsHide: true});
+            if (!markers.some(marker => command.toLowerCase().includes(marker))) continue;
+            execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], {windowsHide: true});
+        } else {
+            const result = spawnSync("ps", ["-p", String(pid), "-o", "pgid=", "-o", "command="], {encoding: "utf8"});
+            if (result.error) throw result.error;
+            if (result.status === 1 && !result.stdout.trim()) continue;
+            if (result.status !== 0) throw new Error(`Cannot inspect managed runtime ${pid}`);
+            const match = result.stdout.trim().match(/^(\d+)\s+(.+)$/);
+            if (!match || !markers.some(marker => match[2].includes(marker))) continue;
+            // Managed runtimes start a new session: kill their workers as well.
+            if (Number(match[1]) !== pid) throw new Error(`Managed runtime ${pid} is not in an isolated process group`);
+            try { process.kill(-pid, "SIGKILL"); }
+            catch (error) { if (error.code !== "ESRCH") throw error; }
         }
+        log(`Force-stopped managed model runtime (pid=${pid})`);
     }
 }
 
-async function stopLocalRuntimes(forceAfterMs = 45000) {
-    if (!serverProc || serverProc.exitCode !== null || serverProc.signalCode !== null) return;
-    log("Shutting down local runtimes...");
-    const serverExit = new Promise(resolve => serverProc.once("exit", resolve));
-    void fetch("http://localhost:8000/api/shutdown", {
-        method: "POST",
-        signal: AbortSignal.timeout(forceAfterMs),
-    }).catch(() => {});
-    const exitedGracefully = await Promise.race([
-        serverExit.then(() => true),
-        new Promise(resolve => setTimeout(() => resolve(false), forceAfterMs)),
-    ]);
-    if (!exitedGracefully) {
-        forceStopManagedModelRuntimes();
-        if (!serverProc.killed) serverProc.kill(platform.isWindows ? undefined : "SIGKILL");
-        await Promise.race([
-            serverExit,
-            new Promise(resolve => setTimeout(resolve, 1000)),
-        ]);
+function backendIsRunning() {
+    return serverProc && serverProc.exitCode === null && serverProc.signalCode === null;
+}
+
+async function stopLocalRuntimes(interruptiblePids = []) {
+    forceStopManagedModelRuntimes(interruptiblePids);
+    if (!backendIsRunning()) return;
+    const child = serverProc;
+    const serverExit = new Promise((resolve, reject) => {
+        child.once("exit", resolve);
+        child.once("error", reject);
+    });
+    if (platform.isWindows) {
+        execFileSync("taskkill", ["/PID", String(child.pid), "/F"], {windowsHide: true});
+    } else if (!child.kill("SIGKILL")) {
+        throw new Error("Could not stop Python process");
     }
+    await serverExit;
     log("Server shutdown complete");
+}
+
+function shutdownHeaders(attempt) {
+    return {"x-vyact-shutdown-token": SHUTDOWN_TOKEN, "x-vyact-shutdown-attempt": attempt};
+}
+
+async function cancelShutdown(attempt) {
+    if (!backendIsRunning()) return;
+    const response = await fetch("http://127.0.0.1:8000/api/shutdown/prepare", {
+        method: "DELETE", headers: shutdownHeaders(attempt), signal: AbortSignal.timeout(SHUTDOWN_CHECK_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Shutdown cancellation failed: ${response.status}`);
+}
+
+function showShutdownBlocked(reasons) {
+    shutdownNotice = reasons;
+    restoreAndFocusMainWindow();
+    const contents = initialSetupView?.webContents || mainWindow?.webContents;
+    if (contents && !contents.isDestroyed()) contents.send("shutdown-blocked", reasons);
+    // loading.html has no React modal yet; use the existing native error UI.
+    if (!contents || contents.isDestroyed() || !/^https?:/.test(contents.getURL())) {
+        const translation = getStartupTranslation();
+        dialog.showErrorBox(translation.shutdownBlockedTitle,
+            `${translation.shutdownBlockedDescription}\n\n${reasons.map(reason => translation.shutdownReasons[reason] || translation.shutdownReasons.unavailable).join("\n")}`);
+    }
+}
+
+async function performShutdown(installUpdate = false) {
+    if (isQuitting) return false;
+    // Reserve before awaiting: repeated Cmd+Q and updater IPC share this gate.
+    isQuitting = true;
+    const attempt = crypto.randomUUID();
+    const startedAt = Date.now();
+    let interruptiblePids = [];
+    try {
+        if (serverSetupInProgress) {
+            isQuitting = false;
+            showShutdownBlocked(["installation"]);
+            return false;
+        }
+        if (backendIsRunning()) {
+            const response = await fetch("http://127.0.0.1:8000/api/shutdown/prepare", {
+                method: "POST", headers: shutdownHeaders(attempt),
+                signal: AbortSignal.timeout(SHUTDOWN_CHECK_TIMEOUT_MS),
+            });
+            if (!response.ok) throw new Error(`Shutdown check failed: ${response.status}`);
+            const state = await response.json();
+            if (state.pid !== serverProc.pid || typeof state.allowed !== "boolean") {
+                throw new Error("Shutdown check returned an unexpected backend");
+            }
+            interruptiblePids = state.interruptible_pids || [];
+            if (!state.allowed) {
+                isQuitting = false;
+                showShutdownBlocked(Array.isArray(state.reasons) && state.reasons.length ? state.reasons : ["unavailable"]);
+                return false;
+            }
+        }
+        if (installUpdate) updateAppUpdateState({status: "installing", error: undefined});
+        log("[shutdown] Admission sealed; stopping model runtimes and Python");
+        await stopLocalRuntimes(interruptiblePids);
+        await elasticsearchStartPromise?.catch(() => {});
+        log(`[shutdown] Stopping owned Elasticsearch elapsed_ms=${Date.now() - startedAt}`);
+        await runElasticsearchLifecycle("stop");
+        shutdownComplete = true;
+        log(`[shutdown] Complete elapsed_ms=${Date.now() - startedAt}`);
+        if (installUpdate) autoUpdater.quitAndInstall(false, true);
+        else app.quit();
+        return true;
+    } catch (error) {
+        log(`[shutdown] Blocked: ${error.message}`);
+        try { await cancelShutdown(attempt); }
+        catch (cancelError) { log(`[shutdown] Could not reopen admission: ${cancelError.message}`); }
+        isQuitting = false;
+        if (installUpdate) updateAppUpdateState({status: "downloaded", error: undefined});
+        showShutdownBlocked(["unavailable"]);
+        return false;
+    }
 }
 
 app.on("before-quit", async event => {
     if (shutdownComplete) return;
     event.preventDefault();
-    if (isQuitting) return;
-    isQuitting = true;
-    // Keep the process alive for cleanup, but dismiss the UI immediately.
-    for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.hide();
-    }
-    const shutdownStartedAt = Date.now();
-    try {
-        log("[shutdown] 1/3 Waiting for pending Elasticsearch startup");
-        await elasticsearchStartPromise?.catch(() => {});
-        log(`[shutdown] 2/3 Stopping backend and model runtimes elapsed_ms=${Date.now() - shutdownStartedAt}`);
-        await stopLocalRuntimes();
-        log(`[shutdown] 3/3 Stopping owned Elasticsearch runtime elapsed_ms=${Date.now() - shutdownStartedAt}`);
-        await runElasticsearchLifecycle("stop");
-    } catch (error) {
-        log(`Elasticsearch shutdown warning: ${error.message}`);
-    } finally {
-        log(`[shutdown] Complete elapsed_ms=${Date.now() - shutdownStartedAt}`);
-        shutdownComplete = true;
-        app.quit();
-    }
+    await performShutdown();
 });
+
+ipcMain.handle("get-shutdown-notice", () => shutdownNotice);
+ipcMain.handle("dismiss-shutdown-notice", () => { shutdownNotice = null; });
 
 ipcMain.handle("get-log-path", () => getLogFile());
 ipcMain.handle("retry-startup", () => {
@@ -1273,18 +1370,7 @@ ipcMain.handle("download-app-update", async () => {
 });
 ipcMain.handle("install-app-update", async () => {
     if (isQuitting || !app.isPackaged || !APP_UPDATE_SUPPORTED || appUpdateState.status !== "downloaded") return false;
-    updateAppUpdateState({status: "installing", error: undefined});
-    log("Installing app update after local runtime shutdown...");
-    isQuitting = true;
-    await stopLocalRuntimes();
-    try {
-        await runElasticsearchLifecycle("stop");
-    } catch (error) {
-        log(`Elasticsearch shutdown warning: ${error.message}`);
-    }
-    shutdownComplete = true;
-    autoUpdater.quitAndInstall(false, true);
-    return true;
+    return performShutdown(true);
 });
 ipcMain.handle("open-external", async (_event, rawUrl) => {
     const url = String(rawUrl || "").trim();

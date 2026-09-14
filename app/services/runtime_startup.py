@@ -1,5 +1,7 @@
 """Startup coordination for optional native runtime updates."""
 
+from services.shutdown_guard import create_install_process, protected
+from services.omlx_policy import refresh_external_mtp_capabilities
 import asyncio
 import json
 import os
@@ -249,6 +251,22 @@ async def load_configured_vyact_model(config: dict | None = None) -> tuple[str, 
     return model_id, await load_ui_language_async() or ""
 
 
+@protected("installation")
+async def _apply_runtime_updates(config: dict) -> None:
+    global _startup_state
+    for command in get_runtime_update_commands(config):
+        process = await create_install_process(
+            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await process.communicate()
+        if process.returncode != 0:
+            detail = stdout.decode("utf-8", errors="replace").strip().splitlines()
+            _startup_state = {**_startup_state, "status": "update_failed"}
+            raise RuntimeError(detail[-1] if detail else "Runtime update failed")
+    if config.get("vyact_config", {}).get("runtime") == "mlx":
+        await asyncio.to_thread(refresh_external_mtp_capabilities, True)
+
+
 async def apply_startup_runtime_choice(update: bool) -> tuple[str, str]:
     global _startup_state
     async with _action_lock:
@@ -257,18 +275,7 @@ async def apply_startup_runtime_choice(update: bool) -> tuple[str, str]:
         if update:
             _startup_state = {**_startup_state, "status": "updating"}
             config = await load_config_async()
-            for command in get_runtime_update_commands(config):
-                process = await asyncio.create_subprocess_exec(
-                    *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-                )
-                stdout, _ = await process.communicate()
-                if process.returncode != 0:
-                    detail = stdout.decode("utf-8", errors="replace").strip().splitlines()
-                    _startup_state = {**_startup_state, "status": "update_failed"}
-                    raise RuntimeError(detail[-1] if detail else "Runtime update failed")
-            if config.get("vyact_config", {}).get("runtime") == "mlx":
-                from services.omlx_policy import refresh_external_mtp_capabilities
-                await asyncio.to_thread(refresh_external_mtp_capabilities, True)
+            await _apply_runtime_updates(config)
         _startup_state = {**_startup_state, "status": "loading_model"}
         result = await load_configured_vyact_model()
         try:

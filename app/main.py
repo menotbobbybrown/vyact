@@ -10,10 +10,13 @@ trace_startup("import:services.hardware_info", "end")
 
 import asyncio
 import os
+import secrets
 import signal
 import warnings
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
+
+from services.shutdown_guard import guard as shutdown_guard, ShutdownPending, interruptible_download_pids
 
 trace_startup("import:uvicorn", "begin")
 import uvicorn
@@ -28,7 +31,7 @@ trace_startup("import:fastapi.middleware.cors", "begin")
 from fastapi.middleware.cors import CORSMiddleware
 trace_startup("import:fastapi.middleware.cors", "end")
 trace_startup("import:fastapi.responses", "begin")
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 trace_startup("import:fastapi.responses", "end")
 trace_startup("import:fastapi.staticfiles", "begin")
 from fastapi.staticfiles import StaticFiles
@@ -458,6 +461,18 @@ async def lifespan(app: FastAPI):
 # APP
 # ─────────────────────────────
 app = FastAPI(title="RAG Agent", version="1.0.0", lifespan=lifespan)
+@app.exception_handler(ShutdownPending)
+async def shutdown_pending_handler(_request: Request, _error: ShutdownPending):
+    return JSONResponse({"detail": "shutdown_pending"}, status_code=503)
+
+
+@app.middleware("http")
+async def shutdown_admission(request: Request, call_next):
+    if shutdown_guard.pending and request.url.path not in ("/api/shutdown", "/api/shutdown/prepare"):
+        return JSONResponse({"detail": "shutdown_pending"}, status_code=503)
+    return await call_next(request)
+
+
 app.add_middleware(BenchmarkGuard)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -640,15 +655,38 @@ app.include_router(browser_extension_router, prefix="/api")
 # ─────────────────────────────
 @app.post("/api/shutdown")
 async def shutdown():
-    """Electron 앱 종료 시 호출 - local model runtimes unload 후 서버 종료."""
-    await shutdown_model_benchmark()
-    try:
-        from services.vyact_runtime import stop_all_vyact_runtimes
-        await asyncio.to_thread(stop_all_vyact_runtimes)
-    except Exception as error:
-        logger.error("[shutdown] Vyact runtime stop failed: %s", error)
-    finally:
-        os.kill(os.getpid(), signal.SIGTERM)
+    """Legacy IDE-backend handoff: never interrupt an admitted mutation."""
+    attempt = f"legacy-{secrets.token_hex(16)}"
+    result = shutdown_guard.prepare(attempt)
+    if not result["allowed"]:
+        return JSONResponse(result, status_code=409)
+    # This compatibility path uses Uvicorn graceful draining, not a forced kill.
+    # Keep lifecycle cleanup (including model stops) admitted.
+    shutdown_guard.cancel(attempt)
+    os.kill(os.getpid(), signal.SIGTERM)
+    return {"ok": True}
+
+
+def _authorize_shutdown(request: Request) -> str:
+    expected = os.environ.get("VYACT_SHUTDOWN_TOKEN", "")
+    if not expected or not secrets.compare_digest(request.headers.get("x-vyact-shutdown-token", ""), expected):
+        raise HTTPException(403, "shutdown_unauthorized")
+    attempt = request.headers.get("x-vyact-shutdown-attempt", "")
+    if not attempt or len(attempt) > 128:
+        raise HTTPException(400, "shutdown_invalid_attempt")
+    return attempt
+
+
+@app.post("/api/shutdown/prepare")
+async def prepare_shutdown(request: Request):
+    """Seal risky work admission; Electron owns process termination and ES stop."""
+    result = shutdown_guard.prepare(_authorize_shutdown(request))
+    return {**result, "pid": os.getpid(), "interruptible_pids": interruptible_download_pids()}
+
+
+@app.delete("/api/shutdown/prepare")
+async def cancel_shutdown(request: Request):
+    shutdown_guard.cancel(_authorize_shutdown(request))
     return {"ok": True}
 
 
