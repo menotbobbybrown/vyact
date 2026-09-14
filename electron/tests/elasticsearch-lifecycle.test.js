@@ -7,9 +7,10 @@ const vm = require('node:vm');
 // Exercise the actual pre-backend orchestration without loading an Electron GUI.
 const source = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
 const helpers = source.slice(source.indexOf('async function runElasticsearchLifecycle('), source.indexOf('// ── 서버 시작'));
-function createHarness(runCommand) {
+function createHarness(runCommand, setupComplete = true) {
     const context = vm.createContext({
         BUNDLED_PYTHON: '/bundled/python', APP_RES: '/resources/app', ES_SESSION: 'session', ES_PORT: 9251,
+        fs: {existsSync: () => setupComplete}, INSTALL_DIR: '/existing/data',
         path, runCommand, getDockerEnv: () => ({VYACT_INSTALL_DIR: '/existing/data'}),
         log: () => {}, getStartupTranslation: () => ({elasticsearchStarting: 'preparing', elasticsearchWaiting: 'waiting'}),
         sendLoadingStatus: () => {}, setTimeout: callback => callback(), isQuitting: false,
@@ -69,4 +70,25 @@ test('quitting cancels subsequent startup retries', async () => {
     });
     await context.startElasticsearchForDesktop();
     assert.equal(attempts, 1);
+});
+
+
+test('initial setup hides ES startup status while installed launches show it', async () => {
+    for (const setupComplete of [false, true]) {
+        const statuses = [];
+        let attempts = 0;
+        const context = createHarness(async () => {
+            if (++attempts === 1) throw Object.assign(new Error('Docker offline'), {exitCode: 2});
+            return '';
+        }, setupComplete);
+        context.sendLoadingStatus = value => statuses.push(value);
+        await context.startElasticsearchForDesktop();
+        assert.equal(attempts, 2);
+        if (setupComplete) {
+            assert.equal(statuses[0], 'preparing');
+            assert.equal(statuses[1].template, 'waiting');
+        } else {
+            assert.deepEqual(statuses, []);
+        }
+    }
 });

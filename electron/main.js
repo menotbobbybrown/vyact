@@ -502,7 +502,8 @@ async function runElasticsearchLifecycle(action) {
 }
 
 async function startElasticsearchForDesktop(timeoutMs = 90000) {
-    sendLoadingStatus(getStartupTranslation().elasticsearchStarting);
+    const setupComplete = fs.existsSync(path.join(INSTALL_DIR, ".setup_done"));
+    if (setupComplete) sendLoadingStatus(getStartupTranslation().elasticsearchStarting);
     const startedAt = Date.now();
     for (let attempt = 0; attempt < 30 && !isQuitting; attempt += 1) {
         try {
@@ -511,7 +512,7 @@ async function startElasticsearchForDesktop(timeoutMs = 90000) {
         } catch (error) {
             if (error.exitCode !== 2 || attempt === 29 || Date.now() - startedAt >= timeoutMs) throw error;
             log("Waiting for Docker to become available...");
-            sendLoadingStatus({template: getStartupTranslation().elasticsearchWaiting, startedAt});
+            if (setupComplete) sendLoadingStatus({template: getStartupTranslation().elasticsearchWaiting, startedAt});
             await new Promise(resolve => setTimeout(resolve, 3000));
         }
     }
