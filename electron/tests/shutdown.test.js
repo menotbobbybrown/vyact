@@ -8,11 +8,17 @@ const source = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
 function fixture({allowed = true, reasons = ['restore'], unavailable = false, setup = false, holdBackend = false} = {}) {
     const order = [];
     let beforeQuit, finishBackend;
+    let attemptNumber = 0;
+    const timers = [];
     const context = vm.createContext({
         isQuitting: false, shutdownComplete: false, shutdownNotice: null,
+        pendingShutdownAttempt: null, shutdownRecoveryTimer: null, shutdownRecoveryPromise: null,
+        SHUTDOWN_RECOVERY_RETRY_MS: 1000,
+        setTimeout: callback => { const timer = {callback, unref() {}}; timers.push(timer); return timer; },
+        clearTimeout: timer => { timer.cancelled = true; },
         serverSetupInProgress: setup, serverProc: {pid: 123, exitCode: null, signalCode: null},
         SHUTDOWN_TOKEN: 'secret', SHUTDOWN_CHECK_TIMEOUT_MS: 5000,
-        crypto: {randomUUID: () => 'attempt'}, AbortSignal,
+        crypto: {randomUUID: () => `attempt-${++attemptNumber}`}, AbortSignal,
         fetch: async (_url, options) => {
             order.push(options.method);
             if (unavailable && options.method === 'POST') throw new Error('offline');
@@ -33,7 +39,7 @@ function fixture({allowed = true, reasons = ['restore'], unavailable = false, se
         order.push('backend');
         if (holdBackend) await new Promise(resolve => {finishBackend = resolve;});
     };
-    return {context, order, quit: () => beforeQuit({preventDefault: () => order.push('prevent')}), finish: () => finishBackend()};
+    return {context, order, timers, quit: () => beforeQuit({preventDefault: () => order.push('prevent')}), finish: () => finishBackend()};
 }
 
 test('repeated quit cannot bypass cleanup and keeps the window visible', async () => {
@@ -124,5 +130,106 @@ test('approved shutdown kills Python immediately without a grace timer', async (
         vm.runInContext(source.slice(source.indexOf('function backendIsRunning()'), source.indexOf('function shutdownHeaders(')), context);
         await context.stopLocalRuntimes();
         assert.deepEqual(order, isWindows ? ['models', 'taskkill', ['/PID', '123', '/F']] : ['models', 'SIGKILL']);
+    }
+});
+
+
+function failingCancellationFixture() {
+    const f = fixture();
+    let sealed = null;
+    let cancellationFailures = 1;
+    let stopFailures = 1;
+    const requests = [];
+    f.context.fetch = async (_url, options) => {
+        const attempt = options.headers['x-vyact-shutdown-attempt'];
+        requests.push([options.method, attempt]);
+        if (options.method === 'DELETE') {
+            if (cancellationFailures-- > 0) throw new Error('Temporary connection failure');
+            if (sealed === attempt) sealed = null;
+            return {ok: true};
+        }
+        const allowed = sealed === null || sealed === attempt;
+        if (allowed) sealed = attempt;
+        return {ok: true, json: async () => ({pid: 123, allowed, reasons: allowed ? [] : ['unavailable']})};
+    };
+    f.context.stopLocalRuntimes = async () => {
+        if (stopFailures-- > 0) throw new Error('Temporary model inspection failure');
+        f.order.push('backend');
+    };
+    return {...f, requests, sealed: () => sealed};
+}
+
+test('lost cancellation automatically retries the original attempt and restores admission', async () => {
+    const f = failingCancellationFixture();
+    assert.equal(await f.context.performShutdown(), false);
+    assert.equal(f.sealed(), 'attempt-1');
+    assert.equal(f.context.pendingShutdownAttempt, 'attempt-1');
+    assert.equal(f.timers.length, 1);
+    await f.timers[0].callback();
+    assert.equal(f.sealed(), null);
+    assert.equal(f.context.pendingShutdownAttempt, null);
+    assert.equal(f.context.isQuitting, false);
+    assert.equal(f.order.includes('backend'), false);
+    assert.equal(await f.context.performShutdown(), true);
+});
+
+test('Cmd+Q retries old cancellation before requesting a new admission', async () => {
+    const f = failingCancellationFixture();
+    await f.context.performShutdown();
+    assert.equal(await f.context.performShutdown(), true);
+    assert.deepEqual(f.requests, [
+        ['POST', 'attempt-1'], ['DELETE', 'attempt-1'],
+        ['DELETE', 'attempt-1'], ['POST', 'attempt-2'],
+    ]);
+    assert.equal(f.timers[0].cancelled, true);
+    // Even a previously queued timer cannot cancel the new attempt.
+    await f.timers[0].callback();
+    assert.equal(f.requests.length, 4);
+});
+
+test('a quit request joins in-flight recovery without cancelling its new admission', async () => {
+    const f = failingCancellationFixture();
+    await f.context.performShutdown();
+    const fetch = f.context.fetch;
+    let release;
+    f.context.fetch = async (url, options) => {
+        if (options.method === 'DELETE') await new Promise(resolve => {release = resolve;});
+        return fetch(url, options);
+    };
+    const recovering = f.timers[0].callback();
+    const quitting = f.context.performShutdown(true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.requests.length, 2);
+    release();
+    await recovering;
+    assert.equal(await quitting, true);
+    assert.deepEqual(f.requests.slice(2), [['DELETE', 'attempt-1'], ['POST', 'attempt-2']]);
+    assert.equal(f.order.at(-1), 'install');
+});
+
+test('Unix orphan groups are inspected, cleaned if verified, or block if ownership is unknown', () => {
+    for (const scenario of [
+        {snapshot: '322 321 /runtime/omlx worker\n900 900 unrelated', killed: true},
+        {snapshot: '322 321 unknown-worker', blocked: true},
+        {snapshot: '900 900 unrelated', killed: false},
+        {snapshot: '', status: 2, blocked: true},
+    ]) {
+        const kills = [];
+        let inspections = 0;
+        const context = vm.createContext({
+            platform: {isWindows: false}, INSTALL_DIR: '/fake', path,
+            fs: {existsSync: name => name.endsWith('omlx.pid'), readFileSync: () => '321'},
+            spawnSync: (_command, args) => {
+                inspections++;
+                return args[0] === '-p' ? {status: 1, stdout: ''}
+                    : {status: scenario.status || 0, stdout: scenario.snapshot};
+            },
+            process: {kill: (...args) => kills.push(args)}, log() {},
+        });
+        vm.runInContext(source.slice(source.indexOf('function forceStopManagedModelRuntimes('), source.indexOf('function backendIsRunning()')), context);
+        if (scenario.blocked) assert.throws(() => context.forceStopManagedModelRuntimes(), /Cannot (verify ownership|inspect runtime group)/);
+        else context.forceStopManagedModelRuntimes();
+        assert.equal(inspections, 2);
+        assert.deepEqual(kills, scenario.killed ? [[-321, 'SIGKILL']] : []);
     }
 });

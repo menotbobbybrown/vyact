@@ -10,7 +10,11 @@ The request carries a per-desktop-session secret and an attempt ID. Admission
 and active-operation counting share one thread lock. Approval seals admission;
 late HTTP requests and already-running workers cannot enter a protected
 mutation. Cancellation reopens admission, and a cancelled attempt cannot later
-seal it. The backend PID must match the Electron-owned child. The legacy
+seal it. If cancellation cannot reach the backend, Electron retains the original
+attempt ID and retries reopening admission without terminating any process.
+A subsequent quit joins any in-flight recovery before requesting a new admission;
+stale recovery timers cannot cancel a later attempt. The backend PID must match
+the Electron-owned child. The legacy
 `/api/shutdown` endpoint is retained for IDE-backend handoff: it checks active
 work and uses Uvicorn's graceful draining, without a forced timeout.
 
@@ -35,7 +39,10 @@ work and uses Uvicorn's graceful draining, without a forced timeout.
 
 Windows managed model roots are verified using CIM, then killed with
 `taskkill /T /F`. Unix managed roots are verified using `ps`, then their isolated
-process groups are killed. An unexpected non-isolated group blocks termination
+process groups are killed. If the leader has already exited, Electron inspects
+remaining group members: a recognized runtime member permits group cleanup;
+an unverified surviving group blocks shutdown instead of being silently skipped.
+An unexpected non-isolated group blocks termination
 rather than leaving its workers behind. Python is killed only after managed
 runtime termination has been requested. No user-owned ES process is forcibly
 killed by these routines.

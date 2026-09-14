@@ -28,6 +28,7 @@ const ES_PORT = Number(process.env.ES_PORT || 9251);
 const ES_SESSION = crypto.randomUUID();
 const SHUTDOWN_TOKEN = crypto.randomUUID();
 const SHUTDOWN_CHECK_TIMEOUT_MS = 5000;
+const SHUTDOWN_RECOVERY_RETRY_MS = 1000;
 const AUTO_START_DELAY_SECONDS = 15;
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/vyact/vyact/releases/latest";
 const GITHUB_RELEASES_URL = "https://github.com/vyact/vyact/releases";
@@ -1152,6 +1153,9 @@ if (hasSingleInstanceLock) app.whenReady().then(() => {
 
 let isQuitting = false;
 let shutdownComplete = false;
+let pendingShutdownAttempt = null;
+let shutdownRecoveryTimer = null;
+let shutdownRecoveryPromise = null;
 function forceStopManagedModelRuntimes(interruptiblePids = []) {
     // These cache-download groups were admitted and reported by our backend.
     for (const pid of interruptiblePids) {
@@ -1184,7 +1188,23 @@ function forceStopManagedModelRuntimes(interruptiblePids = []) {
         } else {
             const result = spawnSync("ps", ["-p", String(pid), "-o", "pgid=", "-o", "command="], {encoding: "utf8"});
             if (result.error) throw result.error;
-            if (result.status === 1 && !result.stdout.trim()) continue;
+            if (result.status === 1 && !result.stdout.trim()) {
+                // A session leader can exit while its worker group survives.
+                // Verify a remaining member before signalling the whole group.
+                const snapshot = spawnSync("ps", ["-axo", "pid=,pgid=,command="], {encoding: "utf8"});
+                if (snapshot.error) throw snapshot.error;
+                if (snapshot.status !== 0) throw new Error(`Cannot inspect runtime group ${pid}`);
+                const members = snapshot.stdout.split("\n").map(line => line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/))
+                    .filter(match => match && Number(match[2]) === pid);
+                if (!members.length) continue;
+                if (!members.some(match => markers.some(marker => match[3].includes(marker)))) {
+                    throw new Error(`Cannot verify ownership of surviving runtime group ${pid}`);
+                }
+                try { process.kill(-pid, "SIGKILL"); }
+                catch (error) { if (error.code !== "ESRCH") throw error; }
+                log(`Force-stopped surviving model workers (pgid=${pid})`);
+                continue;
+            }
             if (result.status !== 0) throw new Error(`Cannot inspect managed runtime ${pid}`);
             const match = result.stdout.trim().match(/^(\d+)\s+(.+)$/);
             if (!match || !markers.some(marker => match[2].includes(marker))) continue;
@@ -1230,6 +1250,32 @@ async function cancelShutdown(attempt) {
     if (!response.ok) throw new Error(`Shutdown cancellation failed: ${response.status}`);
 }
 
+async function recoverShutdownAdmission() {
+    if (shutdownRecoveryPromise) return shutdownRecoveryPromise;
+    const attempt = pendingShutdownAttempt;
+    if (!attempt) return;
+    shutdownRecoveryPromise = cancelShutdown(attempt).then(() => {
+        if (pendingShutdownAttempt === attempt) pendingShutdownAttempt = null;
+    }).finally(() => { shutdownRecoveryPromise = null; });
+    return shutdownRecoveryPromise;
+}
+
+function scheduleShutdownRecovery() {
+    if (shutdownRecoveryTimer || !pendingShutdownAttempt) return;
+    const attempt = pendingShutdownAttempt;
+    shutdownRecoveryTimer = setTimeout(async () => {
+        shutdownRecoveryTimer = null;
+        // A new quit request takes over recovery before requesting admission.
+        if (isQuitting || pendingShutdownAttempt !== attempt) return;
+        try { await recoverShutdownAdmission(); }
+        catch (error) {
+            log(`[shutdown] Admission recovery will retry: ${error.message}`);
+            scheduleShutdownRecovery();
+        }
+    }, SHUTDOWN_RECOVERY_RETRY_MS);
+    shutdownRecoveryTimer.unref?.();
+}
+
 function showShutdownBlocked(reasons) {
     shutdownNotice = reasons;
     restoreAndFocusMainWindow();
@@ -1251,12 +1297,18 @@ async function performShutdown(installUpdate = false) {
     const startedAt = Date.now();
     let interruptiblePids = [];
     try {
+        if (shutdownRecoveryTimer) {
+            clearTimeout(shutdownRecoveryTimer);
+            shutdownRecoveryTimer = null;
+        }
+        await recoverShutdownAdmission();
         if (serverSetupInProgress) {
             isQuitting = false;
             showShutdownBlocked(["installation"]);
             return false;
         }
         if (backendIsRunning()) {
+            pendingShutdownAttempt = attempt;
             const response = await fetch("http://127.0.0.1:8000/api/shutdown/prepare", {
                 method: "POST", headers: shutdownHeaders(attempt),
                 signal: AbortSignal.timeout(SHUTDOWN_CHECK_TIMEOUT_MS),
@@ -1268,6 +1320,7 @@ async function performShutdown(installUpdate = false) {
             }
             interruptiblePids = state.interruptible_pids || [];
             if (!state.allowed) {
+                pendingShutdownAttempt = null;
                 isQuitting = false;
                 showShutdownBlocked(Array.isArray(state.reasons) && state.reasons.length ? state.reasons : ["unavailable"]);
                 return false;
@@ -1279,6 +1332,7 @@ async function performShutdown(installUpdate = false) {
         await elasticsearchStartPromise?.catch(() => {});
         log(`[shutdown] Stopping owned Elasticsearch elapsed_ms=${Date.now() - startedAt}`);
         await runElasticsearchLifecycle("stop");
+        pendingShutdownAttempt = null;
         shutdownComplete = true;
         log(`[shutdown] Complete elapsed_ms=${Date.now() - startedAt}`);
         if (installUpdate) autoUpdater.quitAndInstall(false, true);
@@ -1286,9 +1340,12 @@ async function performShutdown(installUpdate = false) {
         return true;
     } catch (error) {
         log(`[shutdown] Blocked: ${error.message}`);
-        try { await cancelShutdown(attempt); }
-        catch (cancelError) { log(`[shutdown] Could not reopen admission: ${cancelError.message}`); }
+        if (pendingShutdownAttempt === attempt) {
+            try { await recoverShutdownAdmission(); }
+            catch (cancelError) { log(`[shutdown] Could not reopen admission: ${cancelError.message}`); }
+        }
         isQuitting = false;
+        scheduleShutdownRecovery();
         if (installUpdate) updateAppUpdateState({status: "downloaded", error: undefined});
         showShutdownBlocked(["unavailable"]);
         return false;
