@@ -878,7 +878,10 @@ function createWindow() {
             // venv가 없으면 = 최초 설치 → 상세 로그를 보여줘서 뭘 하고 있는지 알 수 있게 한다.
             const isFirstRun = !isSupportedPython(VENV_PYTHON) || !fs.existsSync(platform.uvicornPath);
             finishLoading();
-            mainWindow.loadFile(loadingPath, {query: {firstRun: isFirstRun ? "1" : "0"}});
+            mainWindow.loadFile(loadingPath, {query: {
+                firstRun: isFirstRun ? "1" : "0",
+                initialStatus: getStartupTranslation().startupPreparing,
+            }});
         } else {
             resolve();
         }

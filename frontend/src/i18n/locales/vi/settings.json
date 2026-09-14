@@ -101,6 +101,7 @@
     "pythonSetupFailedTitle": "Thiết lập Python thất bại",
     "pythonSetupFailedMessage": "Vyact không thể hoàn tất việc chuẩn bị môi trường Python. Hãy kiểm tra mạng hoặc phần mềm bảo mật rồi thử lại. Các tệp cài đặt chưa hoàn chỉnh sẽ tự động được dọn dẹp.",
     "pythonSetupRetry": "Thử lại",
+    "startupPreparing": "Đang chuẩn bị khởi động Vyact…",
     "waitingForServer": "Đang chờ máy chủ sẵn sàng…",
     "browserExtensionRequiredTitle": "Cần tiện ích Vyact Chrome",
     "browserExtensionRequiredDescription": "Cài đặt hoặc bật tiện ích Vyact Chrome để sử dụng công cụ trình duyệt trong cuộc trò chuyện thông thường.",

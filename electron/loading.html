@@ -34,9 +34,11 @@
     <div class="log-tail" id="log-tail" aria-live="polite"></div>
   </main>
   <script>
-    const isFirstRun = new URLSearchParams(window.location.search).get('firstRun') === '1';
+    const loadingParams = new URLSearchParams(window.location.search);
+    const isFirstRun = loadingParams.get('firstRun') === '1';
     const logTail = document.getElementById('log-tail');
     const statusLine = document.getElementById('status-line');
+    statusLine.textContent = loadingParams.get('initialStatus') || '';
     let statusTimer = null;
     const lines = [];
     const isNearLogBottom = () => logTail.scrollHeight - logTail.scrollTop - logTail.clientHeight < 8;

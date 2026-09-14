@@ -101,6 +101,7 @@
     "pythonSetupFailedTitle": "Error al configurar Python",
     "pythonSetupFailedMessage": "Vyact no pudo preparar el entorno de Python. Comprueba la red o el software de seguridad e inténtalo de nuevo. Los archivos incompletos se eliminarán automáticamente.",
     "pythonSetupRetry": "Reintentar",
+    "startupPreparing": "Preparando el inicio de Vyact…",
     "waitingForServer": "Esperando a que el servidor esté listo…",
     "browserExtensionRequiredTitle": "Se necesita la extensión Vyact para Chrome",
     "browserExtensionRequiredDescription": "Instala o habilita la extensión Vyact para Chrome para utilizar las herramientas del navegador en el chat normal.",

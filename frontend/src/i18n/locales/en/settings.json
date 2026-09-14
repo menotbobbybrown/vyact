@@ -127,6 +127,7 @@
     "pythonSetupFailedTitle": "Python setup failed",
     "pythonSetupFailedMessage": "Vyact could not finish preparing its Python environment. Check your network or security software, then try again. Completed files will be cleaned up automatically.",
     "pythonSetupRetry": "Try again",
+    "startupPreparing": "Preparing to start Vyact…",
     "waitingForServer": "Waiting for the server to be ready…",
     "browserExtensionRequiredTitle": "Vyact Chrome extension required",
     "browserExtensionRequiredDescription": "Install or enable the Vyact Chrome extension to use browser tools in regular chat.",

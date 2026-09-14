@@ -101,6 +101,7 @@
     "pythonSetupFailedTitle": "Python 设置失败",
     "pythonSetupFailedMessage": "Vyact 无法完成 Python 环境准备。请检查网络或安全软件后重试。不完整的安装文件将自动清理。",
     "pythonSetupRetry": "重试",
+    "startupPreparing": "正在准备启动 Vyact…",
     "waitingForServer": "正在等待服务器准备就绪…",
     "browserExtensionRequiredTitle": "需要 Vyact Chrome 扩展程序",
     "browserExtensionRequiredDescription": "要在普通聊天中使用浏览器工具，请安装或启用 Vyact Chrome 扩展程序。",
