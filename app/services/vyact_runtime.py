@@ -5,6 +5,8 @@ runtime.  In particular, a macOS container cannot use llama.cpp's Metal
 backend, while a native llama-server can.
 """
 from services.shutdown_guard import protected
+from services.runtime_ports import get_runtime_port, get_model_port, is_port_conflict, with_runtime_ports
+from services.pinned_runtime import managed_executable, install_pinned_components, runtime_environment
 import asyncio
 import hashlib
 import json
@@ -17,12 +19,13 @@ import threading
 import time
 import urllib.error
 import urllib.request
+
+import psutil
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 from services.model_storage import get_models_dir
-from services.install_commands import run_install_command
 from config import INSTALL_DIR, get_log_file
 from logger import get_logger
 from services.hardware_info import GPU_SPLIT_DECIMAL_PLACES, get_local_hardware_info, validate_gpu_split_percentages
@@ -33,8 +36,6 @@ from services.runtime_error_details import classify_runtime_load_failure, runtim
 
 logger = get_logger(__name__)
 
-VYACT_RUNTIME_PORT = 11435
-VYACT_RUNTIME_URL = f"http://127.0.0.1:{VYACT_RUNTIME_PORT}/v1"
 VYACT_RUNTIME_DIR = INSTALL_DIR / "runtime"
 VYACT_SWAP_CONFIG = VYACT_RUNTIME_DIR / "llama-swap.yaml"
 VYACT_RUNTIME_PID_FILE = VYACT_RUNTIME_DIR / "llama-swap.pid"
@@ -102,8 +103,8 @@ def get_runtime_paths() -> RuntimePaths:
     llama_server = managed_bin / _executable_name("llama-server")
     llama_swap = managed_bin / _executable_name("llama-swap")
     return RuntimePaths(
-        llama_server=llama_server if llama_server.exists() else _which_path("llama-server") or _bundled_linux_executable("llama-server"),
-        llama_swap=llama_swap if llama_swap.exists() else _which_path("llama-swap") or _bundled_linux_executable("llama-swap"),
+        llama_server=managed_executable("llama.cpp") or (_bundled_linux_executable("llama-server") or (llama_server if llama_server.exists() else _which_path("llama-server"))),
+        llama_swap=managed_executable("llama-swap") or (_bundled_linux_executable("llama-swap") or (llama_swap if llama_swap.exists() else _which_path("llama-swap"))),
         models_dir=get_models_dir(),
         config_file=VYACT_SWAP_CONFIG,
     )
@@ -121,86 +122,20 @@ def runtime_is_available() -> bool:
     return bool(paths.llama_server and paths.llama_swap)
 
 
-def get_native_install_commands() -> list[list[str]]:
-    """Return non-interactive package-manager commands for a missing runtime.
-
-    This never upgrades or removes an existing system installation.  The caller
-    must check :func:`runtime_is_available` first.
-    """
-    paths = get_runtime_paths()
-    system = platform.system()
-    brew_path = _which_path("brew")
-    if system in {"Darwin", "Linux"} and brew_path:
-        commands = []
-        if not paths.llama_server:
-            commands.append([str(brew_path), "install", "llama.cpp"])
-        if not paths.llama_swap:
-            # tap validates formulae before returning; trust must precede it
-            # on Homebrew versions that reject untrusted third-party formulae.
-            commands.extend([
-                [str(brew_path), "trust", "--formula", "mostlygeek/llama-swap/llama-swap"],
-                [str(brew_path), "tap", "mostlygeek/llama-swap"],
-                [str(brew_path), "install", "mostlygeek/llama-swap/llama-swap"],
-            ])
-        return commands
-    winget_path = _which_path("winget")
-    if system == "Windows" and winget_path:
-        common = ["--exact", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"]
-        commands = []
-        if not paths.llama_server:
-            commands.append([str(winget_path), "install", "--id", "ggml.llamacpp", *common])
-        if not paths.llama_swap:
-            commands.append([str(winget_path), "install", "--id", "mostlygeek.llama-swap", *common])
-        return commands
-    return []
-
-
-def get_native_update_commands() -> list[list[str]]:
-    """Return explicit update commands for the detected package-manager source.
-
-    Updates are deliberately opt-in. A new llama.cpp build can alter templates
-    or tool-call parsing, so starting the app must never update it implicitly.
-    """
-    system = platform.system()
-    brew_path = _which_path("brew")
-    if system in {"Darwin", "Linux"} and brew_path:
-        return [[str(brew_path), "upgrade", "llama.cpp", "llama-swap"]]
-    winget_path = _which_path("winget")
-    if system == "Windows" and winget_path:
-        common = ["--exact", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"]
-        return [
-            [str(winget_path), "upgrade", "--id", "ggml.llamacpp", *common],
-            [str(winget_path), "upgrade", "--id", "mostlygeek.llama-swap", *common],
-        ]
-    return []
-
-
 @protected("installation")
 async def install_missing_runtime():
-    """Install only absent components, yielding user-visible command progress."""
-    if runtime_is_available():
+    """Install missing components from the release manifest, never from latest."""
+    missing = [component for component, executable in (
+        ("llama.cpp", managed_executable("llama.cpp") or _bundled_linux_executable("llama-server")),
+        ("llama-swap", managed_executable("llama-swap") or _bundled_linux_executable("llama-swap")),
+    ) if not executable]
+    if not missing:
         yield "Existing llama.cpp and llama-swap installation detected"
         return
-    commands = get_native_install_commands()
-    if not commands:
-        raise RuntimePackageManagerMissingError(
-            "No supported package manager was found for automatic runtime installation"
-        )
-    for command in commands:
-        package_name = command[command.index("--id") + 1] if "--id" in command else command[-1]
-        yield f"Installing {package_name}..."
-        returncode = await run_install_command(command, get_log_file("event"))
-        if returncode != 0:
-            executable_name = "llama-server" if package_name in {"ggml.llamacpp", "llama.cpp"} else "llama-swap"
-            if "--id" in command and _which_path(executable_name):
-                yield f"Existing {package_name} installation detected"
-                continue
-            raise RuntimeError(
-                f"Runtime installation failed for {package_name} "
-                f"(package manager exit code {returncode}; command: {json.dumps(command)})"
-            )
+    yield ", ".join(missing)
+    await install_pinned_components(missing)
     if not runtime_is_available():
-        raise RuntimeError("Runtime installation completed but executables were not found in PATH")
+        raise RuntimeError("Runtime installation completed but executables were not found")
     yield "Vyact native runtime ready"
 
 
@@ -472,31 +407,32 @@ def _read_owned_pid() -> int | None:
 
 def _is_llama_swap_process(pid: int) -> bool:
     try:
-        if os.name == "nt":
-            output = subprocess.check_output(
-                ["wmic", "process", "where", f"ProcessId={pid}", "get", "CommandLine", "/value"], text=True,
-            )
-        else:
-            output = subprocess.check_output(["ps", "-p", str(pid), "-o", "command="], text=True)
-    except (OSError, subprocess.SubprocessError):
+        command = psutil.Process(pid).cmdline()
+    except psutil.NoSuchProcess:
         return False
-    return "llama-swap" in output.lower()
+    except psutil.AccessDenied as error:
+        raise RuntimeError("Unable to inspect the existing Vyact runtime") from error
+    if not command or command[0].replace("\\", "/").rsplit("/", 1)[-1].lower() not in {"llama-swap", "llama-swap.exe"}:
+        return False
+    config = None
+    for index, argument in enumerate(command):
+        if argument in {"--config", "-config"} and index + 1 < len(command):
+            config = command[index + 1]
+        elif argument.startswith(("--config=", "-config=")):
+            config = argument.split("=", 1)[1]
+    return bool(config and os.path.normcase(os.path.abspath(config)) == os.path.normcase(os.path.abspath(VYACT_SWAP_CONFIG)))
 
 
 def _process_has_exited(pid: int) -> bool:
+    if _runtime_process is not None and _runtime_process.pid == pid:
+        return _runtime_process.poll() is not None
     try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
+        process = psutil.Process(pid)
+        return not process.is_running() or process.status() == psutil.STATUS_ZOMBIE
+    except psutil.NoSuchProcess:
         return True
-    if os.name != "nt":
-        try:
-            state = subprocess.check_output(
-                ["ps", "-p", str(pid), "-o", "state="], text=True,
-            ).strip().upper()
-            return state.startswith("Z")
-        except (OSError, subprocess.SubprocessError):
-            pass
-    return False
+    except psutil.AccessDenied as error:
+        raise RuntimeError("Unable to inspect the existing Vyact runtime") from error
 
 
 @protected("runtime")
@@ -523,11 +459,23 @@ def stop_runtime() -> None:
         VYACT_RUNTIME_PID_FILE.unlink(missing_ok=True)
         raise RuntimeError("Vyact runtime PID no longer refers to llama-swap")
     try:
-        if _runtime_process is not None and _runtime_process.pid == pid:
+        if os.name == "nt":
+            # Windows terminate does not cascade to llama-server children.
+            parent = psutil.Process(pid)
+            for child in reversed(parent.children(recursive=True)):
+                try:
+                    child.terminate()
+                    child.wait(timeout=10)
+                except psutil.NoSuchProcess:
+                    pass
+            parent.terminate()
+        elif _runtime_process is not None and _runtime_process.pid == pid:
             _runtime_process.terminate()
         else:
-            os.kill(pid, signal.SIGTERM)
-    except OSError as error:
+            psutil.Process(pid).terminate()
+    except psutil.NoSuchProcess:
+        pass
+    except (OSError, psutil.Error) as error:
         raise RuntimeError("Unable to stop the existing Vyact runtime") from error
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
@@ -544,6 +492,7 @@ def stop_runtime() -> None:
     raise RuntimeError("The existing Vyact runtime did not stop in time")
 
 
+@with_runtime_ports
 def start_single_model(
         model_path: Path, context_size: int, debug_logging: bool = False,
         cache_quantization: bool = True, enable_mtp: bool | None = None,
@@ -581,10 +530,14 @@ def start_single_model(
     mtp_model_path = get_cached_mtp_sidecar(model_path)
     vision_projector_path = get_cached_vision_projector(model_path)
     log_path = get_log_file("llama-swap")
+    log_start = 0
 
     @protected("runtime")
     def launch(acceleration: str | None) -> tuple[str, subprocess.Popen]:
+        nonlocal log_start
+        global _runtime_process
         stop_runtime()
+        log_start = log_path.stat().st_size if log_path.exists() else 0
         model_key = write_single_model_config(
             model_path, context_size, mtp_model_path if acceleration == "mtp" else None,
             vision_projector_path=vision_projector_path,
@@ -597,10 +550,11 @@ def start_single_model(
         VYACT_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
         with log_path.open("ab") as log_file:
             process = subprocess.Popen(
-                [str(paths.llama_swap), "--config", str(VYACT_SWAP_CONFIG), "--listen", f"127.0.0.1:{VYACT_RUNTIME_PORT}"],
+                [str(paths.llama_swap), "--config", str(VYACT_SWAP_CONFIG), "--listen", f"127.0.0.1:{get_runtime_port()}"],
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
+                env=runtime_environment(paths.llama_server or paths.llama_swap),
             )
         _runtime_process = process
         VYACT_RUNTIME_PID_FILE.write_text(str(process.pid), encoding="utf-8")
@@ -608,10 +562,10 @@ def start_single_model(
 
     def wait_until_loaded(model_key: str, process: subprocess.Popen) -> None:
         deadline = time.monotonic() + 120
-        health_url = f"http://127.0.0.1:{VYACT_RUNTIME_PORT}/upstream/{model_key}/health"
+        health_url = f"http://127.0.0.1:{get_runtime_port()}/upstream/{model_key}/health"
         while time.monotonic() < deadline:
             if process.poll() is not None:
-                raise runtime_startup_error("llama-swap stopped while loading the model", log_path)
+                raise runtime_startup_error("llama-swap stopped while loading the model", log_path, since=log_start)
             try:
                 with urllib.request.urlopen(health_url, timeout=2) as response:
                     if response.status == 200:
@@ -619,7 +573,7 @@ def start_single_model(
             except (OSError, urllib.error.URLError):
                 pass
             time.sleep(0.25)
-        raise runtime_startup_error("The model did not become ready within 120 seconds", log_path)
+        raise runtime_startup_error("The model did not become ready within 120 seconds", log_path, since=log_start)
 
     supports_mtp = mtp_model_path is not None or model_has_integrated_mtp(model_path)
     should_try_mtp = supports_mtp and enable_mtp is not False
@@ -635,7 +589,7 @@ def start_single_model(
         _active_mtp_model = relative_model if acceleration == "mtp" else None
     except RuntimeError as error:
         logger.exception("[llama] load failed model=%s acceleration=%s context=%s", model_path, acceleration, context_size)
-        if acceleration is None:
+        if acceleration is None or is_port_conflict(error):
             raise
         if runtime_status is not None and acceleration == "mtp":
             failure_code, failure_message = classify_runtime_load_failure(error)
@@ -691,7 +645,7 @@ def start_configured_runtime(
 
 def get_loaded_context_size(model_key: str, fallback: int) -> int:
     """Read llama.cpp's effective context after automatic fit adjustments."""
-    props_url = f"http://127.0.0.1:{VYACT_RUNTIME_PORT}/upstream/{quote(model_key, safe='')}/props"
+    props_url = f"http://127.0.0.1:{get_runtime_port()}/upstream/{quote(model_key, safe='')}/props"
     try:
         with urllib.request.urlopen(props_url, timeout=5) as response:
             props = json.load(response)
@@ -799,6 +753,8 @@ def write_single_model_config(
         command += " --spec-type draft-mtp --spec-draft-n-max 3"
     config = "\n".join([
         "# Generated by Vyact. Do not add models here: one model is kept resident.",
+        f"startPort: {get_model_port()}",
+        'logToStdout: "both"',
         "models:",
         f"  {json.dumps(model_key)}:",
         f"    cmd: {json.dumps(command)}",

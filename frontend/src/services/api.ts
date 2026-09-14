@@ -582,8 +582,9 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
     },
 
     async getRuntimeStartupStatus(): Promise<{
-        status: 'not_required' | 'check_failed' | 'update_available' | 'updating' | 'loading_model' | 'update_failed' | 'load_failed' | 'ready';
-        packages: Array<{name: string; installed: string; available: string}>;
+        status: 'migration_required' | 'migrating' | 'migration_failed' | 'not_required' | 'check_failed' | 'update_available' | 'updating' | 'loading_model' | 'update_failed' | 'load_failed' | 'ready';
+        operation?: 'migration';
+        packages: Array<{name: string; installed: string; available: string; direction?: 'upgrade' | 'downgrade' | 'change'}>;
         error_code?: 'model_insufficient_memory' | 'model_warmup_failed';
         model?: string;
     }> {

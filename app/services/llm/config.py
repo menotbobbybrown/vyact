@@ -3,6 +3,7 @@ services/llm/config.py — LLM provider 설정 · 상수 · 로깅
 
 provider config 조회, 모델명, 상호작용 로그 저장을 담당한다.
 """
+from services.runtime_ports import get_runtime_url
 import json
 from config.models import (
     DEFAULT_MODEL, LLM_TEMPERATURE, LLM_NUM_CTX, LLM_NUM_PREDICT, LLM_MAX_TOKENS, TOP_K, TOP_P,
@@ -65,7 +66,6 @@ async def get_provider_config() -> dict:
         if config:
             selected_type = config.get("type", "vyact")
             if selected_type == "vyact":
-                from services.vyact_runtime import VYACT_RUNTIME_URL
                 provider_config = config.get("vyact_config", {})
                 return {
                     # llama-swap fronts llama.cpp with an OpenAI-compatible API.
@@ -81,7 +81,7 @@ async def get_provider_config() -> dict:
                     "mtp_enabled": provider_config.get("mtp_enabled"),
                     "is_local": True,
                     "api_key": None,
-                    "base_url": provider_config.get("base_url", VYACT_RUNTIME_URL),
+                    "base_url": get_runtime_url(),
                     "headers": [],
                 }
             if selected_type.startswith("custom:"):
@@ -116,10 +116,9 @@ async def get_provider_config() -> dict:
     except Exception as e:
         logger.warning("[llm] get_provider_config 실패: %s", e)
 
-    from services.vyact_runtime import VYACT_RUNTIME_URL
     return {
         "type": "openai", "selection_type": "vyact", "connection_name": "Vyact",
-        "model": "", "api_key": None, "base_url": VYACT_RUNTIME_URL,
+        "model": "", "api_key": None, "base_url": get_runtime_url(),
         "headers": [], "runtime": "gguf", "is_local": True,
     }
 

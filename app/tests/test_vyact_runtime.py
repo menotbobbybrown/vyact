@@ -2,11 +2,12 @@ import asyncio
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
+from services import vyact_runtime
 from services.vyact_runtime import (
     RuntimePackageManagerMissingError, RuntimePaths, cache_downloaded_model,
-    get_native_install_commands, get_native_update_commands, install_missing_runtime,
+    install_missing_runtime,
     get_runtime_paths,
     delete_downloaded_model,
     initialize_downloaded_models_cache, list_downloaded_models, list_mtp_supported_models,
@@ -22,13 +23,26 @@ class VyactRuntimeTests(unittest.TestCase):
              patch("services.vyact_runtime.VYACT_RUNTIME_DIR", Path(root)), \
              patch("services.vyact_runtime._which_path", return_value=None), \
              patch("services.vyact_runtime._bundled_linux_executable", side_effect=bundled.get), \
-             patch("services.vyact_runtime.get_native_install_commands") as install_commands:
+             patch("services.vyact_runtime.install_pinned_components") as install_commands:
             paths = get_runtime_paths()
             self.assertEqual(paths.llama_server, bundled["llama-server"])
             async def install():
                 return [message async for message in install_missing_runtime()]
             asyncio.run(install())
             install_commands.assert_not_called()
+
+    def test_new_linux_bundle_takes_precedence_over_legacy_runtime_bin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "bin").mkdir()
+            (root / "bin" / "llama-server").touch()
+            (root / "bin" / "llama-swap").touch()
+            with patch("services.vyact_runtime.VYACT_RUNTIME_DIR", root), \
+                 patch("services.vyact_runtime.managed_executable", return_value=None), \
+                 patch("services.vyact_runtime._bundled_linux_executable", side_effect=lambda name: Path("/new-bundle") / name):
+                paths = get_runtime_paths()
+            self.assertEqual(paths.llama_server, Path("/new-bundle/llama-server"))
+            self.assertEqual(paths.llama_swap, Path("/new-bundle/llama-swap"))
 
     def test_runtime_rejects_mtp_with_kv_cache_quantization(self):
         with self.assertRaisesRegex(ValueError, "cannot be enabled together"):
@@ -127,28 +141,16 @@ class VyactRuntimeTests(unittest.TestCase):
                 self.assertEqual(list_mtp_supported_models(), [])
             inspect_model.assert_not_called()
 
-    def test_macos_installs_only_missing_component_with_brew(self):
-        paths = RuntimePaths(None, Path("/opt/homebrew/bin/llama-swap"), Path("/models"), Path("/config"))
-        with patch("services.vyact_runtime.get_runtime_paths", return_value=paths), \
-             patch("services.vyact_runtime.platform.system", return_value="Darwin"), \
-             patch("services.vyact_runtime.shutil.which", return_value="/opt/homebrew/bin/brew"):
-            self.assertEqual(get_native_install_commands(), [["/opt/homebrew/bin/brew", "install", "llama.cpp"]])
-
-    def test_macos_trusts_only_llama_swap_formula_before_install(self):
-        paths = RuntimePaths(Path("/opt/homebrew/bin/llama-server"), None, Path("/models"), Path("/config"))
-        with patch("services.vyact_runtime.get_runtime_paths", return_value=paths), \
-             patch("services.vyact_runtime.platform.system", return_value="Darwin"), \
-             patch("services.vyact_runtime.shutil.which", return_value="/opt/homebrew/bin/brew"):
-            self.assertEqual(get_native_install_commands(), [
-                ["/opt/homebrew/bin/brew", "trust", "--formula", "mostlygeek/llama-swap/llama-swap"],
-                ["/opt/homebrew/bin/brew", "tap", "mostlygeek/llama-swap"],
-                ["/opt/homebrew/bin/brew", "install", "mostlygeek/llama-swap/llama-swap"],
-            ])
-
-    def test_macos_runtime_updates_are_opt_in_through_brew(self):
-        with patch("services.vyact_runtime.platform.system", return_value="Darwin"), \
-             patch("services.vyact_runtime.shutil.which", return_value="/opt/homebrew/bin/brew"):
-            self.assertEqual(get_native_update_commands(), [["/opt/homebrew/bin/brew", "upgrade", "llama.cpp", "llama-swap"]])
+    def test_installs_only_missing_pinned_component(self):
+        async def consume():
+            return [message async for message in install_missing_runtime()]
+        paths = RuntimePaths(None, Path("/existing/llama-swap"), Path("/models"), Path("/config"))
+        with patch("services.vyact_runtime.managed_executable", side_effect=lambda name: paths.llama_swap if name == "llama-swap" else None), \
+             patch("services.vyact_runtime._bundled_linux_executable", return_value=None), \
+             patch("services.vyact_runtime.runtime_is_available", return_value=True), \
+             patch("services.vyact_runtime.install_pinned_components", new=AsyncMock()) as install:
+            asyncio.run(consume())
+        install.assert_awaited_once_with(["llama.cpp"])
 
     def test_finds_new_package_manager_outside_desktop_app_path(self):
         known_brew = Path("/opt/homebrew/bin/brew")
@@ -173,16 +175,6 @@ class VyactRuntimeTests(unittest.TestCase):
                 self.assertIn(executable, _known_executable_paths("llama-server"))
 
 
-    def test_missing_package_manager_stops_before_runtime_install(self):
-        async def consume_install_messages():
-            async for _message in install_missing_runtime():
-                pass
-
-        with patch("services.vyact_runtime.runtime_is_available", return_value=False), \
-             patch("services.vyact_runtime.get_native_install_commands", return_value=[]):
-            with self.assertRaises(RuntimePackageManagerMissingError):
-                asyncio.run(consume_install_messages())
-
     def test_start_single_model_uses_only_the_managed_swap_binary(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             base = Path(temp_dir)
@@ -206,6 +198,7 @@ class VyactRuntimeTests(unittest.TestCase):
                 popen.return_value.poll.return_value = None
                 urlopen.return_value.__enter__.return_value.status = 200
                 self.assertEqual(start_single_model(model, 8192), "vyact-model")
+                self.assertIs(vyact_runtime._runtime_process, popen.return_value)
             write_config.assert_called_once_with(
                 model, 8192, None, vision_projector_path=None, enable_mtp=False, debug_logging=False,
                 dflash2_model_path=None,

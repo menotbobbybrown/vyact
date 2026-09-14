@@ -1,4 +1,5 @@
 """Network-facing OpenAI-compatible gateway for the loopback-only model runtime."""
+from services.runtime_ports import get_runtime_url
 import hmac
 import json
 from collections.abc import AsyncIterator
@@ -8,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from services.model_benchmark import BenchmarkGuard
-from services.vyact_runtime import VYACT_RUNTIME_URL
+
 
 EXTERNAL_API_PORT = 11436
 EXTERNAL_API_BASE_PATH = "/v1"
@@ -83,7 +84,7 @@ async def proxy_model_api(path: str, request: Request):
         if name.lower() not in HOP_BY_HOP_HEADERS and name.lower() not in {"host", "authorization"}
     }
     client = httpx.AsyncClient(timeout=None)
-    upstream_url = f"{VYACT_RUNTIME_URL}/{path}"
+    upstream_url = f"{get_runtime_url()}/{path}"
     if request.url.query:
         upstream_url = f"{upstream_url}?{request.url.query}"
     upstream_request = client.build_request(request.method, upstream_url, headers=headers, content=body)

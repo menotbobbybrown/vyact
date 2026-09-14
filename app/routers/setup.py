@@ -1,6 +1,7 @@
 """
 routers/setup.py – 설치 / 모델 / Provider / 상태
 """
+from services.runtime_ports import get_runtime_url
 from services.shutdown_guard import create_install_process, protected
 from services.model_storage import download_operation, get_models_dir
 from services.log_viewer import stream_logs
@@ -46,6 +47,7 @@ from services.tts_settings import normalize_tts_rate
 from services.mcp_config import ensure_mcp_config
 from services.runtime_settings import DEFAULT_RUNTIME_SETTINGS, apply_runtime_settings, get_runtime_settings
 from services.runtime_startup import (
+    apply_pinned_runtime_updates,
     apply_startup_runtime_choice, get_startup_runtime_state, runtime_load_error_code,
     warm_loaded_vyact_model, persist_loaded_model_profile,
 )
@@ -55,7 +57,7 @@ from services.vyact_model_metadata_cache import get_cached_model_metadata, save_
 from services.mlx_runtime import get_downloaded_mlx_model_path, get_mlx_runtime_capabilities, is_apple_silicon, list_multimodal_supported_mlx_models
 from services.external_api_server import EXTERNAL_API_PORT, public_model_id
 from services.reasoning_capabilities import get_gguf_reasoning_capabilities, get_mlx_reasoning_capabilities
-from services.vyact_runtime import VYACT_RUNTIME_URL, get_downloaded_model_path, get_model_modalities, start_configured_runtime
+from services.vyact_runtime import get_downloaded_model_path, get_model_modalities, start_configured_runtime
 
 logger = get_logger(__name__)
 
@@ -912,26 +914,12 @@ async def install_vyact_runtime(include_omlx: bool = Query(False)):
 async def update_vyact_runtime():
     @protected("installation")
     async def stream():
-        from services.runtime_startup import get_runtime_update_commands
-
-        commands = get_runtime_update_commands(await load_config_async())
-        if not commands:
-            yield sse("패키지 관리자를 통한 런타임 업데이트를 지원하지 않는 환경입니다.", "error", 0)
+        try:
+            await apply_pinned_runtime_updates(await load_config_async())
+        except Exception as error:
+            logger.warning("[vyact] pinned runtime update failed: %s", error)
+            yield sse("Vyact 런타임 업데이트에 실패했습니다.", "error", 0)
             return
-        for command in commands:
-            process = await create_install_process(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            assert process.stdout is not None
-            async for raw in process.stdout:
-                line = raw.decode("utf-8", errors="replace").strip()
-                if line:
-                    yield sse(line, "log")
-            if await process.wait() != 0:
-                yield sse("Vyact 런타임 업데이트에 실패했습니다.", "error", 0)
-                return
         yield sse("Vyact 런타임 업데이트 완료", "ok", 100)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
@@ -953,7 +941,7 @@ async def get_vyact_external_api_status():
 
     def fetch_runtime_models() -> list[str]:
         try:
-            with urllib.request.urlopen(f"{VYACT_RUNTIME_URL}/models", timeout=2) as response:
+            with urllib.request.urlopen(f"{get_runtime_url()}/models", timeout=2) as response:
                 payload = json.load(response)
         except (OSError, ValueError, urllib.error.URLError):
             return []

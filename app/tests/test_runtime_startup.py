@@ -6,6 +6,85 @@ from services import runtime_startup
 
 
 class RuntimeStartupTests(unittest.TestCase):
+    def test_matching_runtime_versions_do_not_offer_update(self):
+        config = {"type": "vyact", "vyact_config": {"model_path": "model.gguf"}}
+        with patch.object(runtime_startup, "migration_packages", return_value=[]), \
+             patch.object(runtime_startup, "pinned_updates", return_value=[]):
+            self.assertEqual(asyncio.run(runtime_startup.detect_native_runtime_updates(config))["status"], "not_required")
+
+    def test_migration_is_offered_without_review_and_waits_for_consent(self):
+        packages = [{"name": "llama.cpp", "installed": "", "available": "b10809"}]
+        with patch.object(runtime_startup, "migration_packages", return_value=packages), \
+             patch.object(runtime_startup, "pinned_updates") as review, \
+             patch.object(runtime_startup, "install_pinned_components", new=AsyncMock()) as install:
+            status = asyncio.run(runtime_startup.detect_native_runtime_updates({}))
+        self.assertEqual(status["status"], "migration_required")
+        self.assertEqual(status["operation"], "migration")
+        review.assert_not_called()
+        install.assert_not_awaited()
+
+    def test_migration_acceptance_installs_then_loads_and_warms(self):
+        events = []
+        async def install(components): events.append(("install", components))
+        async def load():
+            events.append(("load", []))
+            return "model", "ko"
+        packages = [{"name": "llama.cpp", "installed": "", "available": "b10809"}]
+        with patch.object(runtime_startup, "_startup_state", {"status": "migration_required", "operation": "migration"}), \
+             patch.object(runtime_startup, "load_config_async", new=AsyncMock(return_value={})), \
+             patch.object(runtime_startup, "migration_packages", return_value=packages), \
+             patch.object(runtime_startup, "install_pinned_components", side_effect=install), \
+             patch.object(runtime_startup, "apply_pinned_runtime_updates", new=AsyncMock()) as review, \
+             patch.object(runtime_startup, "load_configured_vyact_model", side_effect=load), \
+             patch.object(runtime_startup, "warm_loaded_vyact_model", new=AsyncMock()) as warm:
+            asyncio.run(runtime_startup.apply_startup_runtime_choice(True))
+            self.assertEqual(runtime_startup.get_startup_runtime_state()["status"], "ready")
+        self.assertEqual(events, [("install", ["llama.cpp"]), ("load", [])])
+        review.assert_not_awaited()
+        warm.assert_awaited_once_with("model", "ko")
+
+    def test_migration_failure_remains_retryable_without_loading_model(self):
+        with patch.object(runtime_startup, "_startup_state", {"status": "migration_required", "operation": "migration"}), \
+             patch.object(runtime_startup, "load_config_async", new=AsyncMock(return_value={})), \
+             patch.object(runtime_startup, "migration_packages", return_value=[{"name": "llama.cpp"}]), \
+             patch.object(runtime_startup, "install_pinned_components", new=AsyncMock(side_effect=RuntimeError("download failed"))), \
+             patch.object(runtime_startup, "load_configured_vyact_model", new=AsyncMock()) as load:
+            with self.assertRaisesRegex(RuntimeError, "download failed"):
+                asyncio.run(runtime_startup.apply_startup_runtime_choice(True))
+            self.assertEqual(runtime_startup.get_startup_runtime_state()["status"], "migration_failed")
+            self.assertEqual(runtime_startup.get_startup_runtime_state()["operation"], "migration")
+        load.assert_not_awaited()
+
+    def test_declining_migration_uses_existing_runtime_without_download(self):
+        with patch.object(runtime_startup, "_startup_state", {"status": "migration_required", "operation": "migration"}), \
+             patch.object(runtime_startup, "install_pinned_components", new=AsyncMock()) as install, \
+             patch.object(runtime_startup, "load_configured_vyact_model", new=AsyncMock(return_value=("model", "en"))), \
+             patch.object(runtime_startup, "warm_loaded_vyact_model", new=AsyncMock()):
+            asyncio.run(runtime_startup.apply_startup_runtime_choice(False))
+        install.assert_not_awaited()
+
+    def test_new_pin_prompts_and_installs_only_after_acceptance(self):
+        packages = [{"name": "llama.cpp", "installed": "b1", "available": "b2"}]
+        config = {"type": "vyact", "vyact_config": {"model_path": "model.gguf"}}
+        with patch.object(runtime_startup, "migration_packages", return_value=[]), \
+             patch.object(runtime_startup, "pinned_updates", return_value=packages), \
+             patch.object(runtime_startup, "load_config_async", new=AsyncMock(return_value=config)), \
+             patch.object(runtime_startup, "install_pinned_components", new=AsyncMock()) as install, \
+             patch.object(runtime_startup, "load_configured_vyact_model", new=AsyncMock(return_value=("model", "en"))), \
+             patch.object(runtime_startup, "warm_loaded_vyact_model", new=AsyncMock()):
+            status = asyncio.run(runtime_startup.detect_native_runtime_updates(config))
+            self.assertEqual(status["status"], "update_available")
+            install.assert_not_awaited()
+            asyncio.run(runtime_startup.apply_startup_runtime_choice(True))
+        install.assert_awaited_once_with(["llama.cpp"])
+
+    def test_direct_update_rechecks_target_before_installing(self):
+        with patch.object(runtime_startup, "pinned_updates", return_value=[]), \
+             patch.object(runtime_startup, "install_pinned_components", new=AsyncMock()) as install:
+            with self.assertRaisesRegex(RuntimeError, "No pinned"):
+                asyncio.run(runtime_startup.apply_pinned_runtime_updates({}))
+        install.assert_not_awaited()
+
     def test_saved_seed_is_reapplied_when_local_model_is_restored(self):
         profile = runtime_startup.recommended_model_profile(
             "owner/model.gguf", "gguf", "owner/model", 32768,
@@ -83,7 +162,7 @@ class RuntimeStartupTests(unittest.TestCase):
                 "type": "vyact", "vyact_config": {"runtime": "mlx", "model_path": "mlx/model"},
             }),
         ), patch.object(
-            runtime_startup, "get_runtime_update_commands", return_value=[],
+            runtime_startup, "pinned_updates", return_value=[],
         ), patch.object(
             runtime_startup, "load_configured_vyact_model", new=load_model,
         ), patch.object(

@@ -1,8 +1,8 @@
 """Shared oMLX runtime and per-request policy constants."""
+from services.pinned_runtime import omlx_executable
 
 import json
 import logging
-import shutil
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -70,7 +70,7 @@ def _omlx_python_executable(executable: Path) -> str | None:
 def refresh_external_mtp_capabilities(force: bool = False) -> tuple[tuple[tuple[str, ...], str], ...]:
     """Read External MTP drafter types from the installed oMLX environment."""
     global _external_mtp_target_draft_types, _omlx_capability_signature
-    executable_name = shutil.which("omlx")
+    executable_name = omlx_executable()
     if not executable_name:
         _external_mtp_target_draft_types = _DEFAULT_EXTERNAL_MTP_TARGET_DRAFT_TYPES
         _omlx_capability_signature = None

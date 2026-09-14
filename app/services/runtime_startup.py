@@ -1,13 +1,9 @@
 """Startup coordination for optional native runtime updates."""
 
-from services.shutdown_guard import create_install_process, protected
+from services.shutdown_guard import protected
 from services.omlx_policy import refresh_external_mtp_capabilities
 import asyncio
-import json
-import os
-import platform
 from datetime import datetime, timezone
-from pathlib import Path
 
 import httpx
 
@@ -22,7 +18,8 @@ from services.model_runtime_profiles import (
 )
 from services.runtime_settings import apply_runtime_settings
 from services.model_profile_defaults import hardware_model_profile
-from services.vyact_runtime import VYACT_RUNTIME_DIR, get_native_update_commands, get_runtime_paths, start_configured_runtime
+from services.vyact_runtime import start_configured_runtime
+from services.pinned_runtime import pinned_updates, install_pinned_components, migration_packages, runtime_components, reuse_pinned_components
 
 logger = get_logger(__name__)
 
@@ -46,34 +43,9 @@ def mark_runtime_load_failed(error: Exception, model_id: str) -> str:
     global _startup_state
     error_code = runtime_load_error_code(error)
     _startup_state = {
-        "status": "load_failed", "packages": [], "error_code": error_code, "model": model_id,
+        **_startup_state, "status": "load_failed", "error_code": error_code, "model": model_id,
     }
     return error_code
-
-
-def _uses_package_manager_runtime(config: dict) -> bool:
-    if config.get("type") != "vyact":
-        return False
-    vyact_config = config.get("vyact_config", {})
-    if not vyact_config.get("model_path"):
-        return False
-    if vyact_config.get("runtime", "gguf") == "mlx":
-        from services.mlx_runtime import is_apple_silicon
-        return is_apple_silicon()
-    managed_bin = VYACT_RUNTIME_DIR / "bin"
-    paths = get_runtime_paths()
-    return bool(
-        paths.llama_server and paths.llama_swap
-        and managed_bin not in Path(paths.llama_server).parents
-        and managed_bin not in Path(paths.llama_swap).parents
-    )
-
-
-def get_runtime_update_commands(config: dict) -> list[list[str]]:
-    if config.get("vyact_config", {}).get("runtime", "gguf") == "mlx":
-        from services.mlx_runtime import get_omlx_update_commands
-        return get_omlx_update_commands()
-    return get_native_update_commands()
 
 
 async def warm_loaded_vyact_model(
@@ -106,57 +78,18 @@ async def warm_loaded_vyact_model(
 
 
 async def detect_native_runtime_updates(config: dict) -> dict:
-    """Return package updates without modifying an installed runtime."""
+    """Offer initial managed migration before comparing release-pinned versions."""
     global _startup_state
-    if not _uses_package_manager_runtime(config):
-        _startup_state = {"status": "not_required", "packages": []}
+    if config.get("type") == "vyact" and config.get("vyact_config", {}).get("model_path"):
+        await reuse_pinned_components(runtime_components(config))
+    packages = migration_packages(config)
+    if packages:
+        _startup_state = {"status": "migration_required", "operation": "migration", "packages": packages}
         return get_startup_runtime_state()
-
-    if config.get("vyact_config", {}).get("runtime") == "mlx":
-        from services.omlx_policy import refresh_external_mtp_capabilities
-        await asyncio.to_thread(refresh_external_mtp_capabilities)
-
-    try:
-        if platform.system() in {"Darwin", "Linux"}:
-            commands = get_runtime_update_commands(config)
-            brew = next((command[0] for command in commands if command), "")
-            if not brew:
-                raise RuntimeError("Homebrew is unavailable")
-            formulae = ["omlx"] if config.get("vyact_config", {}).get("runtime") == "mlx" else ["llama.cpp", "llama-swap"]
-            process = await asyncio.create_subprocess_exec(
-                brew, "outdated", "--formula", "--json=v2", *formulae,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env={**os.environ, "HOMEBREW_NO_AUTO_UPDATE": "1"},
-            )
-            stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                raise RuntimeError(stderr.decode("utf-8", errors="replace").strip())
-            data = json.loads(stdout.decode("utf-8") or "{}")
-            packages = [
-                {
-                    "name": item.get("name", ""),
-                    "installed": ", ".join(item.get("installed_versions") or []),
-                    "available": item.get("current_version", ""),
-                }
-                for item in data.get("formulae", [])
-            ]
-        else:
-            # winget reports available upgrades through the upgrade command itself.
-            packages = []
-            for command in get_runtime_update_commands(config):
-                check_command = [*command, "--include-unknown"]
-                process = await asyncio.create_subprocess_exec(
-                    *check_command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-                )
-                stdout, _ = await process.communicate()
-                output = stdout.decode("utf-8", errors="replace")
-                if process.returncode == 0 and "No applicable upgrade found" not in output:
-                    packages.append({"name": command[command.index("--id") + 1], "installed": "", "available": ""})
-        _startup_state = {"status": "update_available" if packages else "not_required", "packages": packages}
-    except Exception as error:
-        logger.warning("[runtime_update] update check failed; continuing with current runtime: %s", error)
-        _startup_state = {"status": "check_failed", "packages": []}
+    if config.get("type") == "vyact" and config.get("vyact_config", {}).get("model_path"):
+        components = runtime_components(config)
+        packages = pinned_updates(components)
+    _startup_state = {"status": "update_available" if packages else "not_required", "packages": packages}
     return get_startup_runtime_state()
 
 
@@ -252,18 +185,34 @@ async def load_configured_vyact_model(config: dict | None = None) -> tuple[str, 
 
 
 @protected("installation")
-async def _apply_runtime_updates(config: dict) -> None:
+async def apply_pinned_runtime_updates(config: dict) -> None:
     global _startup_state
-    for command in get_runtime_update_commands(config):
-        process = await create_install_process(
-            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-        )
-        stdout, _ = await process.communicate()
-        if process.returncode != 0:
-            detail = stdout.decode("utf-8", errors="replace").strip().splitlines()
-            _startup_state = {**_startup_state, "status": "update_failed"}
-            raise RuntimeError(detail[-1] if detail else "Runtime update failed")
-    if config.get("vyact_config", {}).get("runtime") == "mlx":
+    components = runtime_components(config)
+    packages = pinned_updates(components)
+    if not packages:
+        raise RuntimeError("No pinned runtime update is available")
+    try:
+        await install_pinned_components([package["name"] for package in packages])
+    except Exception:
+        _startup_state = {**_startup_state, "status": "update_failed"}
+        raise
+    if "omlx" in components:
+        await asyncio.to_thread(refresh_external_mtp_capabilities, True)
+
+
+@protected("installation")
+async def apply_runtime_migration(config: dict) -> None:
+    global _startup_state
+    # Re-evaluate the filesystem on every retry; never reinstall completed work.
+    packages = migration_packages(config)
+    if not packages:
+        return
+    try:
+        await install_pinned_components([package["name"] for package in packages])
+    except Exception:
+        _startup_state = {**_startup_state, "status": "migration_failed", "operation": "migration"}
+        raise
+    if any(package["name"] == "omlx" for package in packages):
         await asyncio.to_thread(refresh_external_mtp_capabilities, True)
 
 
@@ -273,9 +222,13 @@ async def apply_startup_runtime_choice(update: bool) -> tuple[str, str]:
         if _startup_state.get("status") == "ready":
             return "", ""
         if update:
-            _startup_state = {**_startup_state, "status": "updating"}
+            migrating = _startup_state.get("operation") == "migration"
+            _startup_state = {**_startup_state, "status": "migrating" if migrating else "updating"}
             config = await load_config_async()
-            await _apply_runtime_updates(config)
+            if migrating:
+                await apply_runtime_migration(config)
+            else:
+                await apply_pinned_runtime_updates(config)
         _startup_state = {**_startup_state, "status": "loading_model"}
         result = await load_configured_vyact_model()
         try:

@@ -1,4 +1,5 @@
 """Model storage relocation jobs survive a closed modal or disconnected client."""
+from services.runtime_ports import get_runtime_url
 from services.shutdown_guard import protected
 import asyncio
 import json
@@ -15,7 +16,7 @@ from routers.deps import load_config_async, save_config_async
 from services import model_benchmark, model_storage
 from services.runtime_startup import get_startup_runtime_state, warm_loaded_vyact_model
 from services.vyact_runtime import (
-    VYACT_RUNTIME_URL, initialize_downloaded_models_cache,
+    initialize_downloaded_models_cache,
     start_configured_runtime, stop_all_vyact_runtimes,
 )
 
@@ -30,7 +31,7 @@ class StorageRequest(BaseModel):
 
 def _runtime_available() -> bool:
     try:
-        with urllib.request.urlopen(f"{VYACT_RUNTIME_URL}/models", timeout=2) as response:
+        with urllib.request.urlopen(f"{get_runtime_url()}/models", timeout=2) as response:
             return bool(json.load(response).get("data"))
     except (OSError, ValueError, urllib.error.URLError):
         return False

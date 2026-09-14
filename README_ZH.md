@@ -186,13 +186,13 @@ sudo apt install ./vyact_*_amd64.deb
 
 ### 首次启动前
 
-Vyact 内置 Python，并会为所选配置准备所需组件。macOS 上的 Homebrew 和 Windows 上的 `winget` 可帮助安装缺少的本地运行时依赖。Linux 软件包内置 CPU 运行时，也可使用已有的兼容 GPU 运行时。
+Vyact 内置 Python，并在专用文件夹中准备应用指定版本的模型运行时。macOS 和 Windows 会自动下载所需运行时，Linux 软件包内置 CPU 运行时。已有用户迁移到 Vyact 管理的运行时前会收到确认提示，运行时版本变更也需用户同意。已有的系统安装不会被修改。
 
 | 平台 | 核心应用要求 | 特定功能要求 |
 | --- | --- | --- |
-| macOS（Apple Silicon） | 无 | **本地 GGUF 模型**<br>• 推荐安装 [Homebrew](https://brew.sh/)，以便 Vyact 安装缺少的二进制程序；也可使用已有的兼容 `llama-server` 和 `llama-swap` 程序<br><br>**本地 MLX 模型**<br>• 推荐安装 [Homebrew](https://brew.sh/)，以便 Vyact 自动安装或更新 oMLX；也可使用已有的兼容 `omlx` 程序<br><br>**Elasticsearch**<br>• 原生模式无需外部依赖；容器模式可选用 Docker Desktop<br><br>**Kokoro TTS**<br>• 仅当 Vyact 需要安装 `espeak-ng` 时才需要 Homebrew |
-| Windows | 无 | **本地 GGUF 模型**<br>• 推荐使用 `winget`，以便 Vyact 安装缺少的二进制程序；也可使用已有的兼容 `llama-server` 和 `llama-swap` 程序<br><br>**Elasticsearch**<br>• 原生模式无需外部依赖；容器模式可选用 Docker Desktop<br><br>**Kokoro TTS**<br>• 仅当 Vyact 需要安装 `espeak-ng` 时才需要 `winget` |
-| Linux（x64） | 使用 glibc 2.35 或更新版本的 x86-64 桌面环境；DEB 软件包通过 APT 安装其声明的桌面库依赖 | **本地 GGUF 模型**<br>• 内置 CPU 运行时，无需 Homebrew<br><br>**Elasticsearch**<br>• 原生模式无需外部依赖；容器模式可选用 Docker<br><br>**浏览器与 Kokoro TTS 依赖**<br>• 缺少系统库或 `espeak-ng` 时，需要受支持的包管理器（`apt-get`、`dnf`、`zypper` 或 `pacman`）和桌面 PolicyKit 身份验证代理。Vyact 通过 `pkexec` 请求授权；若不可用，则仅尝试免密或已缓存的 `sudo` 授权。 |
+| macOS（Apple Silicon） | 无 | **本地 GGUF 模型**<br>• Vyact 自动下载并管理固定版本的运行时<br><br>**本地 MLX 模型**<br>• Vyact 在专用环境中安装 oMLX；需要 macOS 15 或更新版本及 Git<br><br>**Elasticsearch**<br>• 原生模式无需外部依赖；容器模式可选用 Docker Desktop<br><br>**Kokoro TTS**<br>• 仅当 Vyact 需要安装 `espeak-ng` 时才需要 Homebrew |
+| Windows | 无 | **本地 GGUF 模型**<br>• Vyact 自动下载并管理固定版本的运行时<br><br>**Elasticsearch**<br>• 原生模式无需外部依赖；容器模式可选用 Docker Desktop<br><br>**Kokoro TTS**<br>• 仅当 Vyact 需要安装 `espeak-ng` 时才需要 `winget` |
+| Linux（x64） | 使用 glibc 2.35 或更新版本的 x86-64 桌面环境；DEB 软件包通过 APT 安装其声明的桌面库依赖 | **本地 GGUF 模型**<br>• 内置 CPU 运行时<br><br>**Elasticsearch**<br>• 原生模式无需外部依赖；容器模式可选用 Docker<br><br>**浏览器与 Kokoro TTS 依赖**<br>• 缺少系统库或 `espeak-ng` 时，需要受支持的包管理器（`apt-get`、`dnf`、`zypper` 或 `pacman`）和桌面 PolicyKit 身份验证代理。Vyact 通过 `pkexec` 请求授权；若不可用，则仅尝试免密或已缓存的 `sudo` 授权。 |
 
 Docker 为可选项：Vyact 可以下载并运行受支持的原生 Elasticsearch 发行版，用于知识检索。只有所选功能缺少必要系统组件时，才需要使用包管理器。
 

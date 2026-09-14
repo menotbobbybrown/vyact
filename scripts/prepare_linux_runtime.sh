@@ -3,9 +3,20 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT_DIR="$ROOT_DIR/electron/linux-runtime"
-LLAMA_COMMIT=918bca552078be4b3437f93117f542ea39972f5f
-SWAP_VERSION=253
-SWAP_SHA256=91f4d0af56cd5471d0133d6f89db7a7db118a9cd6f8ecd2bbdffd50aa29e5eb6
+# Read the same immutable versions used by the desktop installer.
+readarray -t RUNTIME_PINS < <(python3 - "$ROOT_DIR/app/services/runtime_versions.json" <<'PINS'
+import json
+import sys
+with open(sys.argv[1]) as source:
+    manifest = json.load(source)
+print(manifest["llama.cpp"]["commit"])
+print(manifest["llama-swap"]["version"].removeprefix("v"))
+print(manifest["llama-swap"]["assets"]["Linux-x86_64"]["sha256"])
+PINS
+)
+LLAMA_COMMIT="${RUNTIME_PINS[0]}"
+SWAP_VERSION="${RUNTIME_PINS[1]}"
+SWAP_SHA256="${RUNTIME_PINS[2]}"
 
 [[ "$(uname -s)" == Linux && "$(uname -m)" == x86_64 ]] || exit 1
 for command in git cmake make cc c++ curl sha256sum tar; do
@@ -35,6 +46,7 @@ mkdir -p "$BUILD_DIR/swap"
 tar -xzf "$BUILD_DIR/swap.tar.gz" -C "$BUILD_DIR/swap"
 
 mkdir -p "$OUTPUT_DIR"
+cp "$ROOT_DIR/app/services/runtime_versions.json" "$OUTPUT_DIR/runtime-versions.json"
 install -m 755 "$BUILD_DIR/build/bin/llama-server" "$OUTPUT_DIR/llama-server"
 install -m 755 "$BUILD_DIR/swap/llama-swap" "$OUTPUT_DIR/llama-swap"
 cp "$BUILD_DIR/source/LICENSE" "$OUTPUT_DIR/llama.cpp-LICENSE"

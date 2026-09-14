@@ -1,4 +1,5 @@
 """Managed Apple Silicon MLX-VLM model downloads and OpenAI-compatible runtime."""
+from services.pinned_runtime import omlx_executable, managed_executable, install_pinned_components
 from services.shutdown_guard import create_install_process, protected, atomic_write_text, guard
 import asyncio
 import hashlib
@@ -33,7 +34,7 @@ from services.omlx_policy import (
     recommend_omlx_cache_sizes, recommend_omlx_memory_guard,
 )
 from services.runtime_error_details import classify_runtime_load_failure, runtime_startup_error
-from services.vyact_runtime import VYACT_RUNTIME_PORT
+from services.runtime_ports import get_runtime_port, is_port_conflict, with_runtime_ports
 
 MLX_RUNTIME_DIR = INSTALL_DIR / "runtime"
 MLX_RUNTIME_PID_FILE = MLX_RUNTIME_DIR / "omlx.pid"
@@ -80,35 +81,11 @@ def is_apple_silicon() -> bool:
 async def install_missing_omlx_runtime():
     if not is_apple_silicon():
         raise RuntimeError("oMLX requires Apple Silicon")
-    if shutil.which("omlx"):
+    if managed_executable("omlx"):
         yield "Existing oMLX installation detected"
         return
-    brew = shutil.which("brew")
-    if not brew:
-        from services.vyact_runtime import RuntimePackageManagerMissingError
-        raise RuntimePackageManagerMissingError("Homebrew is required to install oMLX")
-    for command in get_omlx_install_commands(brew):
-        process = await create_install_process(
-            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-        )
-        assert process.stdout is not None
-        async for raw in process.stdout:
-            yield raw.decode(errors="replace").rstrip()
-        if await process.wait() != 0:
-            raise RuntimeError(f"oMLX installation failed: {' '.join(command)}")
-
-
-def get_omlx_install_commands(brew: str) -> list[list[str]]:
-    return [
-        [brew, "tap", "jundot/omlx", "https://github.com/jundot/omlx"],
-        [brew, "trust", "--formula", "jundot/omlx/omlx"],
-        [brew, "install", "omlx"],
-    ]
-
-
-def get_omlx_update_commands() -> list[list[str]]:
-    brew = shutil.which("brew")
-    return [[brew, "upgrade", "omlx"]] if brew and shutil.which("omlx") else []
+    yield "oMLX"
+    await install_pinned_components(["omlx"])
 
 
 def _repository_path(repository: str) -> Path:
@@ -781,7 +758,7 @@ def _build_omlx_server_command(
         model_path: Path, context_size: int, enable_mtp: bool | None = None,
         debug_logging: bool = False,
 ) -> tuple[list[str], dict[str, str], str]:
-    executable = shutil.which("omlx")
+    executable = omlx_executable()
     if not executable:
         raise RuntimeError("oMLX is required to run MLX models")
     serving_model_id = model_path.name
@@ -822,7 +799,7 @@ def _build_omlx_server_command(
     memory_guard = recommend_omlx_memory_guard(total_memory_bytes)
     command = [
         executable, "serve", "--model-dir", str(get_mlx_models_dir()),
-        "--host", "127.0.0.1", "--port", str(VYACT_RUNTIME_PORT),
+        "--host", "127.0.0.1", "--port", str(get_runtime_port()),
         "--log-level", "debug" if debug_logging else "info",
         "--max-concurrent-requests", "1",
         "--memory-guard", memory_guard,
@@ -836,6 +813,7 @@ def _build_omlx_server_command(
     return command, environment, speculative_mode
 
 
+@with_runtime_ports
 def start_mlx_model(
         model_path: Path, context_size: int, debug_logging: bool = False,
         cache_quantization: bool = True, enable_mtp: bool | None = None,
@@ -853,6 +831,7 @@ def start_mlx_model(
         stop_mlx_runtime()
         MLX_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
         log_path = get_log_file("omlx")
+        log_start = log_path.stat().st_size if log_path.exists() else 0
         command, environment, speculative_mode = _build_omlx_server_command(
             model_path, context_size, enable_mtp, debug_logging,
         )
@@ -869,11 +848,11 @@ def start_mlx_model(
         _mlx_runtime_process = process
         MLX_RUNTIME_PID_FILE.write_text(str(process.pid), encoding="utf-8")
     deadline = time.monotonic() + 180
-    health_url = f"http://127.0.0.1:{VYACT_RUNTIME_PORT}/v1/models"
+    health_url = f"http://127.0.0.1:{get_runtime_port()}/v1/models"
     try:
         while time.monotonic() < deadline:
             if process.poll() is not None:
-                raise runtime_startup_error("oMLX stopped while loading the model", log_path)
+                raise runtime_startup_error("oMLX stopped while loading the model", log_path, since=log_start)
             try:
                 with urllib.request.urlopen(health_url, timeout=2) as response:
                     if response.status == 200:
@@ -894,10 +873,10 @@ def start_mlx_model(
             except (OSError, urllib.error.URLError):
                 pass
             time.sleep(0.25)
-        raise runtime_startup_error("The oMLX model did not become ready within 180 seconds", log_path)
+        raise runtime_startup_error("The oMLX model did not become ready within 180 seconds", log_path, since=log_start)
     except RuntimeError as error:
         logger.exception("[omlx] load failed model=%s context=%s speculative_mode=%s", model_path, context_size, speculative_mode)
-        if speculative_mode != "external_mtp" or enable_mtp is False:
+        if is_port_conflict(error) or speculative_mode != "external_mtp" or enable_mtp is False:
             raise
         if runtime_status is not None:
             failure_code, failure_message = classify_runtime_load_failure(error)

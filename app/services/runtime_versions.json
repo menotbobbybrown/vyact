@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "llama.cpp": {
+    "version": "b10809",
+    "release": "v0.4.0",
+    "commit": "5266f24da75dc449bd56cbed7addb9c8e4a6a73e",
+    "assets": {
+      "Darwin-arm64": {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-macos-arm64.tar.gz",
+        "sha256": "7d692df9e1e386e62f1c12b843903218041e6cd74c9415aa39a7ed3176f9eaa2"
+      },
+      "Darwin-x86_64": {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-macos-x64.tar.gz",
+        "sha256": "13b34aa8a5d87341a21065a83f54a8167e1aaa6fe0d66065de01632a1ed64be6"
+      },
+      "Linux-x86_64": {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-ubuntu-x64.tar.gz",
+        "sha256": "5e34434ddc6d03cd1584f403201aff0d4bd1a5793a72ff7e286532dfd1e4b941"
+      },
+      "Linux-arm64": {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-ubuntu-arm64.tar.gz",
+        "sha256": "f2b7333971e1b7b42e9268bfdbfa30f5f56e2897156084d2251385df94aec358"
+      },
+      "Windows-x86_64": {
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-win-vulkan-x64.zip",
+        "sha256": "97e50b3ef0cdd2cb4d5afd446a9006b3496bee6c0d0ba7083d32f36075771870"
+      }
+    }
+  },
+  "llama-swap": {
+    "version": "v255",
+    "assets": {
+      "Darwin-arm64": {
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_darwin_arm64.tar.gz",
+        "sha256": "d11b4c733da1c64ffd1b955f64b6af92a8c66a443aeeafeef2e84d3bf1fbf531"
+      },
+      "Darwin-x86_64": {
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_darwin_amd64.tar.gz",
+        "sha256": "98383f95298919cd6a73fcb11dadc78d53754bfe5d3de519fdead112f336f707"
+      },
+      "Linux-x86_64": {
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_linux_amd64.tar.gz",
+        "sha256": "84aa0df0cf3e302a8591e39de347f64c0c7dce1c3a948df68723a82e1fb4f1d4"
+      },
+      "Linux-arm64": {
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_linux_arm64.tar.gz",
+        "sha256": "98686bc626e2d3df3b340b963fd4e4f4d3dd02dcd1bf31f0c777fb09e3053288"
+      },
+      "Windows-x86_64": {
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_windows_amd64.zip",
+        "sha256": "14b40b2e11479af9a83dec3ac2bf7f82864e62099f012b171591b871b9f88aae"
+      }
+    }
+  },
+  "omlx": {
+    "version": "v0.6.4",
+    "assets": {
+      "311": {
+        "url": "https://github.com/jundot/omlx/releases/download/v0.6.4/omlx-0.6.4-cp311-cp311-macosx_15_0_universal2.whl",
+        "sha256": "26213a3962010367356a5a1954e0912b1d04752f563fe29c249a5ab510c02d4c"
+      },
+      "312": {
+        "url": "https://github.com/jundot/omlx/releases/download/v0.6.4/omlx-0.6.4-cp312-cp312-macosx_15_0_universal2.whl",
+        "sha256": "f13d92900bf6c7e925e9a6d5525b4465c615c404ee796d328ffc5d4d379ddb0b"
+      },
+      "313": {
+        "url": "https://github.com/jundot/omlx/releases/download/v0.6.4/omlx-0.6.4-cp313-cp313-macosx_15_0_universal2.whl",
+        "sha256": "7af057b3e18f5afe718babcd4374d6e50169e82d7b35302143e3d8f257aaaa21"
+      }
+    }
+  },
+  "linux_dependencies": {
+    "Linux-x86_64": {
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-10/libgomp1_10.5.0-1ubuntu1~20.04_amd64.deb",
+      "sha256": "1748606410f62d406588ff7c84ec6e0664cca48d7ecac0b539fecd51ac2219bd"
+    },
+    "Linux-arm64": {
+      "url": "https://ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-10/libgomp1_10.5.0-1ubuntu1~20.04_arm64.deb",
+      "sha256": "8d2c8b1cda22249a8deb105ee274d622315026f7394be31ddc94073c30b82378"
+    }
+  },
+  "linux_dependency_license": {
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-10/gcc-10-base_10.5.0-1ubuntu1~20.04_amd64.deb",
+    "sha256": "8fac06791057b1bba6178466e160bb3ec2a795297f10e88e34daf762572ed5c0"
+  }
+}

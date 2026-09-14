@@ -187,31 +187,17 @@ Vyact의 핵심은 **선택한 모델에 작업에 필요한 맥락을 전달하
 
 ### 로컬 모델 실행을 위한 준비
 
-#### Mac: 자동 런타임 설치를 위한 Homebrew 준비
+Vyact는 Python을 포함하며, 앱에서 지정한 고정 버전의 모델 런타임을 전용 폴더에 준비합니다. 기존 사용자는 Vyact 관리 런타임으로 전환하기 전에 안내를 받으며, 런타임 버전 변경도 사용자 동의 후 진행합니다. 기존 시스템에 설치된 프로그램은 그대로 유지합니다.
 
-Apple Silicon Mac에서 로컬 모델용 런타임을 자동으로 준비하려면 Homebrew 사용을 권장합니다. 필요한 런타임이 아직 없다면 터미널을 열고 아래 명령으로 먼저 설치하세요.
+- **Mac (Apple Silicon):** GGUF 런타임은 자동으로 다운로드합니다. MLX용 oMLX는 별도 환경에 설치하며, macOS 15 이상과 Git이 필요합니다.
+- **Windows:** GGUF 런타임을 자동으로 다운로드합니다.
+- **Linux:** 패키지에 CPU 런타임이 포함되어 있습니다.
 
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-설치 여부는 다음 명령으로 확인할 수 있습니다.
-
-```bash
-brew --version
-```
-
-#### Windows: winget 확인
-
-Windows에서 누락된 로컬 GGUF 런타임을 자동 설치할 때는 `winget` 사용을 권장합니다. 호환되는 런타임이 이미 설치되어 있다면 이를 사용할 수 있습니다.
-
-```powershell
-winget --version
-```
+모델 런타임 설치에는 Homebrew나 WinGet이 필요하지 않습니다. 다만 선택 기능인 **Kokoro TTS**에서 `espeak-ng`가 없으면 macOS에서는 Homebrew, Windows에서는 `winget`이 설치에 필요합니다.
 
 #### Linux: AppImage 또는 DEB 실행
 
-Linux x64는 glibc 2.35 이상의 데스크톱 환경이 필요합니다. CPU 런타임을 포함하며, 호환되는 GPU 런타임이 이미 설치되어 있다면 사용할 수 있습니다.
+Linux x64는 glibc 2.35 이상의 데스크톱 환경이 필요합니다.
 
 AppImage를 내려받은 폴더에서 실행합니다.
 

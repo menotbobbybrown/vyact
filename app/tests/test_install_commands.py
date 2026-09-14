@@ -3,7 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from services.install_commands import run_install_command
 from services.vyact_runtime import install_missing_runtime
@@ -30,13 +30,10 @@ class InstallCommandTests(unittest.TestCase):
                 asyncio.run(run_install_command([str(Path(directory) / "missing")], log_file))
             self.assertIn("FileNotFoundError", log_file.read_text())
 
-    def test_failed_brew_install_is_not_hidden_by_other_existing_binary(self):
+    def test_failed_pinned_install_is_not_hidden_by_existing_component(self):
         async def install():
             return [message async for message in install_missing_runtime()]
-
-        with patch("services.vyact_runtime.runtime_is_available", return_value=False), \
-             patch("services.vyact_runtime.get_native_install_commands", return_value=[["brew", "install", "llama.cpp"]]), \
-             patch("services.vyact_runtime.run_install_command", new=AsyncMock(return_value=1)), \
-             patch("services.vyact_runtime._which_path", return_value=Path("/bin/llama-swap")):
-            with self.assertRaisesRegex(RuntimeError, 'command:.*brew.*llama.cpp'):
+        with patch("services.vyact_runtime.managed_executable", return_value=None), \
+             patch("services.vyact_runtime.install_pinned_components", new=AsyncMock(side_effect=RuntimeError("checksum mismatch"))):
+            with self.assertRaisesRegex(RuntimeError, "checksum mismatch"):
                 asyncio.run(install())

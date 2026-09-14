@@ -1,4 +1,5 @@
 """Vyact local runtime chat prefix warm-up utilities."""
+from services.runtime_ports import get_runtime_url
 
 import time
 
@@ -8,7 +9,7 @@ from prompts import build_system_message
 from services.mcp_client import mcp_manager
 from services.runtime_settings import get_runtime_settings
 from services.user_profile import get_profile_text
-from services.vyact_runtime import VYACT_RUNTIME_URL
+
 
 from .config import logger
 from .tools import build_tool_directive
@@ -61,7 +62,7 @@ async def warm_vyact_chat_prefix(
         if tools:
             payload["tools"] = tools
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(f"{VYACT_RUNTIME_URL}/chat/completions", json=payload)
+            response = await client.post(f"{get_runtime_url()}/chat/completions", json=payload)
             response.raise_for_status()
         logger.info(
             "[llm_warmup] prefix_cache succeeded (model=%s, runtime=%s, language=%s, duration_ms=%d)",
@@ -99,7 +100,7 @@ async def warm_vyact_voice_prefix(model: str, language: str, system_prompt: str)
             ],
         }
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(f"{VYACT_RUNTIME_URL}/chat/completions", json=payload)
+            response = await client.post(f"{get_runtime_url()}/chat/completions", json=payload)
             response.raise_for_status()
         logger.info("[llm_warmup] Vyact voice prefix warmed (model=%s, language=%s)", model, language or "default")
         return True

@@ -327,7 +327,7 @@ async def lifespan(app: FastAPI):
             if cfg.get("type") == "vyact" and cfg.get("vyact_config", {}).get("model_path"):
                 vyact_config = cfg["vyact_config"]
                 update_state = await detect_native_runtime_updates(cfg)
-                if update_state["status"] != "update_available":
+                if update_state["status"] not in {"update_available", "migration_required"}:
                     logger.info("[startup-status] models")
                     logger.info("Loading Vyact local model: %s", vyact_config["model_path"])
                     vyact_warmup_model_id, vyact_warmup_language = await load_configured_vyact_model(cfg)

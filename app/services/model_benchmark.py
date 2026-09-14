@@ -1,4 +1,6 @@
 """Bounded benchmarks of user-visible model controls; never persist trial profiles."""
+from services.runtime_ports import get_runtime_url
+from services.pinned_runtime import omlx_executable
 from services import model_storage
 import asyncio
 import copy
@@ -6,7 +8,6 @@ import hashlib
 import json
 import math
 import platform
-import shutil
 import statistics
 import time
 import uuid
@@ -23,7 +24,7 @@ from services.hardware_info import get_settings_hardware_info
 from logger import get_logger
 from services.mlx_runtime import get_downloaded_mlx_model_path
 from services.model_runtime_profiles import build_model_profile_id, normalize_model_profile
-from services.vyact_runtime import VYACT_RUNTIME_URL, get_downloaded_model_path, get_runtime_paths, start_configured_runtime, stop_all_vyact_runtimes
+from services.vyact_runtime import get_downloaded_model_path, get_runtime_paths, start_configured_runtime, stop_all_vyact_runtimes
 
 INDEX = MODEL_BENCHMARK_RESULTS_INDEX
 VERSION = 2
@@ -78,7 +79,7 @@ def fingerprint(profile):
     model_path = (get_downloaded_mlx_model_path(profile["model_path"]) if profile["runtime"] == "mlx"
                   else get_downloaded_model_path(profile["model_path"]))
     model_files = sorted(model_path.glob("*")) if model_path.is_dir() else [model_path]
-    executable = shutil.which("omlx") if profile["runtime"] == "mlx" else get_runtime_paths().llama_server
+    executable = omlx_executable() if profile["runtime"] == "mlx" else get_runtime_paths().llama_server
     if executable:
         model_files.append(Path(executable))
     files = [(str(path), path.stat().st_size, path.stat().st_mtime_ns) for path in model_files if path.is_file()]
@@ -181,7 +182,7 @@ async def _stream_sample(client, model, profile, messages):
     first = None
     usage, timings = {}, {}
     finish = None
-    async with client.stream("POST", f"{VYACT_RUNTIME_URL}/chat/completions", json=body) as response:
+    async with client.stream("POST", f"{get_runtime_url()}/chat/completions", json=body) as response:
         response.raise_for_status()
         async for line in response.aiter_lines():
             if _stop.is_set():

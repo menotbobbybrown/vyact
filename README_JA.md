@@ -186,13 +186,13 @@ DEB のインストール後はアプリケーションメニューから **Vyac
 
 ### 初回起動の前に
 
-Vyact は Python を内蔵し、選んだ構成に必要なコンポーネントを準備します。macOS の Homebrew と Windows の `winget` は、不足するローカルランタイムの依存関係を導入するために使われます。Linux には CPU ランタイムが同梱され、既存の互換 GPU ランタイムも使用できます。
+Vyact は Python を内蔵し、アプリで指定したバージョンのモデルランタイムを専用フォルダーに準備します。macOS と Windows では必要なランタイムを自動ダウンロードし、Linux には CPU ランタイムを同梱しています。既存ユーザーには Vyact 管理のランタイムへの移行前に確認し、ランタイムのバージョン変更にも同意を求めます。システムに既存のプログラムは変更しません。
 
 | プラットフォーム | コアアプリの要件 | 機能別の要件 |
 | --- | --- | --- |
-| macOS (Apple Silicon) | なし | **ローカル GGUF**: 不足する実行ファイルの導入には [Homebrew](https://brew.sh/) を推奨。互換の `llama-server` と `llama-swap` も利用可能。<br><br>**ローカル MLX**: oMLX の自動導入・更新には Homebrew を推奨。互換の `omlx` も利用可能。<br><br>**Elasticsearch**: ネイティブモードは外部依存なし。コンテナーモードの Docker Desktop は任意。<br><br>**Kokoro TTS**: `espeak-ng` の導入が必要な場合のみ Homebrew が必要。 |
-| Windows | なし | **ローカル GGUF**: 不足する実行ファイルの導入には `winget` を推奨。互換の `llama-server` と `llama-swap` も利用可能。<br><br>**Elasticsearch**: ネイティブモードは外部依存なし。Docker Desktop は任意。<br><br>**Kokoro TTS**: `espeak-ng` の導入が必要な場合のみ `winget` が必要。 |
-| Linux (x64) | glibc 2.35 以降の x86-64 デスクトップ環境。DEB は必要なデスクトップライブラリーを APT で導入します。 | **ローカル GGUF**: CPU ランタイム同梱。Homebrew は不要。<br><br>**Elasticsearch**: ネイティブモードは外部依存なし。Docker は任意。<br><br>**ブラウザー・Kokoro TTS**: ライブラリーや `espeak-ng` が不足する場合、対応パッケージマネージャー（`apt-get`、`dnf`、`zypper`、`pacman`）とデスクトップの PolicyKit 認証エージェントが必要。Vyact は `pkexec` で認証を求め、利用できない場合はパスワード不要または認証済みの `sudo` のみ試行します。 |
+| macOS (Apple Silicon) | なし | **ローカル GGUF**: 指定バージョンのランタイムを Vyact が自動ダウンロードして管理。<br><br>**ローカル MLX**: oMLX を専用環境にインストール。macOS 15 以降と Git が必要。<br><br>**Elasticsearch**: ネイティブモードは外部依存なし。コンテナーモードの Docker Desktop は任意。<br><br>**Kokoro TTS**: `espeak-ng` の導入が必要な場合のみ Homebrew が必要。 |
+| Windows | なし | **ローカル GGUF**: 指定バージョンのランタイムを Vyact が自動ダウンロードして管理。<br><br>**Elasticsearch**: ネイティブモードは外部依存なし。Docker Desktop は任意。<br><br>**Kokoro TTS**: `espeak-ng` の導入が必要な場合のみ `winget` が必要。 |
+| Linux (x64) | glibc 2.35 以降の x86-64 デスクトップ環境。DEB は必要なデスクトップライブラリーを APT で導入します。 | **ローカル GGUF**: CPU ランタイム同梱。<br><br>**Elasticsearch**: ネイティブモードは外部依存なし。Docker は任意。<br><br>**ブラウザー・Kokoro TTS**: ライブラリーや `espeak-ng` が不足する場合、対応パッケージマネージャー（`apt-get`、`dnf`、`zypper`、`pacman`）とデスクトップの PolicyKit 認証エージェントが必要。Vyact は `pkexec` で認証を求め、利用できない場合はパスワード不要または認証済みの `sudo` のみ試行します。 |
 
 Docker は任意です。Vyact は知識検索用に対応するネイティブ Elasticsearch をダウンロードして実行できます。パッケージマネージャーは、選んだ機能に必要なシステムコンポーネントが不足している場合に使います。
 

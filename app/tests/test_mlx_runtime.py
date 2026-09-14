@@ -17,7 +17,6 @@ from services.mlx_runtime import (
     download_mlx_model,
     get_downloaded_mlx_model_path,
     get_mlx_downloaded_bytes,
-    get_omlx_install_commands,
     install_missing_omlx_runtime,
     list_downloaded_mlx_models,
     list_mtp_supported_mlx_models,
@@ -43,12 +42,14 @@ class MlxRuntimeTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "Apple Silicon"):
                 asyncio.run(collect_messages())
 
-    def test_omlx_install_trusts_formula_before_installing(self):
-        commands = get_omlx_install_commands("/opt/homebrew/bin/brew")
-        self.assertEqual(commands[1], [
-            "/opt/homebrew/bin/brew", "trust", "--formula", "jundot/omlx/omlx",
-        ])
-        self.assertEqual(commands[2], ["/opt/homebrew/bin/brew", "install", "omlx"])
+    def test_omlx_installs_pinned_package(self):
+        async def consume():
+            return [message async for message in install_missing_omlx_runtime()]
+        with patch("services.mlx_runtime.is_apple_silicon", return_value=True), \
+             patch("services.mlx_runtime.managed_executable", return_value=None), \
+             patch("services.mlx_runtime.install_pinned_components", new=AsyncMock()) as install:
+            asyncio.run(consume())
+        install.assert_awaited_once_with(["omlx"])
 
     def test_associates_bundled_dflash2_subdirectory(self):
         with tempfile.TemporaryDirectory() as temp_dir:

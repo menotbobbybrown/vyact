@@ -29,6 +29,10 @@ const App: React.FC = () => {
     const [runtimeUpdateAction, setRuntimeUpdateAction] = useState<'update' | 'skip' | null>(null);
     const [runtimeUpdateError, setRuntimeUpdateError] = useState('');
     const [runtimeLoadFailure, setRuntimeLoadFailure] = useState<Awaited<ReturnType<typeof api.getRuntimeStartupStatus>> | null>(null);
+    const runtimePromptPrefix = runtimeUpdate?.operation === 'migration'
+        ? 'runtimeMigration'
+        : runtimeUpdate?.packages.some(pkg => pkg.direction === 'downgrade')
+            ? 'runtimeDowngrade' : 'runtimeUpdate';
 
     useEffect(() => {
         checkStatus();
@@ -43,7 +47,7 @@ const App: React.FC = () => {
         void refreshGoogleWorkspaceStatus().catch(() => {});
         void initializeKnowledgeCollections();
         api.getRuntimeStartupStatus().then(status => {
-            if (status.status === 'update_available') setRuntimeUpdate(status);
+            if (['update_available', 'migration_required', 'migration_failed'].includes(status.status)) setRuntimeUpdate(status);
             if (status.status === 'load_failed') setRuntimeLoadFailure(status);
         }).catch(() => {});
     }, [isSetupComplete]);
@@ -112,6 +116,7 @@ const App: React.FC = () => {
     };
 
     const handleRuntimeUpdateChoice = async (choice: string) => {
+        if (runtimeUpdateAction !== null) return;
         const shouldUpdate = choice === 'update';
         setRuntimeUpdateAction(shouldUpdate ? 'update' : 'skip');
         setRuntimeUpdateError('');
@@ -122,7 +127,7 @@ const App: React.FC = () => {
             const message = error instanceof Error ? error.message : '';
             setRuntimeUpdateError(message.includes('model_insufficient_memory')
                 ? t('general.runtimeModelInsufficientMemoryDescription')
-                : message || t('general.runtimeUpdateFailed'));
+                : t(runtimeUpdate?.operation === 'migration' ? 'general.runtimeMigrationFailed' : 'general.runtimeUpdateFailed'));
         } finally {
             setRuntimeUpdateAction(null);
         }
@@ -158,19 +163,19 @@ const App: React.FC = () => {
             <ToastContainer/>
             <ShutdownNotice/>
             {runtimeUpdate && <ConfirmModal
-                title={t('general.runtimeUpdateTitle')}
-                description={runtimeUpdateError || t('general.runtimeUpdateDescription')}
+                title={t(`general.${runtimePromptPrefix}Title`)}
+                description={runtimeUpdateError || t(`general.${runtimePromptPrefix}Description`)}
                 details={runtimeUpdate.packages.map(pkg => pkg.installed && pkg.available
                     ? `${pkg.name}  ${pkg.installed} → ${pkg.available}`
-                    : pkg.name)}
+                    : `${pkg.name}${pkg.available ? `  ${pkg.available}` : ''}`)}
                 options={[
                     {value: 'skip', label: t('general.runtimeUpdateLater')},
-                    {value: 'update', label: t('general.runtimeUpdateNow'), variant: 'primary'},
+                    {value: 'update', label: t(`general.${runtimePromptPrefix}Now`), variant: 'primary'},
                 ]}
                 loading={runtimeUpdateAction !== null}
                 loadingValue={runtimeUpdateAction || undefined}
                 loadingLabel={t(runtimeUpdateAction === 'update'
-                    ? 'general.runtimeUpdatingAndLoading'
+                    ? (runtimeUpdate.operation === 'migration' ? 'general.runtimeMigratingAndLoading' : 'general.runtimeUpdatingAndLoading')
                     : 'general.runtimeLoadingModel')}
                 actionLayout="horizontal"
                 onSelect={choice => void handleRuntimeUpdateChoice(choice)}
