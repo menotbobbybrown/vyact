@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const {autoUpdater} = require("electron-updater");
 const platform = require("./platform");
 const {persistPythonRuntime, isPythonRuntimeUsable} = require("./python-runtime");
-const {startDockerElasticsearch, logElasticsearchDiagnostics} = require("./elasticsearch-startup");
+const {logElasticsearchDiagnostics} = require("./elasticsearch-startup");
 
 // ── 기본 경로 ─────────────────────────────
 const INSTALL_DIR = platform.installDir;
@@ -25,6 +25,7 @@ const BUNDLED_PYTHON = platform.bundledPython(process.resourcesPath, app.isPacka
 const LOGS_DIR = path.join(INSTALL_DIR, "logs");
 const SERVER_PORT = 8000;
 const ES_PORT = Number(process.env.ES_PORT || 9251);
+const ES_SESSION = crypto.randomUUID();
 const AUTO_START_DELAY_SECONDS = 15;
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/vyact/vyact/releases/latest";
 const GITHUB_RELEASES_URL = "https://github.com/vyact/vyact/releases";
@@ -40,6 +41,7 @@ let floatingBrowserView = null;
 let floatingBrowserOpen = false;
 let floatingBrowserBounds = {x: 640, y: 120, width: 540, height: 620, toolbarHeight: 52, footerHeight: 0};
 let serverProc = null;
+let elasticsearchStartPromise = null;
 let appUpdateState = {
     status: "idle",
     currentVersion: app.getVersion(),
@@ -423,7 +425,7 @@ function showElasticsearchUnavailableAndQuit() {
     const [title, message] = getElasticsearchStartupMessage();
     log("Elasticsearch was not ready before startup timeout");
     dialog.showErrorBox(title, message);
-    app.exit(1);
+    app.quit();
 }
 
 function showStartupError(error) {
@@ -490,53 +492,29 @@ function getChildProcessEnv() {
     return platform.childProcessEnv();
 }
 
-function isDockerRunning() {
-    log("Checking Docker (optional)...");
-
-    // Docker Desktop CLI 경로를 포함해야 앱에서 실행한 명령도 Docker를 찾을 수 있다.
-    const env = getDockerEnv();
-
-    try {
-        execSync("docker --version", {stdio: "pipe", env});
-    } catch {
-        log("Docker not installed; using native Elasticsearch");
-        return false;
-    }
-    try {
-        execSync("docker info", {stdio: "pipe", env});
-        log("Docker is running");
-        return true;
-    } catch {
-        log("Docker installed but not running; using native Elasticsearch");
-        return false;
-    }
+async function runElasticsearchLifecycle(action) {
+    const python = BUNDLED_PYTHON;
+    const output = await runCommand(python, [path.join(APP_RES, "services", "es_lifecycle.py"), action], {
+        env: {...getDockerEnv(), VYACT_ES_SESSION: ES_SESSION, ES_PORT: String(ES_PORT)},
+        timeout: 65000,
+    });
+    if (output.trim()) log(output.trim());
 }
 
-// ── Elasticsearch 설치 확인 및 자동 실행 ───
-function checkAndStartElasticsearch() {
-    return startDockerElasticsearch(getDockerEnv(), log);
-}
-
-// ── 모든 의존성 확인 ───────────────────────
-function checkAllDependencies() {
-    log("========================================");
-    log("Checking dependencies");
-    log("========================================");
-
-    const dockerOk = isDockerRunning();
-    if (!dockerOk) {
-        log("Docker not available; setup wizard will configure Elasticsearch");
+async function startElasticsearchForDesktop(timeoutMs = 90000) {
+    sendLoadingStatus(getStartupTranslation().elasticsearchStarting);
+    const startedAt = Date.now();
+    for (let attempt = 0; attempt < 30 && !isQuitting; attempt += 1) {
+        try {
+            await runElasticsearchLifecycle("start");
+            return;
+        } catch (error) {
+            if (error.exitCode !== 2 || attempt === 29 || Date.now() - startedAt >= timeoutMs) throw error;
+            log("Waiting for Docker to become available...");
+            sendLoadingStatus({template: getStartupTranslation().elasticsearchWaiting, startedAt});
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
     }
-
-    if (dockerOk) {
-        checkAndStartElasticsearch();
-    }
-
-    log("========================================");
-    log("Dependency check complete");
-    log("========================================");
-
-    return true; // Docker는 선택 사항 — 네이티브 ES로 대체 가능
 }
 
 // ── 서버 시작 ─────────────────────────────
@@ -557,7 +535,7 @@ function runCommand(command, args, options = {}) {
         child.stdout.on("data", captureOutput);
         child.stderr.on("data", captureOutput);
         child.on("error", reject);
-        child.on("close", code => code === 0 ? resolve(output) : reject(new Error(output || `Command failed (${code})`)));
+        child.on("close", code => code === 0 ? resolve(output) : reject(Object.assign(new Error(output || `Command failed (${code})`), {exitCode: code})));
     });
 }
 
@@ -741,6 +719,7 @@ async function startServer() {
         // 설치된 앱 번들은 읽기 전용일 수 있으므로 __pycache__를 만들지 않는다.
         PYTHONDONTWRITEBYTECODE: "1",
         VYACT_SYSTEM_LANGUAGE: app.getLocale(),
+        VYACT_ES_SESSION: ES_SESSION,
         VYACT_BROWSER_CONTROL_URL: `http://127.0.0.1:${browserControlPort}`,
         VYACT_BROWSER_CONTROL_TOKEN: BROWSER_CONTROL_TOKEN,
     };
@@ -939,7 +918,7 @@ function createWindow() {
 
 // waitForServer 완료 후 실제 앱 화면으로 전환. createWindow()에서 분리한 이유:
 // 의존성 확인/서버 기동이 끝나기 전부터 폴링을 시작하면 retry 예산을 헛되이 소모하므로,
-// checkAllDependencies()+startServer()가 끝난 뒤에 호출한다 (app.whenReady()에서 순서 제어).
+// ES 시작 및 startServer()가 끝난 뒤에 호출한다 (app.whenReady()에서 순서 제어).
 function waitForServerAndLoad() {
     return waitForServer()
         .then(() => {
@@ -1100,13 +1079,20 @@ if (hasSingleInstanceLock) app.whenReady().then(() => {
             // 로딩 화면이 한 번 그려진 다음에만 동기식 설치 작업을 시작한다.
             setTimeout(() => {
                 void (async () => {
-                    if (!checkAllDependencies()) {
-                        throw new Error("Bundled Python 3.12 runtime is missing or invalid");
+                    try {
+                        elasticsearchStartPromise = startElasticsearchForDesktop();
+                        await elasticsearchStartPromise;
+                        if (isQuitting) return;
+                    } catch (error) {
+                        log(`Elasticsearch startup failed: ${error.message}`);
+                        showElasticsearchUnavailableAndQuit();
+                        return;
                     }
                     if (fs.existsSync(path.join(INSTALL_DIR, ".setup_done")) && !await waitForElasticsearch()) {
                         showElasticsearchUnavailableAndQuit();
                         return;
                     }
+                    if (isQuitting) return;
                     await startBrowserControlServer();
                     await stopExistingServerBeforeDesktopStart();
                     await startServer();
@@ -1164,11 +1150,18 @@ async function stopLocalRuntimes(forceAfterMs = 45000) {
 }
 
 app.on("before-quit", async event => {
-    if (isQuitting || !serverProc || serverProc.killed) return;
+    if (isQuitting) return;
     event.preventDefault();
     isQuitting = true;
-    await stopLocalRuntimes();
-    app.quit();
+    try {
+        await elasticsearchStartPromise?.catch(() => {});
+        await stopLocalRuntimes();
+        await runElasticsearchLifecycle("stop");
+    } catch (error) {
+        log(`Elasticsearch shutdown warning: ${error.message}`);
+    } finally {
+        app.quit();
+    }
 });
 
 ipcMain.handle("get-log-path", () => getLogFile());
@@ -1240,7 +1233,12 @@ ipcMain.handle("install-app-update", async () => {
     updateAppUpdateState({status: "installing", error: undefined});
     log("Installing app update after local runtime shutdown...");
     isQuitting = true;
-    await stopLocalRuntimes(3000);
+    await stopLocalRuntimes();
+    try {
+        await runElasticsearchLifecycle("stop");
+    } catch (error) {
+        log(`Elasticsearch shutdown warning: ${error.message}`);
+    }
     autoUpdater.quitAndInstall(false, true);
     return true;
 });

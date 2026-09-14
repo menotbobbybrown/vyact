@@ -30,11 +30,11 @@ const ProjectMemoryModal = ({project, onClose}: ProjectMemoryModalProps) => {
     };
     const renderItems = (type: 'decision' | 'action_item', items: ProjectMemoryItem[]) => items.length ? (
         <div className="project-memory-modal__list">{items.map(item => (
-            <div className={`project-memory-modal__item${item.status === 'completed' ? ' completed' : ''}`} key={item.id}>
-                <button className="project-memory-modal__status" onClick={() => updateItem(type, item)} aria-label={t(item.status === 'completed' ? 'sidebar.projectMemory.markActive' : 'sidebar.projectMemory.markCompleted')}>
-                    {item.status === 'completed' ? <CheckCircle2 size={18}/> : <Circle size={18}/>} 
+            <div className={`project-memory-modal__item${item.status !== 'active' ? ' completed' : ''}`} key={item.id}>
+                <button className="project-memory-modal__status" disabled={item.status === 'superseded'} onClick={() => updateItem(type, item)} aria-label={t(item.status === 'superseded' ? 'sidebar.projectMemory.superseded' : item.status === 'completed' ? 'sidebar.projectMemory.markActive' : 'sidebar.projectMemory.markCompleted')}>
+                    {item.status !== 'active' ? <CheckCircle2 size={18}/> : <Circle size={18}/>}
                 </button>
-                <div><span>{item.text}</span>{(item.owner || item.due_date) && <small>{[item.owner, item.due_date].filter(Boolean).join(' · ')}</small>}</div>
+                <div><span>{item.text}</span>{item.status === 'superseded' && <small>{t('sidebar.projectMemory.superseded')}</small>}{(item.owner || item.due_date) && <small>{[item.owner, item.due_date].filter(Boolean).join(' · ')}</small>}</div>
                 <button className="project-memory-modal__delete" onClick={() => deleteItem(type, item.id)} aria-label={t('sidebar.projectMemory.delete')}><Trash2 size={15}/></button>
             </div>
         ))}</div>

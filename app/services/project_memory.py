@@ -38,10 +38,10 @@ def project_memory_prompt_view(memory: dict) -> dict:
     def compact(items: object) -> list[dict]:
         if not isinstance(items, list):
             return []
-        active = [item for item in items if isinstance(item, dict) and item.get("status") != "completed"]
+        active = [item for item in items if isinstance(item, dict) and item.get("status", "active") == "active"]
         completed = [item for item in items if isinstance(item, dict) and item.get("status") == "completed"][-10:]
         return [
-            {key: item.get(key, "") for key in ("text", "status", "owner", "due_date") if item.get(key)}
+            {key: item.get(key, "") for key in ("id", "text", "status", "owner", "due_date") if item.get(key)}
             for item in (active + completed)[-PROJECT_MEMORY_PROMPT_ITEM_LIMIT:]
         ]
     return {
@@ -89,7 +89,12 @@ def build_project_memory_instruction(memory: dict) -> str:
         "Put only newly confirmed items from this turn in decisions and action_items; use empty arrays when there are none. "
         "Include due_date as an ISO 8601 date and owner only when explicitly stated.\n"
         '<project_memory>{"summary":"...","decisions":["..."],'
-        '"action_items":[{"text":"...","owner":"","due_date":""}]}</project_memory>\n'
+        '"action_items":[{"text":"...","owner":"","due_date":""}],"updates":[]}</project_memory>\n'
+        "Only when the user explicitly replaces a decision or confirms a task is done, add an updates entry: "
+        '{"type":"decision","id":"existing ID","previous_text":"exact existing text","replacement":"new decision"} or '
+        '{"type":"action_item","id":"existing ID","previous_text":"exact existing text","status":"completed"}. '
+        "Use only active items shown above. If the target or intent is uncertain, omit the update. "
+        "Do not treat questions, proposals, or assistant suggestions as changes. Do not repeat replacements in decisions.\n"
         "Put no text other than JSON inside the tag."
     )
 
@@ -102,26 +107,76 @@ def _new_item(text: str, conv_id: str, **extra: str) -> dict:
     }
 
 
+def _apply_memory_updates(memory: dict, updates: object, conv_id: str) -> None:
+    """Apply explicit, unambiguous updates without deleting historical records."""
+    if not isinstance(updates, list):
+        return
+    visible = project_memory_prompt_view(memory)
+    for update in updates:
+        if not isinstance(update, dict):
+            continue
+        key = PROJECT_MEMORY_ITEM_TYPES.get(str(update.get("type", "")))
+        item_id = update.get("id")
+        previous_text = update.get("previous_text")
+        if not key or not isinstance(item_id, str) or not item_id or not isinstance(previous_text, str):
+            continue
+        # Conflicting or repeated instructions for one target are ambiguous.
+        if sum(isinstance(entry, dict) and entry.get("id") == item_id for entry in updates) != 1:
+            continue
+        if not any(item.get("id") == item_id for item in visible[key]):
+            continue
+        targets = [item for item in memory[key] if isinstance(item, dict) and item.get("id") == item_id]
+        if len(targets) != 1:
+            continue
+        target = targets[0]
+        if target.get("status", "active") != "active" or target.get("text") != previous_text:
+            continue
+        if key == "decisions":
+            replacement = update.get("replacement")
+            if not isinstance(replacement, str) or not replacement.strip():
+                continue
+            text = _normalize_text(replacement)
+            if text.casefold() == _normalize_text(previous_text).casefold():
+                continue
+            # Avoid merging unrelated decision histories or creating duplicate active decisions.
+            if any(isinstance(item, dict) and item.get("status", "active") == "active"
+                   and _normalize_text(item.get("text")).casefold() == text.casefold()
+                   for item in memory[key]):
+                continue
+            new_item = _new_item(text, conv_id, supersedes=item_id)
+            memory[key].append(new_item)
+            target.update(status="superseded", superseded_by=new_item["id"])
+        elif update.get("status") == "completed" and "replacement" not in update:
+            target["status"] = "completed"
+        else:
+            continue
+        target["updated_at"] = datetime.now(timezone.utc).isoformat()
+        target["updated_by_conv_id"] = conv_id
+
+
 async def merge_project_memory(project_id: str, conv_id: str, extracted: dict | None) -> None:
-    if not project_id or not extracted:
+    if not project_id or not isinstance(extracted, dict) or not extracted:
         return
     es = get_es()
     try:
         result = await es.get(index=PROJECTS_INDEX, id=project_id)
         source = result.get("_source", {})
         memory = {**empty_project_memory(), **(source.get("memory") or {})}
+        _apply_memory_updates(memory, extracted.get("updates"), conv_id)
         known = {
             _normalize_text(item.get("text")).casefold()
             for key in ("decisions", "action_items")
             for item in memory.get(key, []) if isinstance(item, dict)
         }
         for raw in extracted.get("decisions", []) if isinstance(extracted.get("decisions"), list) else []:
-            text = _normalize_text(raw)
+            text = _normalize_text(raw) if isinstance(raw, str) else ""
             if text and text.casefold() not in known:
                 memory["decisions"].append(_new_item(text, conv_id))
                 known.add(text.casefold())
         action_items = extracted.get("action_items", [])
         for raw in action_items if isinstance(action_items, list) else []:
+            if not isinstance(raw, (dict, str)):
+                continue
             data = raw if isinstance(raw, dict) else {"text": raw}
             text = _normalize_text(data.get("text"))
             if text and text.casefold() not in known:

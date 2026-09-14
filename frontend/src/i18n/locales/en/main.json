@@ -500,6 +500,7 @@
     "exportPdf": "Save PDF",
     "delete": "Delete",
     "projectMemory": {
+      "superseded": "Superseded",
       "title": "Project memory",
       "close": "Close",
       "loading": "Loading…",

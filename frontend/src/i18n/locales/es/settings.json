@@ -89,6 +89,7 @@
     "elasticsearchStartupTitle": "Error de conexión con Elasticsearch",
     "elasticsearchStartupMessage": "Vyact no pudo conectarse a Elasticsearch. Inicia Docker Desktop o Elasticsearch y reinicia Vyact.",
     "elasticsearchChecking": "Comprobando la conexión con Elasticsearch…",
+    "elasticsearchStarting": "Preparando Elasticsearch…",
     "elasticsearchWaiting": "Comprobando la conexión con Elasticsearch… ({{seconds}} s)",
     "preparingModels": "Preparando los modelos de IA…",
     "warmingUpChat": "Preparando el chat…",

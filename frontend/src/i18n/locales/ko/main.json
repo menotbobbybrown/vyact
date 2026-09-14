@@ -500,6 +500,7 @@
     "exportPdf": "PDF 저장",
     "delete": "삭제",
     "projectMemory": {
+      "superseded": "대체됨",
       "title": "프로젝트 메모리",
       "close": "닫기",
       "loading": "불러오는 중…",

@@ -500,6 +500,7 @@
     "exportPdf": "Enregistrer en PDF",
     "delete": "Supprimer",
     "projectMemory": {
+      "superseded": "Remplacée",
       "title": "Mémoire du projet",
       "close": "Fermer",
       "loading": "Chargement…",

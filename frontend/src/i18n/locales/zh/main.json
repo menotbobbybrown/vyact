@@ -500,6 +500,7 @@
     "exportPdf": "保存 PDF",
     "delete": "删除",
     "projectMemory": {
+      "superseded": "已被替代",
       "title": "项目记忆",
       "close": "关闭",
       "loading": "加载中…",

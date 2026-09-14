@@ -15,6 +15,7 @@ from logger import get_logger
 from config import KOKORO_CACHE_READY
 from services.linux_dependencies import chromium_dependencies_available, linux_package_install_command
 from services.install_commands import run_install_command
+from services.es_lifecycle import ElasticsearchLifecycle
 
 logger = get_logger(__name__)
 
@@ -424,12 +425,21 @@ print('kokoro all voices ready')
 
     async def start_elasticsearch(self) -> tuple[bool, str]:
         compose_file = self.app_dir / "docker-compose.yml"
+        lifecycle = ElasticsearchLifecycle(self.install_dir, os.environ.get("ES_PORT", "9251"))
+        previous = await asyncio.to_thread(lifecycle.docker_container)
 
         if await self._run(
             ["docker", "compose", "-f", str(compose_file), "up", "-d", "--build"],
             log=True
         ) != 0:
             return False, "Elasticsearch start failed"
+
+        container = await asyncio.to_thread(lifecycle.docker_container)
+        if container:
+            lifecycle.select("docker")
+            await asyncio.to_thread(lifecycle.migrate, {"mode": "docker"}, container)
+            if not previous or not previous["State"]["Running"]:
+                lifecycle.record_owner(mode="docker", id=container["Id"], started_at=container["State"]["StartedAt"])
 
         ready = False
         for _ in range(20):

@@ -89,6 +89,7 @@
     "elasticsearchStartupTitle": "เชื่อมต่อ Elasticsearch ไม่สำเร็จ",
     "elasticsearchStartupMessage": "Vyact ไม่สามารถเชื่อมต่อกับ Elasticsearch ได้ โปรดเปิด Docker Desktop หรือ Elasticsearch แล้วเริ่ม Vyact ใหม่",
     "elasticsearchChecking": "กำลังตรวจสอบการเชื่อมต่อ Elasticsearch…",
+    "elasticsearchStarting": "กำลังเตรียม Elasticsearch…",
     "elasticsearchWaiting": "กำลังตรวจสอบการเชื่อมต่อ Elasticsearch… ({{seconds}} วินาที)",
     "preparingModels": "กำลังเตรียมโมเดล AI…",
     "warmingUpChat": "กำลังเตรียมแชต…",

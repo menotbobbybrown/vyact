@@ -89,6 +89,7 @@
     "elasticsearchStartupTitle": "Elasticsearch 接続エラー",
     "elasticsearchStartupMessage": "Elasticsearch に接続できません。Docker Desktop または Elasticsearch を起動してから、Vyact を再起動してください。",
     "elasticsearchChecking": "Elasticsearch 接続を確認しています…",
+    "elasticsearchStarting": "Elasticsearch を準備しています…",
     "elasticsearchWaiting": "Elasticsearch 接続を確認しています… ({{seconds}}秒)",
     "preparingModels": "AIモデルを準備しています…",
     "warmingUpChat": "チャットを準備しています…",

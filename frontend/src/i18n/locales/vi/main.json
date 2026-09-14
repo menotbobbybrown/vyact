@@ -500,6 +500,7 @@
     "exportPdf": "Lưu PDF",
     "delete": "Xóa",
     "projectMemory": {
+      "superseded": "Đã được thay thế",
       "title": "Bộ nhớ dự án",
       "close": "Đóng",
       "loading": "Đang tải…",

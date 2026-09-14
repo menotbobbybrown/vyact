@@ -89,6 +89,7 @@
     "elasticsearchStartupTitle": "Elasticsearch 连接失败",
     "elasticsearchStartupMessage": "Vyact 无法连接到 Elasticsearch。请启动 Docker Desktop 或 Elasticsearch，然后重新启动 Vyact。",
     "elasticsearchChecking": "正在检查 Elasticsearch 连接…",
+    "elasticsearchStarting": "正在准备 Elasticsearch…",
     "elasticsearchWaiting": "正在检查 Elasticsearch 连接… ({{seconds}} 秒)",
     "preparingModels": "正在准备 AI 模型…",
     "warmingUpChat": "正在预热聊天…",

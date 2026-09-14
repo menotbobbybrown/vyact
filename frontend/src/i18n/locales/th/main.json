@@ -498,6 +498,7 @@
     "exportPdf": "บันทึกเป็น PDF",
     "delete": "ลบ",
     "projectMemory": {
+      "superseded": "ถูกแทนที่แล้ว",
       "title": "หน่วยความจำโปรเจกต์",
       "close": "ปิด",
       "loading": "กำลังโหลด…",

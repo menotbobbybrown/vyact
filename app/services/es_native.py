@@ -11,7 +11,7 @@ Docker가 보안정책(EDR·가상화 차단 등)에 막히는 환경을 위한 
   4. config/elasticsearch.yml 에 path.data/logs, security off, single-node, 포트 주입
   5. nori(한국어 분석기) 플러그인 설치
   6. 백그라운드 실행
-  7. 부팅 자동시작 등록 (Windows: 시작프로그램, macOS: LaunchAgent, Linux: XDG autostart)
+  7. Vyact 세션 소유권 기록 (로그인 자동실행 등록 없음)
   8. 포트 응답 대기
 
 각 단계는 (진행률, 메시지, level) 을 yield 한다.
@@ -31,6 +31,7 @@ import httpx
 from config import INSTALL_DIR
 from config.models import ES_VERSION, ES_DOWNLOAD_BASE, ES_ARTIFACTS
 from services.db import ES_PORT, ES_TRANSPORT_PORT
+from services.es_lifecycle import ElasticsearchLifecycle
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -149,79 +150,10 @@ def _extract(archive: Path, kind: str):
             t.extractall(INSTALL_DIR)
 
 
-def _register_autostart():
-    """부팅(로그인) 시 ES 자동 시작 등록. 권한 이슈 최소화."""
-    if platform.system() == "Windows":
-        # 시작프로그램 폴더에 콘솔창 없이 백그라운드 실행하는 .vbs 배치
-        startup = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / \
-                  "Start Menu" / "Programs" / "Startup"
-        startup.mkdir(parents=True, exist_ok=True)
-        bat = _es_binary()
-        vbs = startup / "vyact-elasticsearch.vbs"
-        # WScript.Shell 로 창 숨김(0) 실행
-        vbs.write_text(
-            'Set WshShell = CreateObject("WScript.Shell")\n'
-            f'WshShell.Run """{bat}""", 0, False\n',
-            encoding="utf-8",
-        )
-        return str(vbs)
-    if platform.system() == "Darwin":
-        # macOS: LaunchAgent plist
-        agents = Path.home() / "Library" / "LaunchAgents"
-        agents.mkdir(parents=True, exist_ok=True)
-        plist = agents / "com.vyact.elasticsearch.plist"
-        binary = _es_binary()
-        plist.write_text(
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
-            '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
-            '<plist version="1.0"><dict>\n'
-            '  <key>Label</key><string>com.vyact.elasticsearch</string>\n'
-            f'  <key>ProgramArguments</key><array><string>{binary}</string></array>\n'
-            '  <key>RunAtLoad</key><true/>\n'
-            '  <key>KeepAlive</key><false/>\n'
-            '</dict></plist>\n',
-            encoding="utf-8",
-        )
-        return str(plist)
-
-    # Linux: desktop-environment portable XDG autostart entry. Elasticsearch's
-    # own -d mode handles daemonization, so no systemd dependency is required.
-    autostart_dir = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "autostart"
-    autostart_dir.mkdir(parents=True, exist_ok=True)
-    desktop_file = autostart_dir / "vyact-elasticsearch.desktop"
-    desktop_file.write_text(
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        "Name=Vyact Elasticsearch\n"
-        f'Exec="{_es_binary()}" -d\n'
-        "Terminal=false\n"
-        "X-GNOME-Autostart-enabled=true\n",
-        encoding="utf-8",
-    )
-    os.chmod(desktop_file, 0o755)
-    return str(desktop_file)
-
-
 async def _start_es_background():
-    """ES를 백그라운드로 기동."""
-    binary = _es_binary()
-    if platform.system() == "Windows":
-        # 콘솔창 없이 실행
-        CREATE_NO_WINDOW = 0x08000000
-        await asyncio.create_subprocess_exec(
-            str(binary),
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-            creationflags=CREATE_NO_WINDOW,
-        )
-    else:
-        os.chmod(binary, 0o755)
-        await asyncio.create_subprocess_exec(
-            str(binary), "-d",  # -d: 데몬 모드
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
+    """Start ES under the desktop session; never register login autostart."""
+    lifecycle = ElasticsearchLifecycle(INSTALL_DIR, ES_PORT)
+    await asyncio.to_thread(lifecycle.start_native, ES_HOME)
 
 
 async def install_native_es() -> AsyncGenerator[tuple, None]:
@@ -302,15 +234,6 @@ async def install_native_es() -> AsyncGenerator[tuple, None]:
     except Exception as e:
         logger.error(f"분석기 설치 경고: {e}")
         yield (72, f"분석기 설치 경고: {e}", "info")
-
-    # 부팅 자동시작 등록
-    logger.info("부팅 시 자동 시작 등록 중...")
-    yield (80, "부팅 시 자동 시작 등록 중...", "info")
-    try:
-        _register_autostart()
-    except Exception as e:
-        logger.error(f"자동시작 등록 경고: {e}")
-        yield (80, f"자동시작 등록 경고: {e}", "info")
 
     # 기동
     logger.info("Elasticsearch 시작 중...")
