@@ -21,6 +21,7 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 from services.model_storage import get_models_dir
+from services.install_commands import run_install_command
 from config import INSTALL_DIR, get_log_file
 from logger import get_logger
 from services.hardware_info import GPU_SPLIT_DECIMAL_PLACES, get_local_hardware_info, validate_gpu_split_percentages
@@ -133,9 +134,11 @@ def get_native_install_commands() -> list[list[str]]:
         if not paths.llama_server:
             commands.append([str(brew_path), "install", "llama.cpp"])
         if not paths.llama_swap:
+            # tap validates formulae before returning; trust must precede it
+            # on Homebrew versions that reject untrusted third-party formulae.
             commands.extend([
-                [str(brew_path), "tap", "mostlygeek/llama-swap"],
                 [str(brew_path), "trust", "--formula", "mostlygeek/llama-swap/llama-swap"],
+                [str(brew_path), "tap", "mostlygeek/llama-swap"],
                 [str(brew_path), "install", "mostlygeek/llama-swap/llama-swap"],
             ])
         return commands
@@ -184,20 +187,15 @@ async def install_missing_runtime():
     for command in commands:
         package_name = command[command.index("--id") + 1] if "--id" in command else command[-1]
         yield f"Installing {package_name}..."
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        _stdout, _ = await process.communicate()
-        if process.returncode != 0:
-            executable_name = "llama-server" if package_name == "ggml.llamacpp" else "llama-swap"
-            if _which_path(executable_name):
+        returncode = await run_install_command(command, get_log_file("event"))
+        if returncode != 0:
+            executable_name = "llama-server" if package_name in {"ggml.llamacpp", "llama.cpp"} else "llama-swap"
+            if "--id" in command and _which_path(executable_name):
                 yield f"Existing {package_name} installation detected"
                 continue
             raise RuntimeError(
                 f"Runtime installation failed for {package_name} "
-                f"(package manager exit code {process.returncode})"
+                f"(package manager exit code {returncode}; command: {json.dumps(command)})"
             )
     if not runtime_is_available():
         raise RuntimeError("Runtime installation completed but executables were not found in PATH")

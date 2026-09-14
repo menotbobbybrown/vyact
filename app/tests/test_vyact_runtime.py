@@ -140,8 +140,8 @@ class VyactRuntimeTests(unittest.TestCase):
              patch("services.vyact_runtime.platform.system", return_value="Darwin"), \
              patch("services.vyact_runtime.shutil.which", return_value="/opt/homebrew/bin/brew"):
             self.assertEqual(get_native_install_commands(), [
-                ["/opt/homebrew/bin/brew", "tap", "mostlygeek/llama-swap"],
                 ["/opt/homebrew/bin/brew", "trust", "--formula", "mostlygeek/llama-swap/llama-swap"],
+                ["/opt/homebrew/bin/brew", "tap", "mostlygeek/llama-swap"],
                 ["/opt/homebrew/bin/brew", "install", "mostlygeek/llama-swap/llama-swap"],
             ])
 

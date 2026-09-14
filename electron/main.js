@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const {autoUpdater} = require("electron-updater");
 const platform = require("./platform");
 const {persistPythonRuntime, isPythonRuntimeUsable} = require("./python-runtime");
+const {startDockerElasticsearch, logElasticsearchDiagnostics} = require("./elasticsearch-startup");
 
 // ── 기본 경로 ─────────────────────────────
 const INSTALL_DIR = platform.installDir;
@@ -394,7 +395,7 @@ function isElasticsearchReady() {
     });
 }
 
-async function waitForElasticsearch(retries = 10, retryDelayMs = 3000) {
+async function waitForElasticsearch(retries = 30, retryDelayMs = 3000) {
     const startedAt = Date.now();
     for (let attempt = 1; attempt <= retries; attempt += 1) {
         if (await isElasticsearchReady()) {
@@ -418,6 +419,7 @@ async function waitForElasticsearch(retries = 10, retryDelayMs = 3000) {
 }
 
 function showElasticsearchUnavailableAndQuit() {
+    logElasticsearchDiagnostics(getDockerEnv(), log);
     const [title, message] = getElasticsearchStartupMessage();
     log("Elasticsearch was not ready before startup timeout");
     dialog.showErrorBox(title, message);
@@ -512,41 +514,7 @@ function isDockerRunning() {
 
 // ── Elasticsearch 설치 확인 및 자동 실행 ───
 function checkAndStartElasticsearch() {
-    log("Checking Elasticsearch...");
-    const env = getDockerEnv();
-
-    try {
-        // ES 컨테이너 존재 여부 확인
-        const containers = execSync(
-            "docker ps -a --filter name=elasticsearch --format '{{.Names}}'",
-            {encoding: "utf-8", env}
-        ).trim();
-
-        if (containers.includes("elasticsearch")) {
-            // 실행 상태 확인
-            const running = execSync(
-                "docker ps --filter name=elasticsearch --format '{{.Names}}'",
-                {encoding: "utf-8", env}
-            ).trim();
-
-            if (running.includes("elasticsearch")) {
-                log("Elasticsearch is running");
-                return true;
-            } else {
-                log("Starting Elasticsearch...");
-                execSync("docker start elasticsearch", {stdio: "inherit", env});
-                log("Elasticsearch started");
-                return true;
-            }
-        } else {
-            // 컨테이너 없음 — setup wizard에서 설치하므로 여기서는 건너뜀
-            log("Elasticsearch not installed; setup wizard will configure it");
-            return false;
-        }
-    } catch (e) {
-        log(`Elasticsearch check failed: ${e.message}`);
-        return false;
-    }
+    return startDockerElasticsearch(getDockerEnv(), log);
 }
 
 // ── 모든 의존성 확인 ───────────────────────

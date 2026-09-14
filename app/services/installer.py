@@ -14,6 +14,7 @@ from logger import get_logger
 
 from config import KOKORO_CACHE_READY
 from services.linux_dependencies import chromium_dependencies_available, linux_package_install_command
+from services.install_commands import run_install_command
 
 logger = get_logger(__name__)
 
@@ -60,22 +61,10 @@ class Installer:
         log: bool = False,
         env: dict[str, str] | None = None,
     ) -> int:
-        """명령 실행"""
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            cwd=str(self.install_dir),
-            env=env,
+        """Always retain diagnostics, including failures of prerequisite checks."""
+        return await run_install_command(
+            cmd, self.log_file, cwd=str(self.install_dir), env=env,
         )
-        if log:
-            with open(self.log_file, "a") as f:
-                async for line in proc.stdout:
-                    f.write(line.decode())
-        else:
-            await proc.communicate()
-        await proc.wait()
-        return proc.returncode
 
     async def check_docker(self) -> tuple[bool, str]:
         """Docker 확인"""
