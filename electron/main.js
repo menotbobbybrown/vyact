@@ -41,6 +41,7 @@ let floatingBrowserView = null;
 let floatingBrowserOpen = false;
 let floatingBrowserBounds = {x: 640, y: 120, width: 540, height: 620, toolbarHeight: 52, footerHeight: 0};
 let serverProc = null;
+let serverModuleLoadingCompletedAt = null;
 let elasticsearchStartPromise = null;
 let appUpdateState = {
     status: "idle",
@@ -729,7 +730,8 @@ async function startServer() {
     const finalPython = fs.existsSync(python) ? python : resolvePython();
     if (!finalPython) throw new Error("Bundled Python 3.12 runtime is missing");
     log(`Starting server: ${finalPython}`);
-    sendLoadingStatus(getStartupTranslation().waitingForServer);
+    serverModuleLoadingCompletedAt = null;
+    sendLoadingStatus(getStartupTranslation().startupPreparing);
 
     const pythonSpawnStartedAt = Date.now();
     serverProc = spawn(finalPython, ["-u", "main.py"], {
@@ -751,6 +753,10 @@ async function startServer() {
         pendingServerOutput[streamIndex] = flush ? "" : lines.pop();
         for (const line of lines.map(value => value.trim()).filter(Boolean)) {
             if (line.startsWith("[startup-timing]")) {
+                if (line.includes("stage=uvicorn.run ") && serverModuleLoadingCompletedAt === null) {
+                    serverModuleLoadingCompletedAt = Date.now();
+                    sendLoadingStatus(getStartupTranslation().waitingForServer);
+                }
                 // These early diagnostics predate Python's FileHandler.
                 log(line);
                 continue;
@@ -791,14 +797,18 @@ function waitForServer(retries = 180) {
     // 30초로는 부족해 첫 실행이 "서버 시작 실패"로 멈추는 문제가 있어 넉넉히 잡는다.
     return new Promise((resolve, reject) => {
         let count = 0;
+        let lastDisplayedWaitSeconds = 0;
         const retry = () => {
             count += 1;
             if (count >= retries) {
                 reject(new Error("Server failed to start"));
                 return;
             }
-            if (count === 1 || count % 5 === 0) {
-                sendLoadingLog(`⏳ Waiting for server... ${count}s elapsed`);
+            const waitSeconds = serverModuleLoadingCompletedAt === null
+                ? 0 : Math.floor((Date.now() - serverModuleLoadingCompletedAt) / 5000) * 5;
+            if (waitSeconds > lastDisplayedWaitSeconds) {
+                lastDisplayedWaitSeconds = waitSeconds;
+                sendLoadingLog(`⏳ Waiting for server... ${waitSeconds}s elapsed`);
             }
             setTimeout(check, 1000);
         };
