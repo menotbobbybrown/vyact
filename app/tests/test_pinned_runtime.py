@@ -162,3 +162,36 @@ class PinnedRuntimeTests(unittest.TestCase):
                 self.assertEqual(runtime.installed_runtime()["llama-swap"]["version"], "v255")
                 self.assertEqual(runtime.managed_executable("llama-swap").read_text(), "older runtime")
                 self.assertEqual(previous_binary.read_text(), "newer runtime")
+
+class CachedRuntimeTests(unittest.TestCase):
+    def test_retained_version_is_selected_only_after_successful_matching_probe(self):
+        for output, code, accepted in [(b'version: 10809', 0, True), (b'version: 108090', 0, False), (b'10809', 1, False)]:
+            with self.subTest(output=output, code=code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                executable = root / 'versions/llama.cpp-b10809-old/bin/llama-server'
+                executable.parent.mkdir(parents=True)
+                executable.write_text('fixture')
+                previous = {'llama.cpp': {'version': 'b10900', 'executable': 'new/llama-server'}}
+                (root / 'installed-versions.json').write_text(json.dumps(previous))
+                process = AsyncMock()
+                process.returncode = code
+                process.communicate.return_value = (output, None)
+                with patch.object(runtime, 'RUNTIME_ROOT', root), \
+                     patch.object(runtime.platform, 'system', return_value='Darwin'), \
+                     patch.object(runtime.asyncio, 'create_subprocess_exec', return_value=process), \
+                     patch.object(runtime, '_download', new=AsyncMock()) as download:
+                    asyncio.run(runtime.reuse_pinned_components(['llama.cpp']))
+                    record = json.loads((root / 'installed-versions.json').read_text())['llama.cpp']
+                    self.assertEqual(record['version'], 'b10809' if accepted else 'b10900')
+                    download.assert_not_called()
+                    self.assertTrue(executable.exists())
+
+    def test_install_reuses_cached_version_without_download(self):
+        with tempfile.TemporaryDirectory() as directory:
+            record = {'version': 'b10809', 'executable': 'versions/cached/llama-server'}
+            with patch.object(runtime, 'RUNTIME_ROOT', Path(directory)), \
+                 patch.object(runtime, '_cached_runtime', new=AsyncMock(return_value=record)), \
+                 patch.object(runtime, '_download', new=AsyncMock()) as download:
+                asyncio.run(runtime.install_pinned_components(['llama.cpp']))
+                download.assert_not_called()
+                self.assertEqual(json.loads((Path(directory) / 'installed-versions.json').read_text())['llama.cpp'], record)

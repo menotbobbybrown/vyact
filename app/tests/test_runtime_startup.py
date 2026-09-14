@@ -6,6 +6,25 @@ from services import runtime_startup
 
 
 class RuntimeStartupTests(unittest.TestCase):
+    def setUp(self):
+        reuse_patch = patch.object(runtime_startup, "reuse_pinned_components", new=AsyncMock())
+        self.reuse = reuse_patch.start()
+        self.addCleanup(reuse_patch.stop)
+
+    def test_cached_selection_precedes_prompt_detection(self):
+        events = []
+        async def reuse(components):
+            events.append("reuse")
+        self.reuse.side_effect = reuse
+        def updates(components):
+            self.assertEqual(events, ["reuse"])
+            return []
+        config = {"type": "vyact", "vyact_config": {"model_path": "model.gguf"}}
+        with patch.object(runtime_startup, "migration_packages", return_value=[]), \
+             patch.object(runtime_startup, "pinned_updates", side_effect=updates):
+            status = asyncio.run(runtime_startup.detect_native_runtime_updates(config))
+        self.assertEqual(status["status"], "not_required")
+
     def test_matching_runtime_versions_do_not_offer_update(self):
         config = {"type": "vyact", "vyact_config": {"model_path": "model.gguf"}}
         with patch.object(runtime_startup, "migration_packages", return_value=[]), \
