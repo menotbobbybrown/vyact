@@ -39,7 +39,7 @@ class HuggingFaceModelTests(unittest.TestCase):
             executable = Path(temp_dir) / "omlx"
             executable.write_text("#!/runtime/python\n")
             discovered = '["deepseek_v4_mtp", "gemma4_assistant", "gemma4_unified_assistant", "qwen3_5_mtp"]\n'
-            with patch("services.omlx_policy.shutil.which", return_value=str(executable)), \
+            with patch("services.omlx_policy.omlx_executable", return_value=str(executable)), \
                  patch("services.omlx_policy._omlx_python_executable", return_value="/runtime/python"), \
                  patch("services.omlx_policy.subprocess.run", return_value=SimpleNamespace(stdout=discovered)), \
                  patch.object(omlx_policy, "_omlx_capability_signature", None), \

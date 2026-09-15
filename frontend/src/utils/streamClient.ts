@@ -1,6 +1,8 @@
 import { ApiError, translateBackendError } from './apiError';
 import i18n from '../i18n';
 
+const PAINT_FALLBACK_MS = 50;
+
 // streamClient.ts – 백엔드 토큰 SSE 엔드포인트 파서
 //
 // 서버는 event: token|meta|done|error 형식의 SSE 프레임을 흘려보낸다.
@@ -83,33 +85,52 @@ export async function streamSSE(
         return event;
     };
 
-    const waitForPaint = () => new Promise<void>(resolve => {
-        requestAnimationFrame(() => resolve());
+    const waitForPaint = () => new Promise<void>((resolve, reject) => {
+        signal?.throwIfAborted();
+        const cleanup = () => {
+            cancelAnimationFrame(frameId);
+            clearTimeout(timeoutId);
+            signal?.removeEventListener('abort', onAbort);
+        };
+        const finish = () => { cleanup(); resolve(); };
+        const onAbort = () => { cleanup(); reject(signal?.reason); };
+        const frameId = requestAnimationFrame(finish);
+        // Hidden windows may stop painting; network processing must still continue.
+        const timeoutId = setTimeout(finish, PAINT_FALLBACK_MS);
+        signal?.addEventListener('abort', onAbort, {once: true});
     });
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+    try {
+        while (true) {
+            signal?.throwIfAborted();
+            const { done, value } = await reader.read();
+            signal?.throwIfAborted();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
 
-        let sepIdx: number;
-        // 완성된 프레임(\n\n 경계)만 처리하고 나머지는 버퍼에 남긴다.
-        while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
-            const frame = buffer.slice(0, sepIdx);
-            buffer = buffer.slice(sepIdx + 2);
-            if (frame.trim()) {
-                const event = dispatchFrame(frame);
-                // 한 네트워크 청크에 여러 token 프레임이 함께 도착하면 React가 상태
-                // 업데이트를 한 번에 배치한다. 다음 token도 이미 버퍼에 있을 때만 한
-                // 프레임 양보하여 실제 스트리밍이 화면에 점진적으로 보이게 한다.
-                if (event === 'token' && buffer.includes('\n\n')) await waitForPaint();
-                if (event === 'done' || event === 'error') {
-                    await reader.cancel();
-                    return;
+            let sepIdx: number;
+            // Process complete frames, retaining partial frames for the next chunk.
+            while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
+                signal?.throwIfAborted();
+                const frame = buffer.slice(0, sepIdx);
+                buffer = buffer.slice(sepIdx + 2);
+                if (frame.trim()) {
+                    const event = dispatchFrame(frame);
+                    if (event === 'done' || event === 'error') return;
+                    // Let React paint between tokens delivered in the same chunk.
+                    if (event === 'token' && buffer.includes('\n\n')) await waitForPaint();
                 }
             }
         }
+        buffer += decoder.decode();
+        // Preserve support for a final event without a trailing blank line.
+        const finalEvent = buffer.trim() ? dispatchFrame(buffer) : null;
+        if (finalEvent !== 'done' && finalEvent !== 'error') {
+            throw new ApiError(i18n.t('main:networkError.streamFailed'));
+        }
+    } finally {
+        // Cleanup must not replace the original network/cancellation error.
+        try { await reader.cancel(); } catch { /* The stream may already be errored. */ }
+        reader.releaseLock();
     }
-    // 마지막 잔여 프레임 처리
-    if (buffer.trim()) dispatchFrame(buffer);
 }

@@ -22,6 +22,7 @@ class VyactRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root, \
              patch("services.vyact_runtime.VYACT_RUNTIME_DIR", Path(root)), \
              patch("services.vyact_runtime._which_path", return_value=None), \
+             patch("services.vyact_runtime.managed_executable", return_value=None), \
              patch("services.vyact_runtime._bundled_linux_executable", side_effect=bundled.get), \
              patch("services.vyact_runtime.install_pinned_components") as install_commands:
             paths = get_runtime_paths()
