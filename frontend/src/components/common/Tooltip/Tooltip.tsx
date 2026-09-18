@@ -50,6 +50,11 @@ export function TooltipProvider({children}: {children: ReactNode}) {
         };
         adoptTitlesWithin(document.body);
         const observer = new MutationObserver(records => {
+            // Removing a hovered trigger does not reliably emit pointerout/blur.
+            if (activeTargetRef.current && !activeTargetRef.current.isConnected) {
+                activeTargetRef.current = null;
+                setTooltip(null);
+            }
             records.forEach(record => {
                 if (record.type === 'attributes') {
                     adoptNativeTitle(record.target as Element);
@@ -94,9 +99,17 @@ export function TooltipProvider({children}: {children: ReactNode}) {
         const closeOnEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') hideTooltip();
         };
+        window.addEventListener('scroll', hideTooltip, true);
+        window.addEventListener('resize', hideTooltip);
         window.addEventListener('keydown', closeOnEscape, true);
+        window.addEventListener('pointerdown', hideTooltip, true);
+        window.addEventListener('click', hideTooltip, true);
         return () => {
+            window.removeEventListener('scroll', hideTooltip, true);
+            window.removeEventListener('resize', hideTooltip);
             window.removeEventListener('keydown', closeOnEscape, true);
+            window.removeEventListener('pointerdown', hideTooltip, true);
+            window.removeEventListener('click', hideTooltip, true);
         };
     }, []);
 

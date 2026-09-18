@@ -14,8 +14,32 @@
     overflow-wrap: anywhere;
 }
 
-.gwp-load-error .gwp-refresh {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+.gwp-load-error .gwp-load-error-retry {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+}
+
+.gwp-load-error .gwp-load-error-retry:hover:not(:disabled) {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface2));
+}
+
+.gwp-load-error .gwp-load-error-retry:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.gwp-load-error .gwp-load-error-retry:disabled {
+    opacity: .6;
+    cursor: wait;
 }

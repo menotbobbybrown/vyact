@@ -227,7 +227,9 @@ def _format_mail_threads(
         )
         participants = []
         seen_participants = set()
-        for headers in thread_headers:
+        for message, headers in zip(thread_messages, thread_headers):
+            if "DRAFT" in message.get("labelIds", []):
+                continue
             name, email = parseaddr(headers.get("from", ""))
             participant_key = email.strip().lower() or name.strip().lower()
             if not participant_key or participant_key in seen_participants:

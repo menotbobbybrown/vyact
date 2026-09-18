@@ -1,3 +1,5 @@
+import quotedReplyStyles from './quotedReply.css?inline';
+import {getMailActionTarget, isDraftMail} from './mailDraftUtils';
 import MailRecipientGroups, {type RecipientGroupEditorHandle} from './MailRecipientGroups';
 import {mergeGroupRecipients, type MailRecipientGroup} from './mailRecipientGroupUtils';
 import WorkspaceLoadError from './WorkspaceLoadError';
@@ -337,7 +339,7 @@ const addQuotedReplyToggles = (document: Document, labels: QuotedReplyLabels, on
     if (!document.getElementById('vyact-quoted-reply-style')) {
         const style = document.createElement('style');
         style.id = 'vyact-quoted-reply-style';
-        style.textContent = '.vyact-quoted-reply-toggle{display:inline-flex;align-items:center;margin:12px 0 8px;padding:5px 10px;border:1px solid #b6b6b6;border-radius:8px;gap:9px;min-height:34px;transition:background .15s,border-color .15s;background:#f5f5f5;color:#424242;cursor:pointer;font:600 12px/1.25 Arial,sans-serif}.vyact-quoted-reply-toggle:hover{background:#f4e7e1;border-color:#b9593c;color:#94452f}.vyact-quoted-reply-toggle:focus-visible{outline:2px solid #b9593c;outline-offset:3px}.vyact-quoted-reply-toggle::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin-top:-3px}.vyact-quoted-reply-toggle[aria-expanded=true]::after{transform:rotate(225deg);margin-top:3px}.vyact-quoted-reply-content[hidden]{display:none!important}';
+        style.textContent = quotedReplyStyles;
         document.head.append(style);
     }
 
@@ -355,11 +357,14 @@ const addQuotedReplyToggles = (document: Document, labels: QuotedReplyLabels, on
         button.className = 'vyact-quoted-reply-toggle';
         button.setAttribute('aria-controls', content.id);
         button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-label', labels.show);
         button.textContent = labels.show;
         button.addEventListener('click', () => {
             content.hidden = !content.hidden;
             button.setAttribute('aria-expanded', String(!content.hidden));
-            button.textContent = content.hidden ? labels.show : labels.hide;
+            const label = content.hidden ? labels.show : labels.hide;
+            button.setAttribute('aria-label', label);
+            button.textContent = label;
             requestAnimationFrame(onToggle);
         });
         quotedReply.append(button, content);
@@ -455,10 +460,15 @@ const EmailBody = memo(function EmailBody({mail, fillAvailableSpace = false}: {
         onLoad={event => {
             const iframe = event.currentTarget;
             const document = iframe.contentDocument;
-            if (document) addQuotedReplyToggles(document, {
-                show: t('googleWorkspace.showQuotedReply'),
-                hide: t('googleWorkspace.hideQuotedReply'),
-            }, resizeToContent);
+            if (document) {
+                // Email documents are isolated from the app's theme variables.
+                const accent = getComputedStyle(iframe).getPropertyValue('--accent').trim();
+                if (accent) document.documentElement.style.setProperty('--vyact-quote-accent', accent);
+                addQuotedReplyToggles(document, {
+                    show: t('googleWorkspace.showQuotedReply'),
+                    hide: t('googleWorkspace.hideQuotedReply'),
+                }, resizeToContent);
+            }
             // Native details toggles do not bubble. Capture them so expanding
             // embedded logs also updates the otherwise non-scrolling iframe.
             document?.addEventListener('toggle', resizeToContent, true);
@@ -622,6 +632,11 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
     const [selectedKnowledgeSourceId, setSelectedKnowledgeSourceId] = useState('');
     const [expandedThreadMessageIds, setExpandedThreadMessageIds] = useState<Set<string>>(new Set());
     const [compose, setCompose] = useState(false);
+    const [editingDraft, setEditingDraft] = useState<{draftId: string; messageId: string} | null>(null);
+    const [draftBusy, setDraftBusy] = useState(false);
+    const [isDiscardingDraft, setIsDiscardingDraft] = useState(false);
+    const draftBusyRef = useRef(false);
+    const composeFormRef = useRef<HTMLFormElement>(null);
     const [composeMode, setComposeMode] = useState<'new' | 'reply' | 'forward'>('new');
     const [replyTo, setReplyTo] = useState<MailDetail | null>(null);
     const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
@@ -895,7 +910,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         return () => { cancelled = true; };
     }, [selectedMessageId, accountId]);
 
-    const openMail = async (id: string, showActivity = true, mailLabel = label) => {
+    const openMail = async (id: string, showActivity = true, mailLabel = label, replacedMessageId?: string) => {
         const requestId = ++mailOpenRequestIdRef.current;
         if (showActivity) setIsOpeningMail(true);
         try {
@@ -910,9 +925,18 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
             ].filter(address => address.email.toLowerCase() !== message.accountEmail?.toLowerCase());
             setRecipientSuggestions(saveRecentMailRecipients(accountId, messageRecipients));
             const threadMessages = message.threadMessages || [];
-            setExpandedThreadMessageIds(new Set([
-                threadMessages.at(-1)?.id || message.id,
-            ]));
+            if (replacedMessageId) {
+                const availableIds = new Set<string>(threadMessages.map((item: MailThreadMessage) => item.id));
+                availableIds.add(message.id);
+                setExpandedThreadMessageIds(current => new Set(
+                    [...current].map(messageId => messageId === replacedMessageId ? id : messageId)
+                        .filter(messageId => availableIds.has(messageId)),
+                ));
+            } else {
+                setExpandedThreadMessageIds(new Set([
+                    threadMessages.at(-1)?.id || message.id,
+                ]));
+            }
             setMails(current => current.map(mail => mail.id === id ? {...mail, isUnread: false} : mail));
             if (mailReadUpdatesRef.current.get(id)?.pending) return;
             // Gmail counts unread messages per label, including older messages in a conversation.
@@ -949,6 +973,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         }
     };
     const closeCompose = () => {
+        setEditingDraft(null);
         setCompose(false);
         setReplyTo(null);
         setAttachments([]);
@@ -1032,17 +1057,36 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         return () => window.clearTimeout(timeoutId);
     }, [sendFeedback]);
 
-    const send = async (form: HTMLFormElement) => {
-        if (sendingRef.current || aiGenerating) return;
+    useEffect(() => {
+        if (composeFormRef.current) composeFormRef.current.inert = isSending || draftBusy;
+    }, [compose, isSending, draftBusy]);
+
+    const showDraftError = (error: unknown) => {
+        if (error instanceof ApiError && (error.status === 404 || error.status === 409)) {
+            toast.error(t('googleWorkspace.draftChanged'));
+        } else notifyWorkspaceError(error);
+    };
+
+    const send = async (form: HTMLFormElement, saveDraft = false) => {
+        if (sendingRef.current || aiGenerating || draftBusyRef.current) return;
+        if (editingDraft && !emailEditorRef.current?.editor) return;
         sendingRef.current = true;
         setIsSending(true);
         try {
             const data = new FormData(form);
+            data.set('body', '');
+            if (editingDraft) {
+                data.set('draft_id', editingDraft.draftId);
+                data.set('draft_message_id', editingDraft.messageId);
+                data.set('save_draft', String(saveDraft));
+            }
             // Use the submitted values for history as well: input blur can commit a
             // recipient after the React state captured by this handler was rendered.
             const sentRecipients = ['to', 'cc', 'bcc'].flatMap(field =>
                 String(data.get(field) || '').split(/[,;]+/).map(parseMailAddress),
             );
+            const editorHtml = emailEditorRef.current?.getHTML() || '';
+            const editorText = emailEditorRef.current?.editor?.getText() || '';
             const resolvedFiles = await Promise.all(attachments.map(async (att) => {
                 if (isForwardedAttachment(att)) {
                     const blob = await api.getGoogleMailAttachment(att.messageId, att.id, att.mimeType);
@@ -1051,7 +1095,6 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                 return att;
             }));
             resolvedFiles.forEach(file => data.append('attachments', file));
-            const editorHtml = emailEditorRef.current?.getHTML() || '';
             const hasEditorContent = editorHtml.replace(/<p><\/p>/g, '').trim().length > 0;
             let htmlBody = '';
             if (originalHtmlBody) {
@@ -1060,11 +1103,11 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                 if (!hasEditorContent && originalMailForAi) {
                     data.set('body', originalMailForAi.body || '');
                 } else {
-                    data.set('body', emailEditorRef.current?.editor?.getText() || '');
+                    data.set('body', editorText);
                 }
             } else if (hasEditorContent) {
                 htmlBody = editorHtml;
-                data.set('body', emailEditorRef.current?.editor?.getText() || '');
+                data.set('body', editorText);
             }
             if (htmlBody) {
                 const extractedInlineImages = await extractInlineImages(htmlBody);
@@ -1072,6 +1115,17 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                 extractedInlineImages.images.forEach(image => data.append('inline_images', image));
             }
             const sentMessage = await api.sendGoogleMail(data);
+            if (editingDraft) {
+                closeCompose();
+                // Keep the conversation mounted while replacing the saved draft's
+                // message ID; Gmail changes that ID on every save.
+                await Promise.allSettled([
+                    loadMails(),
+                    loadMailLabels(),
+                    ...(sentMessage.id ? [openMail(sentMessage.id, false, label, editingDraft.messageId)] : []),
+                ]);
+                return;
+            }
             setRecipientSuggestions(saveRecentMailRecipients(
                 accountId,
                 sentRecipients,
@@ -1096,14 +1150,96 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
             if (threadRefreshMessageId) {
                 setIsRefreshingSentReply(false);
             }
-        } catch {
+        } catch (error) {
             setIsRefreshingSentReply(false);
-            setSendFeedback('error');
+            if (editingDraft) showDraftError(error);
+            else setSendFeedback('error');
         } finally {
             sendingRef.current = false;
             setIsSending(false);
         }
     };
+    const saveDraftAndClose = () => {
+        if (editingDraft && composeFormRef.current) void send(composeFormRef.current, true);
+        else closeCompose();
+    };
+    const editDraft = async (messageId: string) => {
+        if (draftBusyRef.current || sendingRef.current) return;
+        draftBusyRef.current = true;
+        setDraftBusy(true);
+        try {
+            const draft = await api.getGoogleMailDraft(messageId) as {draftId: string; message: MailThreadMessage};
+            const message = draft.message;
+            closeCompose();
+            setEditingDraft({draftId: draft.draftId, messageId: message.id});
+            setComposeMode('new');
+            setComposeFields({
+                to: (message.toAddresses || []).map(address => address.email),
+                cc: (message.ccAddresses || []).map(address => address.email),
+                bcc: (message.bccAddresses || []).map(address => address.email),
+                subject: message.subject,
+                body: message.htmlBody || `<p>${escapeHtml(message.body).replace(/\n/g, '<br>')}</p>`,
+            });
+            setAttachments((message.attachments || []).map(attachment => ({...attachment, messageId: message.id, forwarded: true as const})));
+            setIsCcVisible(Boolean(message.ccAddresses?.length));
+            setIsBccVisible(Boolean(message.bccAddresses?.length));
+            setCompose(true);
+        } catch (error) {
+            showDraftError(error);
+        } finally {
+            draftBusyRef.current = false;
+            setDraftBusy(false);
+        }
+    };
+    const discardDraft = async (messageId: string) => {
+        if (draftBusyRef.current || sendingRef.current || trashingMailsRef.current) return;
+        draftBusyRef.current = true;
+        setDraftBusy(true);
+        setIsDiscardingDraft(true);
+        trashingMailsRef.current = true;
+        setIsTrashingMails(true);
+        try {
+            const draft = editingDraft?.messageId === messageId
+                ? editingDraft
+                : await api.getGoogleMailDraft(messageId) as {draftId: string};
+            await api.deleteGoogleMailDraft(draft.draftId, messageId);
+            if (editingDraft) closeCompose();
+            setSelected(current => {
+                if (!current || (current.id !== messageId && !current.threadMessages?.some(message => message.id === messageId))) return current;
+                const remainingMessages = current.threadMessages?.filter(message => message.id !== messageId) || [];
+                const actionMessage = remainingMessages.find(message => message.id === current.id) || remainingMessages[0];
+                if (!actionMessage) return null;
+                return {
+                    ...current,
+                    ...actionMessage,
+                    to: actionMessage.toAddresses || [],
+                    cc: actionMessage.ccAddresses || [],
+                    bcc: actionMessage.bccAddresses || [],
+                    attachments: actionMessage.attachments || [],
+                    labelIds: [...new Set(remainingMessages.flatMap(message => message.labelIds || []))],
+                    threadMessages: remainingMessages,
+                };
+            });
+            setExpandedThreadMessageIds(current => {
+                const next = new Set(current);
+                next.delete(messageId);
+                return next;
+            });
+            await Promise.allSettled([loadMails(), loadMailLabels()]);
+        } catch (error) {
+            showDraftError(error);
+        } finally {
+            draftBusyRef.current = false;
+            setDraftBusy(false);
+            setIsDiscardingDraft(false);
+            trashingMailsRef.current = false;
+            setIsTrashingMails(false);
+        }
+    };
+    const renderDraftActions = (messageId: string) => provider === 'google' && <div className="gwp-draft-actions" onClick={event => event.stopPropagation()}>
+        <button type="button" onClick={() => void editDraft(messageId)} disabled={draftBusy || isSending} title={t('googleWorkspace.editDraft')} aria-label={t('googleWorkspace.editDraft')}><Pencil size={16} aria-hidden="true"/></button>
+        <button type="button" className="gwp-draft-delete" onClick={() => void discardDraft(messageId)} disabled={draftBusy || isSending} title={t('googleWorkspace.discardDraft')} aria-label={t('googleWorkspace.discardDraft')}><Trash2 size={16} aria-hidden="true"/></button>
+    </div>;
     const selectLabel = (labelId: string) => {
         mailOpenRequestIdRef.current += 1;
         setHandledNotificationMessageId(selectedMessageId || null);
@@ -1470,6 +1606,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         return `${header}${content}`;
     };
     const replyToMail = (mail: MailDetail) => {
+        if (isDraftMail(mail)) return;
         const senderEmail = mail.from.match(/<([^>]+)>/)?.[1] || mail.from;
         const myEmail = mail.accountEmail?.toLowerCase() || '';
         const senderIsMe = senderEmail.toLowerCase() === myEmail;
@@ -1496,10 +1633,26 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         setIsMacroMenuOpen(false);
         setCompose(true);
     };
+    const selectedActionMail = ((): MailDetail | null => {
+        if (!selected) return null;
+        if (!selected.threadMessages?.length) return isDraftMail(selected) ? null : selected;
+        const message = getMailActionTarget(selected.threadMessages, selected.id);
+        if (!message) return null;
+        if (message.id === selected.id) return {...selected, labelIds: message.labelIds};
+        return {
+            ...selected,
+            ...message,
+            to: message.toAddresses || [],
+            cc: message.ccAddresses || [],
+            bcc: message.bccAddresses || [],
+            attachments: message.attachments || [],
+        };
+    })();
     const replyToSelectedMail = () => {
-        if (selected) replyToMail(selected);
+        if (selectedActionMail) replyToMail(selectedActionMail);
     };
     const forwardMail = (mail: MailDetail) => {
+        if (isDraftMail(mail)) return;
         setReplyTo(null);
         setComposeMode('forward');
         setOriginalMailForAi(mail);
@@ -1518,7 +1671,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         setCompose(true);
     };
     const forwardSelectedMail = () => {
-        if (selected) forwardMail(selected);
+        if (selectedActionMail) forwardMail(selectedActionMail);
     };
     const previewAttachment = async (attachment: MailAttachment, messageId = selected?.id) => {
         if (!selected) return;
@@ -1628,7 +1781,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
     const attachmentBytes = attachments.reduce((total, file) => total + file.size, 0);
     const attachmentLimitExceeded = attachmentBytes > MAX_MAIL_ATTACHMENT_BYTES;
     const canSendMail = Boolean(composeFields.to.length && composeFields.subject.trim() && (composeFields.body.replace(/<p><\/p>/g, '').trim() || originalHtmlBody)) && !attachmentLimitExceeded;
-    const isMailActionBusy = isOpeningMail || isRefreshingSentReply || isTrashingMails || isMovingMails || isApplyingLabel;
+    const isMailActionBusy = draftBusy || isOpeningMail || isRefreshingSentReply || isTrashingMails || isMovingMails || isApplyingLabel;
     const formatAttachmentSize = (bytes: number) => {
         if (bytes >= 1024 * 1024) return `${formatLocalizedNumber(bytes / (1024 * 1024), bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
         if (bytes >= 1024) return `${formatLocalizedNumber(bytes / 1024, bytes >= 10 * 1024 ? 0 : 1)} KB`;
@@ -1666,9 +1819,10 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
         const participants = mail.participants?.map(participant => (
             participant.isMe ? t('googleWorkspace.me') : participant.name || participant.email
         )).filter(Boolean);
-        const senderNames = participants?.length ? participants.join(', ') : mail.from;
+        const senderNames = participants?.length ? participants.join(', ') : isDraftMail(mail) ? '' : mail.from;
         return <>
             <span className="gwp-mail-participants">{senderNames}</span>
+            {isDraftMail(mail) && <span className="gwp-mail-draft-status">{t('googleWorkspace.draft')}</span>}
             {mail.messageCount && mail.messageCount > 1
                 ? <span className="gwp-mail-thread-count">{mail.messageCount}</span>
                 : null}
@@ -1978,7 +2132,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                     setMailAttachMenuId(null);
                     onDelete();
                 }} disabled={isMailActionBusy}>
-                    <Trash2 aria-hidden="true" size={16}/><span>{t('googleWorkspace.delete')}</span>
+                    <Trash2 aria-hidden="true" size={16}/><span>{t(provider === 'google' && isDraftMail(mail) ? 'googleWorkspace.discardDraft' : 'googleWorkspace.delete')}</span>
                 </button>}
         </ActionMenu>;
     };
@@ -2058,6 +2212,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
             const message = threadMessages[0];
             const messageDetail: MailDetail = {
                 id: message.id,
+                labelIds: message.labelIds,
                 threadId: selected.threadId,
                 from: message.from,
                 to: message.toAddresses || selected.to,
@@ -2081,8 +2236,8 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                         <MailChatAttachMenu mail={selected} menuId="whole-thread"/>
                         <KnowledgeCollectionAttachSelect source={{source_type: 'email_thread', source_id: selectedKnowledgeSourceId || selected.threadId || selected.id}} prepareSource={async () => ({source_type: 'email_thread', source_id: (await api.indexGoogleMailThreadForKnowledge(selected.threadId || selected.id, accountId, getKnowledgeThreadSnapshot(selected))).source_id})} onOpen={() => setMailAttachMenuId(null)} onActionChange={setKnowledgeCollectionAction}/>
                         <button className="gwp-detail-delete" aria-label={t('googleWorkspace.delete')} onClick={() => void trashSelectedThread()} disabled={isMailActionBusy}>{isTrashingMails ? <LoaderCircle aria-hidden="true" size={16} className="gwp-spin"/> : <Trash2 aria-hidden="true" size={16}/>}</button>
-                        <button className="gwp-detail-forward" title={t('googleWorkspace.forward')} aria-label={t('googleWorkspace.forward')} onClick={forwardSelectedMail} disabled={isMailActionBusy}><Forward aria-hidden="true" size={16}/></button>
-                        <button className="gwp-primary" onClick={replyToSelectedMail}>{t('googleWorkspace.reply')}</button>
+                        <button className="gwp-detail-forward" title={t('googleWorkspace.forward')} aria-label={t('googleWorkspace.forward')} onClick={forwardSelectedMail} disabled={isMailActionBusy || !selectedActionMail}><Forward aria-hidden="true" size={16}/></button>
+                        <button className="gwp-primary" onClick={replyToSelectedMail} disabled={isMailActionBusy || !selectedActionMail}>{t('googleWorkspace.reply')}</button>
                     </div>
                 </div>
                 <div className="gwp-single-message-scroll">
@@ -2093,12 +2248,14 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                             <div className="gwp-message-meta">
                                 <div>
                                     <span className="gwp-participants-label"><span>{t('googleWorkspace.sender')}</span><i aria-hidden="true">·</i><span>{t('googleWorkspace.recipient')}</span></span>
+                                    {isDraftMail(message) && <span className="gwp-mail-draft-status">{t('googleWorkspace.draftUnsent')}</span>}
                                     <MailSenderDetails mail={messageDetail}/>
                                 </div>
-                                <div><span>{t('googleWorkspace.receivedAt')}</span><time dateTime={message.date}>{formatReceivedDate(message.date, i18n.resolvedLanguage || i18n.language)}</time></div>
+                                {!isDraftMail(message) && <div><span>{t('googleWorkspace.receivedAt')}</span><time dateTime={message.date}>{formatReceivedDate(message.date, i18n.resolvedLanguage || i18n.language)}</time></div>}
                             </div>
                         </div>
                     </header>
+                    {isDraftMail(message) && renderDraftActions(message.id)}
                     {renderSpamNotice(message)}
                     <div className="gwp-email-frame gwp-email-frame--single"><EmailBody mail={message} fillAvailableSpace/></div>
                 </div>
@@ -2118,8 +2275,8 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                     <MailChatAttachMenu mail={selected} menuId="whole-thread"/>
                     <KnowledgeCollectionAttachSelect source={{source_type: 'email_thread', source_id: selectedKnowledgeSourceId || selected.threadId || selected.id}} prepareSource={async () => ({source_type: 'email_thread', source_id: (await api.indexGoogleMailThreadForKnowledge(selected.threadId || selected.id, accountId, getKnowledgeThreadSnapshot(selected))).source_id})} onOpen={() => setMailAttachMenuId(null)} onActionChange={setKnowledgeCollectionAction}/>
                     <button className="gwp-detail-delete" aria-label={t('googleWorkspace.delete')} onClick={() => void trashSelectedThread()} disabled={isMailActionBusy}>{isTrashingMails ? <LoaderCircle aria-hidden="true" size={16} className="gwp-spin"/> : <Trash2 aria-hidden="true" size={16}/>}</button>
-                    <button className="gwp-detail-forward" title={t('googleWorkspace.forward')} aria-label={t('googleWorkspace.forward')} onClick={forwardSelectedMail} disabled={isMailActionBusy}><Forward aria-hidden="true" size={16}/></button>
-                    <button className="gwp-primary" onClick={replyToSelectedMail}>{t('googleWorkspace.reply')}</button>
+                    <button className="gwp-detail-forward" title={t('googleWorkspace.forward')} aria-label={t('googleWorkspace.forward')} onClick={forwardSelectedMail} disabled={isMailActionBusy || !selectedActionMail}><Forward aria-hidden="true" size={16}/></button>
+                    <button className="gwp-primary" onClick={replyToSelectedMail} disabled={isMailActionBusy || !selectedActionMail}>{t('googleWorkspace.reply')}</button>
                 </div>
             </div>
             <header className="gwp-thread-title">
@@ -2133,6 +2290,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                     const expanded = expandedThreadMessageIds.has(message.id);
                     const messageDetail: MailDetail = {
                         id: message.id,
+                        labelIds: message.labelIds,
                         threadId: selected.threadId,
                         from: message.from,
                         to: message.toAddresses || [],
@@ -2151,19 +2309,20 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
                         <div className="gwp-thread-message-summary" onClick={() => toggleThreadMessage(message.id)}>
                             <span className="gwp-thread-message-index">{index + 1}</span>
                             <div className="gwp-thread-message-summary-text">
-                                <MailSenderDetails mail={messageDetail} compact/>
+                                {isDraftMail(message) ? <span className="gwp-mail-draft-status">{t('googleWorkspace.draftUnsent')}</span> : <MailSenderDetails mail={messageDetail} compact/>}
                                 {!expanded && <small>{collapsedPreview}</small>}
                             </div>
-                            {expanded && <div className="gwp-thread-message-actions" onClick={event => event.stopPropagation()}>
+                            {isDraftMail(message) && renderDraftActions(message.id)}
+                            {expanded && !isDraftMail(message) && <div className="gwp-thread-message-actions" onClick={event => event.stopPropagation()}>
                                 <button onClick={() => replyToMail(messageDetail)} aria-label={t('googleWorkspace.reply')} title={t('googleWorkspace.reply')}><Reply aria-hidden="true" size={16}/></button>
                                 <button onClick={() => forwardMail(messageDetail)} aria-label={t('googleWorkspace.forward')} title={t('googleWorkspace.forward')}><Forward aria-hidden="true" size={16}/></button>
                             </div>}
                             <MailChatAttachMenu
                                 mail={{...messageDetail, threadMessages: undefined}}
                                 menuId={`message-${message.id}`}
-                                onDelete={() => void trashThreadMessage(message.id)}
+                                onDelete={() => void (isDraftMail(message) && provider === 'google' ? discardDraft(message.id) : trashThreadMessage(message.id))}
                             />
-                            <time dateTime={message.date}>{formatReceivedDate(message.date, i18n.resolvedLanguage || i18n.language)}</time>
+                            {!isDraftMail(message) && <time dateTime={message.date}>{formatReceivedDate(message.date, i18n.resolvedLanguage || i18n.language)}</time>}
                             <button className="gwp-thread-message-toggle" onClick={event => { event.stopPropagation(); toggleThreadMessage(message.id); }} aria-expanded={expanded} aria-label={expanded ? t('googleWorkspace.collapse') : t('googleWorkspace.expand')}>
                                 {expanded ? <ChevronUp aria-hidden="true" size={17}/> : <ChevronDown aria-hidden="true" size={17}/>}
                             </button>
@@ -2252,11 +2411,11 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
             loadingValue="delete"
             loadingLabel={t('googleWorkspace.processing')}
         />}
-        {compose && <div className="gwp-compose-backdrop"><form className="gwp-compose" noValidate onSubmit={event => { event.preventDefault(); send(event.currentTarget); }}><header><h3>{replyTo ? t('googleWorkspace.reply') : t('googleWorkspace.compose')}</h3><button type="button" aria-label={t('googleWorkspace.close')} onClick={closeCompose} disabled={aiGenerating || isSending}><X aria-hidden="true" size={24}/></button></header><div className="gwp-recipient-fields"><MailRecipientField name="to" label={t('googleWorkspace.recipient')} recipients={composeFields.to} suggestions={recipientSuggestions} onChange={to => setComposeFields(current => ({...current, to}))} invalidEmailMessage={t('googleWorkspace.invalidEmail')} removeLabel={email => t('googleWorkspace.removeRecipient', {email})} trailingAction={<span className="gwp-recipient-actions"><CustomSelect key={groupPickerVersion} className="gwp-recipient-group-picker" alignRight value="" disabled={groupsLoading || isSending} ariaLabel={t('googleWorkspace.applyRecipientGroup')} placeholder={t('googleWorkspace.recipientGroups')} renderTrigger={() => <><Mail size={15} aria-hidden="true"/><span>{t('googleWorkspace.recipientGroups')}</span><ChevronDown size={13} aria-hidden="true"/></>} header={<div className="gwp-recipient-group-menu-heading"><span>{t('googleWorkspace.recipientGroups')}</span><button type="button" className="gwp-recipient-group-manage" aria-label={t('googleWorkspace.settings')} onClick={event => { event.preventDefault(); event.stopPropagation(); setGroupPickerVersion(value => value + 1); setSettingsSection('groups'); setSignatureSettingsOpen(true); }}><Settings size={16} aria-hidden="true"/></button></div>} options={recipientGroups.map(group => ({value: group.id, label: group.name}))} onChange={id => {
+        {compose && <div className="gwp-compose-backdrop"><form ref={composeFormRef} className="gwp-compose" noValidate onSubmit={event => { event.preventDefault(); send(event.currentTarget); }}><header><h3>{editingDraft ? t('googleWorkspace.editDraft') : replyTo ? t('googleWorkspace.reply') : t('googleWorkspace.compose')}</h3><button type="button" aria-label={t('googleWorkspace.close')} onClick={saveDraftAndClose} disabled={aiGenerating || isSending || draftBusy}><X aria-hidden="true" size={24}/></button></header><div className="gwp-recipient-fields"><MailRecipientField name="to" label={t('googleWorkspace.recipient')} recipients={composeFields.to} suggestions={recipientSuggestions} onChange={to => setComposeFields(current => ({...current, to}))} invalidEmailMessage={t('googleWorkspace.invalidEmail')} removeLabel={email => t('googleWorkspace.removeRecipient', {email})} trailingAction={<span className="gwp-recipient-actions"><CustomSelect key={groupPickerVersion} className="gwp-recipient-group-picker" alignRight value="" disabled={groupsLoading || isSending} ariaLabel={t('googleWorkspace.applyRecipientGroup')} placeholder={t('googleWorkspace.recipientGroups')} renderTrigger={() => <><Mail size={15} aria-hidden="true"/><span>{t('googleWorkspace.recipientGroups')}</span><ChevronDown size={13} aria-hidden="true"/></>} header={<div className="gwp-recipient-group-menu-heading"><span>{t('googleWorkspace.recipientGroups')}</span><button type="button" className="gwp-recipient-group-manage" aria-label={t('googleWorkspace.settings')} onClick={event => { event.preventDefault(); event.stopPropagation(); setGroupPickerVersion(value => value + 1); setSettingsSection('groups'); setSignatureSettingsOpen(true); }}><Settings size={16} aria-hidden="true"/></button></div>} options={recipientGroups.map(group => ({value: group.id, label: group.name}))} onChange={id => {
             const group = recipientGroups.find(item => item.id === id);
             if (group) setComposeFields(current => ({...current, to: mergeGroupRecipients(current.to, group.emails)}));
         }}/>{!isCcVisible && <button type="button" onClick={() => setIsCcVisible(true)}>{t('googleWorkspace.cc')}</button>}{!isBccVisible && <button type="button" onClick={() => setIsBccVisible(true)}>{t('googleWorkspace.bcc')}</button>}</span>}/>{isCcVisible && <MailRecipientField name="cc" label={t('googleWorkspace.cc')} recipients={composeFields.cc} suggestions={recipientSuggestions} onChange={cc => setComposeFields(current => ({...current, cc}))} invalidEmailMessage={t('googleWorkspace.invalidEmail')} removeLabel={email => t('googleWorkspace.removeRecipient', {email})}/>} {isBccVisible && <MailRecipientField name="bcc" label={t('googleWorkspace.bcc')} recipients={composeFields.bcc} suggestions={recipientSuggestions} onChange={bcc => setComposeFields(current => ({...current, bcc}))} invalidEmailMessage={t('googleWorkspace.invalidEmail')} removeLabel={email => t('googleWorkspace.removeRecipient', {email})}/>}</div><div className="gwp-compose-subject-row"><input name="subject" value={composeFields.subject} onChange={event => setComposeFields(current => ({...current, subject: event.target.value}))} placeholder={t('googleWorkspace.subject')}/>{mailMacroOptions.length > 0 && <div className="gwp-compose-macro-menu" ref={macroMenuRef}><button type="button" className="gwp-macro-menu-button" aria-label={t('googleWorkspace.applyMacro')} title={t('googleWorkspace.applyMacro')} aria-expanded={isMacroMenuOpen} onClick={() => setIsMacroMenuOpen(open => !open)}><FileText aria-hidden="true" size={17}/></button>{isMacroMenuOpen && <div className="gwp-macro-menu-popover"><CustomSelect className="gwp-mail-macro-select" value={selectedMacroId} options={mailMacroOptions} placeholder={t('googleWorkspace.applyMacro')} onChange={value => { applyMailMacro(value); setIsMacroMenuOpen(false); }}/><button type="button" className="gwp-save-macro-button" aria-label={t('googleWorkspace.saveMacro')} title={t('googleWorkspace.saveMacro')} onClick={openMacroSaveDialog} disabled={!canSaveCurrentMailBody || isSending}><Save aria-hidden="true" size={17}/></button></div>}</div>}</div>{replyTo && <input type="hidden" name="reply_to" value={replyTo.id}/>}<EmailEditor ref={emailEditorRef} content={composeFields.body} onChange={body => setComposeFields(current => ({...current, body}))} placeholder={t('googleWorkspace.message')} lockMailSignature originalHtmlSrcDoc={originalHtmlBody ? createEmailDocument(removeDarkModeStyles(originalHtmlBody)) : undefined}/>
-<div className="gwp-compose-macro">{mailMacroOptions.length > 0 && <CustomSelect className="gwp-mail-macro-select" value={selectedMacroId} options={mailMacroOptions} placeholder={t('googleWorkspace.applyMacro')} onChange={applyMailMacro}/>}<button type="button" className="gwp-save-macro-button" onClick={openMacroSaveDialog} disabled={!canSaveCurrentMailBody || isSending}>{t('googleWorkspace.saveMacro')}</button></div><div className="gwp-compose-actions"><div className="gwp-compose-attachment-actions"><button className="gwp-attachment-button" type="button" onClick={() => attachmentRef.current?.click()} disabled={isSending}><Paperclip aria-hidden="true" size={16}/><span>{t('googleWorkspace.attach')}</span></button><input ref={attachmentRef} type="file" multiple hidden disabled={isSending} onChange={event => addAttachments(event.target.files)}/>{attachments.length > 0 && <details ref={composeAttachmentDetailsRef} className="gwp-compose-attachment-summary"><summary aria-label={t('googleWorkspace.attachments', {count: attachments.length})}><Paperclip aria-hidden="true" size={16}/><strong>{attachments.length}</strong><small className={attachmentLimitExceeded ? 'gwp-attachment-limit-exceeded' : ''}>{formatAttachmentSize(attachmentBytes)} / {MAX_MAIL_ATTACHMENT_BYTES / (1024 * 1024)} MB</small><ChevronUp className="gwp-attachment-summary-chevron" aria-hidden="true" size={15}/></summary><div className="gwp-compose-attachment-popover">{attachments.map((file, index) => { const name = isForwardedAttachment(file) ? file.filename : file.name; const key = isForwardedAttachment(file) ? `fwd-${file.id}-${index}` : `${file.name}-${file.lastModified}-${index}`; return <div className="gwp-compose-attachment-row" key={key}><span>{name}</span><small>{formatAttachmentSize(file.size)}</small><button type="button" aria-label={t('googleWorkspace.removeAttachment', {name})} onClick={() => removeAttachment(index)} disabled={isSending}>×</button></div>; })}</div></details>}</div><div className="gwp-compose-send-group"><button type="button" className="gwp-compose-cancel" onClick={closeCompose} disabled={aiGenerating || isSending}>{t('googleWorkspace.cancel')}</button><div className="gwp-ai-write-wrap">{aiPromptOpen && <div className="gwp-ai-prompt-popover">{aiGeneratedText && <div className="gwp-ai-generated-preview"><div className="gwp-ai-generated-preview-header"><strong>{t('googleWorkspace.aiGeneratedPreview')}</strong><button type="button" className="gwp-ai-prompt-insert" onClick={insertAiGeneratedBody} disabled={aiGenerating || isSending}>{t('googleWorkspace.aiInsert')}</button></div><pre>{aiGeneratedText}</pre></div>}<textarea ref={aiPromptInputRef} aria-label={t('googleWorkspace.aiWrite')} value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={getAiPlaceholder()} rows={3} disabled={aiGenerating || isSending} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (aiPrompt.trim()) generateAiBody(); } }}/><div className="gwp-ai-prompt-actions"><button type="button" className="gwp-ai-prompt-cancel" onClick={() => { setAiPromptOpen(false); setAiGeneratedText(null); }} disabled={aiGenerating || isSending}>{t('googleWorkspace.close')}</button><button type="button" className="gwp-primary gwp-ai-prompt-generate" disabled={!aiPrompt.trim() || aiGenerating || isSending} onClick={generateAiBody}>{aiGenerating ? <><LoaderCircle aria-hidden="true" size={14} className="gwp-spin"/>{t('googleWorkspace.aiGenerating')}</> : t('googleWorkspace.aiGenerate')}</button></div></div>}<button type="button" className="gwp-ai-write-btn" onClick={() => { if (!aiPromptOpen && !aiPrompt) { const subject = originalMailForAi?.subject || ''; if (composeMode === 'reply') setAiPrompt(t('googleWorkspace.aiDefaultPromptReply', {subject})); else if (composeMode === 'forward') setAiPrompt(t('googleWorkspace.aiDefaultPromptForward', {subject})); } setAiPromptOpen(o => !o); }} disabled={aiGenerating || isSending}><Sparkles aria-hidden="true" size={15}/><span>{t('googleWorkspace.aiWrite')}</span></button></div><button className="gwp-primary gwp-compose-send" type="submit" disabled={!canSendMail || isSending || aiGenerating}>{isSending ? <LoaderCircle aria-hidden="true" size={16} className="gwp-spin"/> : t('googleWorkspace.send')}</button></div></div></form></div>}
+<div className="gwp-compose-macro">{mailMacroOptions.length > 0 && <CustomSelect className="gwp-mail-macro-select" value={selectedMacroId} options={mailMacroOptions} placeholder={t('googleWorkspace.applyMacro')} onChange={applyMailMacro}/>}<button type="button" className="gwp-save-macro-button" onClick={openMacroSaveDialog} disabled={!canSaveCurrentMailBody || isSending}>{t('googleWorkspace.saveMacro')}</button></div><div className="gwp-compose-actions"><div className="gwp-compose-attachment-actions"><button className="gwp-attachment-button" type="button" onClick={() => attachmentRef.current?.click()} disabled={isSending}><Paperclip aria-hidden="true" size={16}/><span>{t('googleWorkspace.attach')}</span></button><input ref={attachmentRef} type="file" multiple hidden disabled={isSending} onChange={event => addAttachments(event.target.files)}/>{attachments.length > 0 && <details ref={composeAttachmentDetailsRef} className="gwp-compose-attachment-summary"><summary aria-label={t('googleWorkspace.attachments', {count: attachments.length})}><Paperclip aria-hidden="true" size={16}/><strong>{attachments.length}</strong><small className={attachmentLimitExceeded ? 'gwp-attachment-limit-exceeded' : ''}>{formatAttachmentSize(attachmentBytes)} / {MAX_MAIL_ATTACHMENT_BYTES / (1024 * 1024)} MB</small><ChevronUp className="gwp-attachment-summary-chevron" aria-hidden="true" size={15}/></summary><div className="gwp-compose-attachment-popover">{attachments.map((file, index) => { const name = isForwardedAttachment(file) ? file.filename : file.name; const key = isForwardedAttachment(file) ? `fwd-${file.id}-${index}` : `${file.name}-${file.lastModified}-${index}`; return <div className="gwp-compose-attachment-row" key={key}><span>{name}</span><small>{formatAttachmentSize(file.size)}</small><button type="button" aria-label={t('googleWorkspace.removeAttachment', {name})} onClick={() => removeAttachment(index)} disabled={isSending}>×</button></div>; })}</div></details>}</div><div className="gwp-compose-send-group">{editingDraft && <button type="button" className="gwp-draft-delete" title={t('googleWorkspace.discardDraft')} aria-label={t('googleWorkspace.discardDraft')} disabled={isSending || aiGenerating || draftBusy} onClick={() => void discardDraft(editingDraft.messageId)}><Trash2 size={18} aria-hidden="true"/></button>}<button type="button" className="gwp-compose-cancel" onClick={saveDraftAndClose} disabled={aiGenerating || isSending || draftBusy}>{t(editingDraft ? 'googleWorkspace.saveDraftAndClose' : 'googleWorkspace.cancel')}</button><div className="gwp-ai-write-wrap">{aiPromptOpen && <div className="gwp-ai-prompt-popover">{aiGeneratedText && <div className="gwp-ai-generated-preview"><div className="gwp-ai-generated-preview-header"><strong>{t('googleWorkspace.aiGeneratedPreview')}</strong><button type="button" className="gwp-ai-prompt-insert" onClick={insertAiGeneratedBody} disabled={aiGenerating || isSending}>{t('googleWorkspace.aiInsert')}</button></div><pre>{aiGeneratedText}</pre></div>}<textarea ref={aiPromptInputRef} aria-label={t('googleWorkspace.aiWrite')} value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} placeholder={getAiPlaceholder()} rows={3} disabled={aiGenerating || isSending} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (aiPrompt.trim()) generateAiBody(); } }}/><div className="gwp-ai-prompt-actions"><button type="button" className="gwp-ai-prompt-cancel" onClick={() => { setAiPromptOpen(false); setAiGeneratedText(null); }} disabled={aiGenerating || isSending}>{t('googleWorkspace.close')}</button><button type="button" className="gwp-primary gwp-ai-prompt-generate" disabled={!aiPrompt.trim() || aiGenerating || isSending} onClick={generateAiBody}>{aiGenerating ? <><LoaderCircle aria-hidden="true" size={14} className="gwp-spin"/>{t('googleWorkspace.aiGenerating')}</> : t('googleWorkspace.aiGenerate')}</button></div></div>}<button type="button" className="gwp-ai-write-btn" onClick={() => { if (!aiPromptOpen && !aiPrompt) { const subject = originalMailForAi?.subject || ''; if (composeMode === 'reply') setAiPrompt(t('googleWorkspace.aiDefaultPromptReply', {subject})); else if (composeMode === 'forward') setAiPrompt(t('googleWorkspace.aiDefaultPromptForward', {subject})); } setAiPromptOpen(o => !o); }} disabled={aiGenerating || isSending}><Sparkles aria-hidden="true" size={15}/><span>{t('googleWorkspace.aiWrite')}</span></button></div><button className="gwp-primary gwp-compose-send" type="submit" disabled={!canSendMail || isSending || aiGenerating || draftBusy}>{isSending ? <LoaderCircle aria-hidden="true" size={16} className="gwp-spin"/> : t('googleWorkspace.send')}</button></div></div></form></div>}
         {isMacroSaveOpen && <ModalOverlay className="gwp-label-modal-overlay" onClose={() => setIsMacroSaveOpen(false)} closeOnBackdrop>
             <form className="gwp-label-modal" onSubmit={event => { event.preventDefault(); void saveCurrentBodyAsMacro(); }}>
                 <header><h3>{t('googleWorkspace.saveCurrentBodyAsMacro')}</h3><button type="button" aria-label={t('googleWorkspace.close')} onClick={() => setIsMacroSaveOpen(false)}><X aria-hidden="true" size={20}/></button></header>
@@ -2308,7 +2467,7 @@ function MailPanel({accountId, selectedMessageId, onAttachFilesToChat, navigatio
             actionLayout="horizontal"
         />}
         {sendFeedback && <div className={`gwp-send-feedback gwp-send-feedback--${sendFeedback}`} role="status">{sendFeedback === 'success' ? <CheckCircle2 aria-hidden="true" size={18}/> : <CircleAlert aria-hidden="true" size={18}/>}<span>{t(sendFeedback === 'success' ? 'googleWorkspace.mailSent' : 'googleWorkspace.mailSendFailed')}</span></div>}
-        {(isOpeningMail || isRefreshingSentReply || isTrashingMails || knowledgeCollectionAction) && <div className="gwp-mail-activity" role="status"><LoaderCircle aria-hidden="true" size={18} className="gwp-spin"/><span>{knowledgeCollectionAction === 'add' ? t('knowledgeCollectionSources.addingEmail') : knowledgeCollectionAction === 'remove' ? t('knowledgeCollectionSources.removingEmail') : isOpeningMail ? t('googleWorkspace.loadingMail') : isRefreshingSentReply ? t('googleWorkspace.loadingSentReply') : t('googleWorkspace.deletingSelectedMail')}</span></div>}
+        {(isOpeningMail || isRefreshingSentReply || isTrashingMails || knowledgeCollectionAction) && <div className="gwp-mail-activity" role="status"><LoaderCircle aria-hidden="true" size={18} className="gwp-spin"/><span>{knowledgeCollectionAction === 'add' ? t('knowledgeCollectionSources.addingEmail') : knowledgeCollectionAction === 'remove' ? t('knowledgeCollectionSources.removingEmail') : isOpeningMail ? t('googleWorkspace.loadingMail') : isRefreshingSentReply ? t('googleWorkspace.loadingSentReply') : t(isDiscardingDraft ? 'googleWorkspace.deletingDraft' : 'googleWorkspace.deletingSelectedMail')}</span></div>}
         {attachmentPreview?.mimeType.startsWith('image/') && attachmentPreview.url && createPortal(
             <ImageViewer images={[{src: attachmentPreview.url, alt: attachmentPreview.filename}]} currentIndex={0} onClose={closeAttachmentPreview} onIndexChange={() => {}}/>,
             document.body,

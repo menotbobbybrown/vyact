@@ -1008,6 +1008,12 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         const payload = await response.json();
         return payload as {body: string};
     },
+    async getGoogleMailDraft(messageId: string) {
+        return fetchJson(`${API_BASE}/${workspace}/mail/drafts/by-message/${encodeURIComponent(messageId)}`);
+    },
+    async deleteGoogleMailDraft(draftId: string, messageId: string) {
+        return fetchJson(`${API_BASE}/${workspace}/mail/drafts/${encodeURIComponent(draftId)}?${new URLSearchParams({message_id: messageId})}`, {method: 'DELETE'});
+    },
     async sendGoogleMail(data: FormData) {
         const response = await fetch(`${API_BASE}/${workspace}/mail/send`, {method: 'POST', body: data});
         await assertOk(response);

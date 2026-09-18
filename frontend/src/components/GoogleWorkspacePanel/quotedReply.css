@@ -1,0 +1,93 @@
+/* Injected into the isolated, light-background email document. */
+[data-vyact-quoted-reply] {
+    margin-top: 16px;
+}
+
+/* Use a consistent section gap instead of the generated separator break. */
+br:has(+ [data-vyact-quoted-reply]) {
+    display: none;
+}
+
+p:has(+ [data-vyact-quoted-reply]),
+p:has(+ br + [data-vyact-quoted-reply]) {
+    margin-bottom: 0;
+}
+
+.vyact-quoted-reply-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 36px;
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px solid transparent;
+    outline: none;
+    box-shadow: none;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--vyact-quote-accent) 7%, white);
+    color: color-mix(in srgb, var(--vyact-quote-accent) 72%, #302522);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-align: left;
+    transition: background .15s, color .15s;
+}
+
+.vyact-quoted-reply-toggle:hover {
+    background: color-mix(in srgb, var(--vyact-quote-accent) 13%, white);
+    color: color-mix(in srgb, var(--vyact-quote-accent) 60%, #302522);
+}
+
+.vyact-quoted-reply-toggle:focus-visible {
+    background: color-mix(in srgb, var(--vyact-quote-accent) 22%, white);
+    color: color-mix(in srgb, var(--vyact-quote-accent) 50%, #302522);
+}
+
+.vyact-quoted-reply-toggle::after {
+    content: '';
+    flex: 0 0 6px;
+    margin-right: 2px;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+}
+
+.vyact-quoted-reply-toggle[aria-expanded=true]::after {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.vyact-quoted-reply-content {
+    margin-top: 10px;
+}
+
+.vyact-quoted-reply-content[hidden] {
+    display: none !important;
+}
+
+.vyact-quoted-reply-content > div:first-child {
+    color: #80858b !important;
+    font-size: 11px !important;
+    line-height: 1.5;
+    margin-bottom: 8px !important;
+}
+
+.vyact-quoted-reply-content > blockquote {
+    margin: 0 !important;
+    padding: 0 0 0 12px !important;
+    border-left: 2px solid #e1e3e6 !important;
+}
+
+.vyact-quoted-reply-content > blockquote > :first-child {
+    margin-top: 0;
+}
+
+.vyact-quoted-reply-content > blockquote > :last-child {
+    margin-bottom: 0;
+}

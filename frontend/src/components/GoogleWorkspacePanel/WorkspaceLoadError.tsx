@@ -12,8 +12,8 @@ export default function WorkspaceLoadError({message, onRetry, busy = false}: {
         <AlertCircle aria-hidden="true" size={24}/>
         <strong>{t('networkError.requestFailed')}</strong>
         <p>{message}</p>
-        <button type="button" className="gwp-refresh" onClick={onRetry} disabled={busy}>
-            <RefreshCw aria-hidden="true" size={16}/>{t('common:retry')}
+        <button type="button" className="gwp-load-error-retry" onClick={onRetry} disabled={busy} aria-label={t('common:retry')} title={t('common:retry')} aria-busy={busy}>
+            <RefreshCw aria-hidden="true" size={18} className={busy ? 'gwp-spin' : undefined}/>
         </button>
     </div>;
 }

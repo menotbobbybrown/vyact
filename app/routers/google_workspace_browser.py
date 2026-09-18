@@ -1331,22 +1331,71 @@ async def generate_mail_body(request: MailAiGenerateRequest):
     return {"body": generated.strip()}
 
 
+def _get_current_draft(service, draft_id: str, expected_message_id: str) -> dict:
+    draft = service.users().drafts().get(userId="me", id=draft_id, format="full").execute()
+    if not expected_message_id or draft.get("message", {}).get("id") != expected_message_id:
+        raise HTTPException(409, "Draft changed. Reopen it before editing or deleting.")
+    return draft
+
+
+@router.get("/google-workspace/mail/drafts/by-message/{message_id}")
+async def get_mail_draft(message_id: str):
+    await _require_connection()
+    service = await _build_service("gmail", "v1")
+    page_token = None
+    while True:
+        page = service.users().drafts().list(userId="me", maxResults=500, pageToken=page_token).execute()
+        for summary in page.get("drafts", []):
+            if summary.get("message", {}).get("id") != message_id:
+                continue
+            draft = _get_current_draft(service, summary["id"], message_id)
+            return {"draftId": draft["id"], "message": _thread_message_detail(draft["message"], service)}
+        page_token = page.get("nextPageToken")
+        if not page_token:
+            raise HTTPException(404, "Draft not found. Refresh the conversation.")
+
+
+@router.delete("/google-workspace/mail/drafts/{draft_id}")
+async def delete_mail_draft(draft_id: str, message_id: str):
+    await _require_connection()
+    service = await _build_service("gmail", "v1")
+    _get_current_draft(service, draft_id, message_id)
+    service.users().drafts().delete(userId="me", id=draft_id).execute()
+    return {"ok": True}
+
+
 @router.post("/google-workspace/mail/send")
-async def send_mail(to: Annotated[str, Form()], subject: Annotated[str, Form()], body: Annotated[str, Form()], cc: Annotated[str, Form()] = "", bcc: Annotated[str, Form()] = "", reply_to: Annotated[str, Form()] = "", html_body: Annotated[str, Form()] = "", attachments: Annotated[list[UploadFile], File()] = [], inline_images: Annotated[list[UploadFile], File()] = []):
+async def send_mail(to: Annotated[str, Form()] = "", subject: Annotated[str, Form()] = "", body: Annotated[str, Form()] = "", cc: Annotated[str, Form()] = "", bcc: Annotated[str, Form()] = "", reply_to: Annotated[str, Form()] = "", html_body: Annotated[str, Form()] = "", attachments: Annotated[list[UploadFile], File()] = [], inline_images: Annotated[list[UploadFile], File()] = [], draft_id: Annotated[str, Form()] = "", draft_message_id: Annotated[str, Form()] = "", save_draft: Annotated[bool, Form()] = False):
     await _require_connection()
     if sum(_attachment_size(upload) for upload in [*attachments, *inline_images]) > MAX_MAIL_ATTACHMENT_BYTES:
         raise HTTPException(413, "Total attachment size cannot exceed 25 MB.")
     service = await _build_service("gmail", "v1")
+    if save_draft and not draft_id:
+        raise HTTPException(422, "An existing draft is required.")
+    draft = _get_current_draft(service, draft_id, draft_message_id) if draft_id else None
     message = _email_message(to, cc, bcc, subject, body, attachments, html_body, inline_images)
+    if draft:
+        # Keep the original sender and reply chain when replacing the MIME body.
+        headers = {header["name"].lower(): header["value"] for header in draft["message"].get("payload", {}).get("headers", [])}
+        for header in ("From", "In-Reply-To", "References"):
+            if headers.get(header.lower()):
+                message[header] = headers[header.lower()]
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
     payload: dict = {"raw": raw}
-    if reply_to:
+    if reply_to and not draft:
         original = service.users().messages().get(userId="me", id=reply_to, format="metadata", metadataHeaders=["Message-ID"]).execute()
         message["In-Reply-To"] = _headers(original).get("Message-ID", "")
         message["References"] = _headers(original).get("Message-ID", "")
         payload["raw"] = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
         payload["threadId"] = original.get("threadId")
-    sent_message = service.users().messages().send(userId="me", body=payload).execute()
+    if draft:
+        payload["threadId"] = draft["message"].get("threadId")
+        if save_draft:
+            updated = service.users().drafts().update(userId="me", id=draft_id, body={"message": payload}).execute()
+            return {"ok": True, "draftId": updated["id"], "id": updated["message"]["id"], "threadId": updated["message"].get("threadId")}
+        sent_message = service.users().drafts().send(userId="me", body={"id": draft_id, "message": payload}).execute()
+    else:
+        sent_message = service.users().messages().send(userId="me", body=payload).execute()
     return {
         "ok": True,
         "id": sent_message.get("id"),

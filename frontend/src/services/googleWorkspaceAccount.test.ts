@@ -16,11 +16,15 @@ describe('Google workspace account isolation', () => {
             first.getGoogleMailMessage('message', 'INBOX'),
             second.markGoogleMailMessageRead('message'),
             first.sendGoogleMail(new FormData()),
+            second.getGoogleMailDraft('draft-message'),
+            first.deleteGoogleMailDraft('draft', 'draft-message'),
         ]);
         const urls = fetch.mock.calls.map(([url]) => new URL(url, 'http://test'));
         expect(urls.map(url => url.searchParams.get('account_id')))
-            .toEqual(['first', 'second', 'first', 'second', 'first']);
+            .toEqual(['first', 'second', 'first', 'second', 'first', 'second', 'first']);
         expect(urls[0].searchParams.get('label')).toBe('INBOX');
         expect(urls[1].searchParams.get('label')).toBe('SENT');
+        expect(urls[6].searchParams.get('message_id')).toBe('draft-message');
+        expect(fetch.mock.calls[6][1].method).toBe('DELETE');
     });
 });
