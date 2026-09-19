@@ -455,7 +455,10 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                         "content": _FAILED_TOOL_SKIPPED_RESULT,
                     })
                     continue
-                approved = await await_tool_approval(name, args, lambda event: _emit(on_event, event))
+                approved = await await_tool_approval(
+                    name, args, lambda event: _emit(on_event, event),
+                    **mcp_manager.get_tool_approval_metadata(name),
+                )
                 if not approved:
                     result_text = "[실행 미승인] 필요한 실행 승인을 받지 못해 이 도구를 실행하지 않았습니다."
                     await _emit(on_event, {"phase": "approval_rejected", "name": name, "args": args, "result": result_text})
@@ -687,7 +690,10 @@ async def gemini_stream(client, model, api_key, system_message, user_prompt,
                         "response": {"result": _FAILED_TOOL_SKIPPED_RESULT},
                     }})
                     continue
-                approved = await await_tool_approval(name, args, lambda event: _emit(on_event, event))
+                approved = await await_tool_approval(
+                    name, args, lambda event: _emit(on_event, event),
+                    **mcp_manager.get_tool_approval_metadata(name),
+                )
                 if not approved:
                     result_text = "[실행 미승인] 필요한 실행 승인을 받지 못해 이 도구를 실행하지 않았습니다."
                     await _emit(on_event, {"phase": "approval_rejected", "name": name, "args": args, "result": result_text})
@@ -858,7 +864,10 @@ async def claude_stream(client, model, api_key, system_message, user_prompt,
                         "content": _FAILED_TOOL_SKIPPED_RESULT,
                     })
                     continue
-                approved = await await_tool_approval(name, args, lambda event: _emit(on_event, event))
+                approved = await await_tool_approval(
+                    name, args, lambda event: _emit(on_event, event),
+                    **mcp_manager.get_tool_approval_metadata(name),
+                )
                 if not approved:
                     result_text = "[실행 미승인] 필요한 실행 승인을 받지 못해 이 도구를 실행하지 않았습니다."
                     await _emit(on_event, {"phase": "approval_rejected", "name": name, "args": args, "result": result_text})

@@ -73,10 +73,14 @@ class ToolAllowlistTests(unittest.IsolatedAsyncioTestCase):
                 stack.enter_context(patch('services.llm.providers._get_unified_tools', AsyncMock(return_value=(offered, ['allowed__read_file']))))
                 stack.enter_context(patch('services.llm.providers.build_tool_directive', AsyncMock(return_value='')))
                 stack.enter_context(patch('services.llm.providers.get_tool_language', AsyncMock(return_value='en')))
+                metadata = {'annotations': {'readOnlyHint': True}, 'annotations_trusted': True}
+                lookup = stack.enter_context(patch('services.mcp_client.mcp_manager.get_tool_approval_metadata', return_value=metadata))
                 approve = stack.enter_context(patch('services.llm.providers.await_tool_approval', AsyncMock(return_value=True)))
                 execute = stack.enter_context(patch('services.mcp_client.mcp_manager.call_tool', AsyncMock(return_value='read result')))
                 client = Client(provider)
                 _ = [piece async for piece in streamer(client, 'test', 'key', 'system', 'question', [], [], [], 30)]
+                lookup.assert_called_once_with('allowed__read_file')
+                self.assertEqual(approve.call_args.kwargs, metadata)
                 approve.assert_awaited_once()
                 self.assertEqual(approve.call_args.args[0], 'allowed__read_file')
                 execute.assert_awaited_once_with('allowed__read_file', {})

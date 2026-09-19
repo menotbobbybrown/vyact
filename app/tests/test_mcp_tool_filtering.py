@@ -3,7 +3,9 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from services.code_tools import current_code_folder
-from services.mcp_client import MCPManager, _Server
+from services.mcp_config import build_servers_config
+from services.mcp_client import MCPManager, _Server, _cfg_key
+from mcp.types import Tool, ToolAnnotations
 
 
 async def _handler(**_kwargs):
@@ -15,6 +17,36 @@ def _tool(name: str):
 
 
 class McpToolFilteringTests(unittest.IsolatedAsyncioTestCase):
+    def test_approval_metadata_comes_from_matching_server_and_explicit_hints(self):
+        manager = MCPManager()
+        manager._workers["Docs"] = SimpleNamespace(
+            cfg={"trust_tool_annotations": True},
+            server=_Server("Docs", None, [Tool(name="lookup", inputSchema={},
+                annotations=ToolAnnotations(readOnlyHint=True))]),
+        )
+        self.assertEqual(manager.get_tool_approval_metadata("Docs__lookup"), {
+            "annotations": {"readOnlyHint": True}, "annotations_trusted": True,
+        })
+        self.assertEqual(manager.get_tool_approval_metadata("Other__lookup"), {})
+        self.assertEqual(manager.get_tool_approval_metadata("Docs__missing"), {})
+        manager._workers["Docs"].cfg = {}
+        self.assertFalse(manager.get_tool_approval_metadata("Docs__lookup")["annotations_trusted"])
+        self.assertNotEqual(_cfg_key({}), _cfg_key({"trust_tool_annotations": True}))
+
+    async def test_custom_transports_preserve_explicit_annotation_trust(self):
+        for server_type, connection in (
+            ("custom", {"command": "example-mcp"}),
+            ("custom_remote", {"url": "https://example.test/mcp"}),
+        ):
+            for trusted in (True, False, "true", None):
+                with self.subTest(server_type=server_type, trusted=trusted):
+                    config = {"name": "Example", **connection, "trust_tool_annotations": trusted}
+                    server = {"id": "example", "type": server_type, "enabled": True, "config": config}
+                    with patch("services.mcp_config.list_servers", AsyncMock(return_value=[server])):
+                        connections = await build_servers_config()
+                    self.assertEqual(len(connections), 1)
+                    self.assertIs(next(iter(connections.values()))["trust_tool_annotations"], trusted is True)
+
     async def test_disabled_internal_tools_are_not_exposed(self):
         manager = MCPManager()
         manager.register_internal_tool(

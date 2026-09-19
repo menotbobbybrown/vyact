@@ -94,23 +94,33 @@ async def get_tool_rejection_response(tool_name: str) -> str:
     return template.format(tool=_base_tool_name(tool_name))
 
 
-def get_tool_risk(tool_name: str) -> str:
+def get_tool_risk(tool_name: str, annotations: dict | None = None,
+                  annotations_trusted: bool = False) -> str:
     name = _base_tool_name(tool_name)
+    if "__" in tool_name:
+        # External names are not proof of read-only behavior (e.g. get_and_delete).
+        hints = annotations if annotations_trusted and isinstance(annotations, dict) else {}
+        if hints.get("destructiveHint") is True or name.startswith(("delete_", "trash_", "clear_")):
+            return "destructive"
+        if hints.get("readOnlyHint") is True:
+            return "read"
+        # Non-destructive, idempotent and closed-world do not mean read-only.
+        # Missing metadata must not silently exempt a tool from approval.
+        return "sensitive"
     if name in READ_ONLY_TOOLS or name.startswith(("get_", "list_", "search_", "read_", "check_")):
         return "read"
     if name in DESTRUCTIVE_TOOLS or name.startswith(("delete_", "trash_", "clear_")):
         return "destructive"
     if name in SENSITIVE_TOOLS or name.startswith(("send_", "reply_", "share_", "publish_")):
         return "sensitive"
-    # MCP 도구는 서버마다 이름이 달라 사전에 모두 분류할 수 없다. 알 수 없는
-    # 외부 도구는 보수적으로 민감 작업으로 취급하고, 자체 코드 도구만 일반 쓰기로 둔다.
-    return "sensitive" if "__" in tool_name else "write"
+    return "write"
 
 
-def requires_approval(tool_name: str, mode: str) -> bool:
+def requires_approval(tool_name: str, mode: str, annotations: dict | None = None,
+                      annotations_trusted: bool = False) -> bool:
     if _base_tool_name(tool_name) in {"browser_wait_for_user", "browser_ask_user"}:
         return True
-    risk = get_tool_risk(tool_name)
+    risk = get_tool_risk(tool_name, annotations, annotations_trusted)
     normalized_mode = mode if mode in APPROVAL_MODES else "risky_only"
     if normalized_mode == "always_confirm":
         return risk != "read"
@@ -119,9 +129,11 @@ def requires_approval(tool_name: str, mode: str) -> bool:
     return risk in {"sensitive", "destructive"}
 
 
-async def await_tool_approval(tool_name: str, arguments: dict, emit: ApprovalEmitter) -> bool:
+async def await_tool_approval(tool_name: str, arguments: dict, emit: ApprovalEmitter,
+                              annotations: dict | None = None,
+                              annotations_trusted: bool = False) -> bool:
     context = current_approval_context.get()
-    if not requires_approval(tool_name, context.mode):
+    if not requires_approval(tool_name, context.mode, annotations, annotations_trusted):
         return True
     if not context.interactive:
         return False
@@ -130,7 +142,7 @@ async def await_tool_approval(tool_name: str, arguments: dict, emit: ApprovalEmi
     _pending_approvals[approval_id] = PendingApproval(future, tool_name, arguments)
     await emit({
         "phase": "approval_required", "approval_id": approval_id,
-        "name": tool_name, "args": arguments, "risk": get_tool_risk(tool_name),
+        "name": tool_name, "args": arguments, "risk": get_tool_risk(tool_name, annotations, annotations_trusted),
         "conversation_id": context.conversation_id, "project_id": context.project_id,
     })
     try:

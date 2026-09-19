@@ -551,7 +551,8 @@
       "env": "Environment Variables (KEY=VALUE, one per line)",
       "url": "Server URL",
       "transport": "Transport",
-      "headers": "Headers (KEY=VALUE, one per line)"
+      "headers": "Headers (KEY=VALUE, one per line)",
+      "trust_tool_annotations": "Trust server read-only hints (skip approval for reads)"
     },
     "options": {
       "readonly": "Read Only",

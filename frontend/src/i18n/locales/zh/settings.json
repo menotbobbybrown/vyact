@@ -515,7 +515,8 @@
       "env": "环境变量 (KEY=VALUE, 每行一个)",
       "url": "服务器 URL",
       "transport": "传输方式",
-      "headers": "请求头 (KEY=VALUE, 每行一个)"
+      "headers": "请求头 (KEY=VALUE, 每行一个)",
+      "trust_tool_annotations": "信任服务器的只读提示（跳过读取审批）"
     },
     "options": {
       "readonly": "只读",

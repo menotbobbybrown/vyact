@@ -515,7 +515,8 @@
       "env": "Variables d'environnement (CLÉ=VALEUR, une par ligne)",
       "url": "URL du serveur",
       "transport": "Transport",
-      "headers": "En-têtes (CLÉ=VALEUR, un par ligne)"
+      "headers": "En-têtes (CLÉ=VALEUR, un par ligne)",
+      "trust_tool_annotations": "Se fier aux indications de lecture seule du serveur (sans approbation des lectures)"
     },
     "options": {
       "readonly": "Lecture seule",

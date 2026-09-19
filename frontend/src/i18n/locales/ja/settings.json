@@ -515,7 +515,8 @@
       "env": "環境変数 (KEY=VALUE, 改行区切り)",
       "url": "サーバーURL",
       "transport": "転送方式",
-      "headers": "ヘッダー (KEY=VALUE, 改行区切り)"
+      "headers": "ヘッダー (KEY=VALUE, 改行区切り)",
+      "trust_tool_annotations": "サーバーの読み取り専用情報を信頼（読み取りの承認を省略）"
     },
     "options": {
       "readonly": "読み取り専用",

@@ -56,6 +56,7 @@ def _cfg_key(cfg: dict) -> str:
             "url": cfg.get("url"),
             "transport": cfg.get("transport"),
             "tool_whitelist": cfg.get("tool_whitelist"),
+            "trust_tool_annotations": cfg.get("trust_tool_annotations", False),
         }, sort_keys=True, ensure_ascii=False)
     except Exception:
         return repr(cfg)
@@ -372,6 +373,26 @@ class MCPManager:
                     await asyncio.wait_for(worker.wait_ready(), timeout=30.0)
                 except asyncio.TimeoutError:
                     logger.warning("[mcp] '%s' connection wait timeout (continuing in background)", worker.name)
+
+    def get_tool_approval_metadata(self, tool_name: str) -> dict:
+        """Use metadata from the connected server, never model-supplied arguments."""
+        if _SEP not in tool_name:
+            return {}
+        server_name, local_name = tool_name.split(_SEP, 1)
+        worker = self._workers.get(server_name)
+        if worker is None or worker.server is None:
+            return {}
+        for tool in worker.server.tools:
+            if tool.name != local_name:
+                continue
+            annotations = getattr(tool, "annotations", None)
+            if annotations is not None and hasattr(annotations, "model_dump"):
+                annotations = annotations.model_dump(exclude_unset=True)
+            return {
+                "annotations": annotations if isinstance(annotations, dict) else None,
+                "annotations_trusted": worker.cfg.get("trust_tool_annotations") is True,
+            }
+        return {}
 
     async def get_tools(self) -> list[dict]:
         """연결된 모든 서버의 tool을 OpenAI-compatible 'tools' 스키마로 변환.

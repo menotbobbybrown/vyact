@@ -298,6 +298,7 @@ MCP_CATALOG: dict[str, dict] = {
             {"key": "command", "label": "실행 명령", "type": "text", "required": True},
             {"key": "args", "label": "인자 (줄바꿈 구분)", "type": "lines", "required": False},
             {"key": "env", "label": "환경변수 (KEY=VALUE, 줄바꿈)", "type": "env", "required": False},
+            {"key": "trust_tool_annotations", "label": "서버의 읽기 전용 정보 신뢰 (조회 승인 생략)", "type": "toggle", "required": False},
         ],
     },
     "custom_remote": {
@@ -312,6 +313,7 @@ MCP_CATALOG: dict[str, dict] = {
                  {"value": "sse", "label": "SSE"},
              ]},
             {"key": "headers", "label": "헤더 (KEY=VALUE, 줄바꿈)", "type": "env", "required": False},
+            {"key": "trust_tool_annotations", "label": "서버의 읽기 전용 정보 신뢰 (조회 승인 생략)", "type": "toggle", "required": False},
         ],
     },
 }
@@ -629,6 +631,7 @@ async def build_servers_config(include_server_ids: set[str] | None = None) -> di
         if key in servers:
             servers[key]["_server_id"] = s.get("id")
             servers[key]["_server_type"] = type_
+            servers[key]["trust_tool_annotations"] = conf.get("trust_tool_annotations") is True
         if key in servers and type_ in TOOL_WHITELIST:
             servers[key]["tool_whitelist"] = TOOL_WHITELIST[type_]
 

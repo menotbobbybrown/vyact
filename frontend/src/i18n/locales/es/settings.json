@@ -515,7 +515,8 @@
       "env": "Variables de entorno (CLAVE=VALOR, una por línea)",
       "url": "URL del servidor",
       "transport": "Transporte",
-      "headers": "Encabezados (CLAVE=VALOR, uno por línea)"
+      "headers": "Encabezados (CLAVE=VALOR, uno por línea)",
+      "trust_tool_annotations": "Confiar en las indicaciones de solo lectura del servidor (sin aprobación para lecturas)"
     },
     "options": {
       "readonly": "Solo lectura",

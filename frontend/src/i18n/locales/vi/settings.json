@@ -515,7 +515,8 @@
       "env": "Biến môi trường (KEY=VALUE, mỗi dòng một biến)",
       "url": "URL máy chủ",
       "transport": "Transport",
-      "headers": "Headers (KEY=VALUE, mỗi dòng một mục)"
+      "headers": "Headers (KEY=VALUE, mỗi dòng một mục)",
+      "trust_tool_annotations": "Tin thông tin chỉ đọc từ máy chủ (bỏ qua phê duyệt khi đọc)"
     },
     "options": {
       "readonly": "Chỉ đọc",

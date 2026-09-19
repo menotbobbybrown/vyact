@@ -580,7 +580,8 @@
       "env": "환경변수 (KEY=VALUE, 줄바꿈)",
       "url": "서버 URL",
       "transport": "전송 방식",
-      "headers": "헤더 (KEY=VALUE, 줄바꿈)"
+      "headers": "헤더 (KEY=VALUE, 줄바꿈)",
+      "trust_tool_annotations": "서버의 읽기 전용 정보 신뢰 (조회 승인 생략)"
     },
     "options": {
       "readonly": "읽기 전용",
