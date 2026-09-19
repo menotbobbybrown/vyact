@@ -1,6 +1,8 @@
-import {describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import type {Message} from '../../types';
 import {getUnansweredQuestionIndex, isUnansweredResponse, markResponseStopped, prepareRetryTurn, removeRetryTurn} from './chatRetry';
+
+afterEach(() => vi.useRealTimers());
 
 describe('stopped response retry', () => {
     it('keeps an empty response available for retry without marking it as an error', () => {
@@ -55,21 +57,25 @@ describe('retry from reloaded history', () => {
 });
 
 it('repeated retry and stop preserve one original question in UI and saved history', () => {
+    vi.useFakeTimers();
     const earlier: Message[] = [{role: 'user', content: 'Earlier'}, {role: 'assistant', content: 'Answer'}];
     const question: Message = {id: 'original', role: 'user', content: 'Retry me', timestamp: 'original-time', attachments: [{type: 'file', filename: 'test.txt'}]};
     let visible: Message[] = [...earlier, question, {role: 'assistant', content: '', isStopped: true}];
     for (let attempt = 0; attempt < 3; attempt++) {
+        const retryTime = new Date(Date.UTC(2026, 8, 20, 2, attempt));
+        vi.setSystemTime(retryTime);
         const originalState = [...visible];
         const retry = prepareRetryTurn(visible, question);
         expect(visible).toEqual(originalState);
         expect(retry.history).toEqual(earlier);
-        expect(retry.userMessage).toBe(question);
+        expect(retry.userMessage).toEqual({...question, timestamp: retryTime.toISOString()});
+        expect(question.timestamp).toBe('original-time');
         // Both the immediate UI and the server save use the same explicit snapshot.
         const sentHistory = [...retry.history, retry.userMessage];
         visible = [...retry.history, retry.userMessage, {role: 'assistant', content: '', isStopped: true}];
         expect(visible.filter(message => message.role === 'user')).toEqual(sentHistory.filter(message => message.role === 'user'));
         expect(sentHistory.filter(message => message.content === 'Retry me')).toHaveLength(1);
-        expect(sentHistory[sentHistory.length - 1].timestamp).toBe('original-time');
+        expect(sentHistory[sentHistory.length - 1].timestamp).toBe(retryTime.toISOString());
         // Reopening history removes only the empty response placeholder.
         if (attempt === 1) visible = sentHistory;
     }

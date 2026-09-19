@@ -38,5 +38,8 @@ export function getUnansweredQuestionIndex(messages: Message[]): number {
 }
 
 export function prepareRetryTurn(messages: Message[], userMessage: Message) {
-    return {userMessage, history: removeRetryTurn(messages)};
+    return {
+        userMessage: {...userMessage, timestamp: new Date().toISOString()},
+        history: removeRetryTurn(messages),
+    };
 }
