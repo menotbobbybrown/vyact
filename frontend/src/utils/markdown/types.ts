@@ -10,7 +10,6 @@ export interface MessageProps {
     model?: string;
     attachments?: Array<{ type: 'image' | 'zip' | 'file'; filename?: string; original_name?: string; saved_name?: string; path?: string; url?: string; file_count?: number; files?: unknown[]; content?: string }>;
     isError?: boolean;
-    isStopped?: boolean;
     errorTitle?: string;
     onRetry?: () => void;
     isGeneratedImage?: boolean;

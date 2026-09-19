@@ -1,9 +1,9 @@
 import type {Message} from '../../types';
 
-export function markResponseStopped(message: Message, stoppedLabel: string): Message {
+export function markResponseStopped(message: Message): Message {
     return {
         ...message,
-        content: message.content?.trim() ? message.content : stoppedLabel,
+        content: message.content,
         isStopped: true,
         isError: false,
         toolStatus: undefined,

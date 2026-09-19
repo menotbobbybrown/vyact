@@ -4,12 +4,12 @@ import {markResponseStopped, removeRetryTurn} from './chatRetry';
 
 describe('stopped response retry', () => {
     it('keeps an empty response available for retry without marking it as an error', () => {
-        const stopped = markResponseStopped({id: 'response', role: 'assistant', content: ''}, 'Stopped');
-        expect(stopped).toMatchObject({id: 'response', content: 'Stopped', isStopped: true, isError: false});
+        const stopped = markResponseStopped({id: 'response', role: 'assistant', content: ''});
+        expect(stopped).toMatchObject({id: 'response', content: '', isStopped: true, isError: false});
     });
     it('preserves partial output and completes pending tool activity', () => {
         const message: Message = {role: 'assistant', content: 'Partial answer', toolStatus: {phase: 'running', label: 'Search'}, activityLog: [{phase: 'running', label: 'Search'}]};
-        const stopped = markResponseStopped(message, 'Stopped');
+        const stopped = markResponseStopped(message);
         expect(stopped.content).toBe('Partial answer');
         expect(stopped.toolStatus).toBeUndefined();
         expect(stopped.activityLog?.[0].phase).toBe('completed');

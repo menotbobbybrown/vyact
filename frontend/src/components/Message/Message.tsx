@@ -75,7 +75,7 @@ const StreamingTextGroup: React.FC<{
 
 const Message: React.FC<MessageProps> = ({
                                              messageId, role, content, timestamp, sources, model, attachments,
-                                             isError, isStopped, errorTitle, onRetry, isGeneratedImage, articleSources,
+                                             isError, errorTitle, onRetry, isGeneratedImage, articleSources,
                                              pdfFile, pdfParams, onPdfEdit, injectedContext, onShowInjectedContext, onOpenMemo, onOpenQuickMemo,
                                              isStreaming = false, conversationId, requestStartedAt, toolStatus, activityLog, progressMessages, stats,
                                              truncated,
@@ -597,13 +597,6 @@ const Message: React.FC<MessageProps> = ({
                     </div>
                 )}
             </div>
-            {isStopped && onRetry && !isStreaming && (
-                <button type="button" onClick={onRetry} className="message-retry message-retry-stopped">
-                    <RotateCcw size={14}/>{t('message.retry')}
-                </button>
-            )}
-
-
             {tableImgViewer && (
                 <ImageViewer
                     images={tableImgViewer.images}
@@ -825,6 +818,12 @@ const Message: React.FC<MessageProps> = ({
                                     </svg>
                                 )}
                             </button>
+                            {onRetry && (
+                                <button type="button" className="msg-copy-btn msg-retry-btn"
+                                        onClick={onRetry} aria-label={t('message.retry')}>
+                                    <RotateCcw size={14}/>
+                                </button>
+                            )}
                             <span className="msg-time">{formatTimestamp(timestamp)}{model && ` · ${formatModelDisplayName(model)}`}</span>
                         </>
                     ) : (

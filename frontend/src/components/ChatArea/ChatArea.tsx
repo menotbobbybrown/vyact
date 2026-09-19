@@ -488,7 +488,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                     <div className="chat-area-content">
                         {isEmpty && !isLoading && <WelcomeGreeting projectName={projectName}/>}
 
-                        {messages.map((msg, idx) => (
+                        {messages.map((msg, idx) => msg.isStopped && !msg.content.trim() ? null : (
                             <div
                                 key={msg.id || msg.timestamp || idx}
                                 className={`chat-message-row chat-message-row--${msg.role}`}
@@ -502,9 +502,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                                 model={msg.model}
                                 attachments={msg.attachments}
                                 isError={msg.isError}
-                                isStopped={msg.isStopped}
                                 errorTitle={msg.errorTitle}
-                                onRetry={(msg.isError || msg.isStopped) && idx === messages.length - 1 && !isLoading ? onRetry : undefined}
+                                onRetry={!isLoading && (
+                                    (msg.isError && idx === messages.length - 1)
+                                    || (msg.role === 'user' && idx === messages.length - 2 && messages[idx + 1]?.isStopped)
+                                ) ? onRetry : undefined}
                                 isGeneratedImage={msg.isGeneratedImage}
                                 articleSources={msg.articleSources}
                                 pdfFile={msg.pdfFile}

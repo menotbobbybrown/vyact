@@ -800,7 +800,7 @@ export function useChat(deps: UseChatDeps) {
                         setLastFailedQuery({...failedRequest, retryMessageId: streamId});
                         setMessagesForConversation(requestConvId, prev => prev.map(m =>
                             m.id === streamId
-                                ? markResponseStopped(m, t('toolActivity.stopped'))
+                                ? markResponseStopped(m)
                                 : m));
                     } else {
                         // HTTP 레벨 실패(ApiError)나 네트워크 중단 등 — onError(서버가 보낸 SSE error
