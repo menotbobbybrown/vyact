@@ -453,6 +453,7 @@
     }
   },
   "mcpMenu": {
+    "scopeHelp": "Các công tắc công cụ này chỉ áp dụng cho ứng dụng Vyact,\nđộc lập với tiện ích Chrome.",
     "title": "Công cụ AI",
     "loading": "Đang tải...",
     "empty": "Chưa có công cụ AI",

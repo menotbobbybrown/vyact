@@ -9,6 +9,7 @@ import {
 } from '../../services/googleWorkspaceStatus';
 import {emitMcpServersChanged, onMcpServersChanged} from '../../utils/mcpEvents';
 import type {McpCatalogEntry, McpServer} from '../../types';
+import {Tooltip} from '../common/Tooltip/Tooltip';
 import './McpMenu.css';
 
 interface McpMenuProps {
@@ -148,7 +149,7 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
                 disabled={disabled}
                 aria-label={t('mcpMenu.title')}
             >
-                <Wrench size={18}/>
+                <Wrench size={17} strokeWidth={2} aria-hidden="true"/>
                 {enabledCount > 0 && (
                     <span className="mcp-menu-count">{enabledCount}</span>
                 )}
@@ -157,7 +158,10 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
             {open && (
                 <div className="mcp-menu-popover">
                     <div className="mcp-menu-header">
-                        {t('mcpMenu.title')}
+                        <Tooltip content={t('mcpMenu.scopeHelp')} multiline>
+                            <button type="button" className="mcp-menu-help" aria-label={t('mcpMenu.scopeHelp')}>?</button>
+                        </Tooltip>
+                        <span>{t('mcpMenu.title')}</span>
                     </div>
 
                     <div className="mcp-menu-list">

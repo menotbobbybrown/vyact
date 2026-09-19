@@ -5,6 +5,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, WebSocket, WebSoc
 from pydantic import BaseModel
 
 from services.extension_browser import extension_browser
+from services.extension_tools import extension_tool_catalog
 
 
 router = APIRouter(prefix="/browser-extension", tags=["browser-extension"])
@@ -27,6 +28,7 @@ async def browser_websocket(websocket: WebSocket):
         return
     await websocket.accept()
     extension_browser.attach(websocket)
+    previous_tools = None
     try:
         while True:
             message = await websocket.receive_json()
@@ -39,6 +41,14 @@ async def browser_websocket(websocket: WebSocket):
                 })
             elif message.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
+            if message.get("type") in {"hello", "ping"}:
+                try:
+                    tools = await extension_tool_catalog()
+                    if tools != previous_tools:
+                        await websocket.send_json({"type": "tools_changed", "servers": tools})
+                        previous_tools = tools
+                except Exception:
+                    pass  # A failed snapshot must not erase extension preferences.
     except WebSocketDisconnect:
         pass
     finally:
@@ -76,3 +86,9 @@ async def command_result(command_id: str, payload: BrowserResult, request: Reque
     _require_local(request)
     _require_token(authorization)
     return {"accepted": extension_browser.complete(command_id, payload.model_dump())}
+
+
+@router.get("/tools")
+async def get_extension_tools(request: Request):
+    _require_local(request)
+    return {"servers": await extension_tool_catalog()}

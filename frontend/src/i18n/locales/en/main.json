@@ -453,6 +453,7 @@
     }
   },
   "mcpMenu": {
+    "scopeHelp": "These tool switches apply only to the Vyact app,\nindependently of the Chrome extension.",
     "title": "AI Tools",
     "loading": "Loading...",
     "empty": "No AI tools registered.",

@@ -18,6 +18,8 @@ from agent import (
     query_llm, get_model_name,
     get_conversation, rag_query_stream,
 )
+from services.mcp_client import mcp_manager
+from services.mcp_config import build_servers_config
 from services.request_cancellation import await_while_connected
 from services.llm.config import get_model_display_name
 from services.llm.stats import format_generation_stats
@@ -352,6 +354,7 @@ class QueryRequest(BaseModel):
     external_resource_ids: list[str] = []  # 사용자가 명시적으로 선택한 외부 데이터만 별도 검색
     external_document_selections: list[dict] = []  # 모달에서 명시적으로 첨부한 외부 데이터 원문
     minimal_prompt: bool = False  # True면 응답 언어 규칙 외에는 클라이언트 system_prompt만 사용하고 컨텍스트·도구·RAG 주입을 제외.
+    client_tool_ids: list[str] | None = None  # None: desktop defaults; []: no client tools.
     tools_enabled: bool = True  # 확장 프로그램 등 답변 전용 클라이언트는 False로 요청.
     selected_mcp_ids: list[str] = []  # @로 선택한 MCP들은 enabled 여부와 무관하게 이번 요청에만 사용.
     approval_mode: str = "risky_only"
@@ -510,10 +513,19 @@ async def query(req: QueryRequest):
         mode=req.approval_mode, conversation_id=req.conv_id,
         project_id=req.project_id, interactive=False,
     ))
+    scope_token = None
     try:
+        if req.use_tools and (req.client_tool_ids is not None or req.selected_mcp_ids):
+            scope_token = await mcp_manager.enable_request_scope(
+                req.selected_mcp_ids or req.client_tool_ids or [],
+                client_scope=req.client_tool_ids is not None, explicit=bool(req.selected_mcp_ids),
+            )
         return await _query_response(req)
     finally:
         current_approval_context.reset(token)
+        if scope_token is not None:
+            mcp_manager.reset_request_scope(scope_token)
+            await mcp_manager.connect_all(await build_servers_config())
 
 
 async def _query_response(req: QueryRequest):
@@ -852,9 +864,12 @@ async def query_stream(req: QueryRequest):
                 mode=req.approval_mode, conversation_id=req.conv_id, project_id=req.project_id,
                 interactive=True,
             ))
-            if req.selected_mcp_ids and req.use_tools:
-                from services.mcp_client import mcp_manager
-                mcp_scope_token = await mcp_manager.enable_request_scope(req.selected_mcp_ids)
+            if req.use_tools and (req.client_tool_ids is not None or req.selected_mcp_ids):
+                selected_ids = req.selected_mcp_ids or req.client_tool_ids or []
+                mcp_scope_token = await mcp_manager.enable_request_scope(
+                    selected_ids, client_scope=req.client_tool_ids is not None,
+                    explicit=bool(req.selected_mcp_ids),
+                )
             # 1) 붙여넣기 UI 마커 제거 (본문은 사용자 질문으로 유지)
             clean_question = unwrap_pasted_text(req.question)
 
@@ -1321,8 +1336,6 @@ async def query_stream(req: QueryRequest):
             if approval_context_token is not None:
                 current_approval_context.reset(approval_context_token)
             if mcp_scope_token is not None:
-                from services.mcp_client import mcp_manager
-                from services.mcp_config import build_servers_config
                 mcp_manager.reset_request_scope(mcp_scope_token)
                 await mcp_manager.connect_all(await build_servers_config())
             if not _saved and not req.no_history:

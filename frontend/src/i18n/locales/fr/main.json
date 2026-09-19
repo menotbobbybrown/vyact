@@ -453,6 +453,7 @@
     }
   },
   "mcpMenu": {
+    "scopeHelp": "Ces interrupteurs s’appliquent uniquement à l’application Vyact,\nindépendamment de l’extension Chrome.",
     "title": "Outils d’IA",
     "loading": "Chargement...",
     "empty": "Aucun outil d’IA",

@@ -30,6 +30,8 @@ logger = get_logger(__name__)
 
 # tool 이름 prefix 구분자 (서버명과 tool명 사이)
 _SEP = "__"
+_client_scope: ContextVar[bool] = ContextVar("client_tool_scope", default=False)
+_explicit_scope: ContextVar[bool] = ContextVar("explicit_tool_scope", default=True)
 _request_server_ids: ContextVar[frozenset[str] | None] = ContextVar("request_mcp_server_ids", default=None)
 _request_server_types: ContextVar[frozenset[str] | None] = ContextVar("request_mcp_server_types", default=None)
 
@@ -194,6 +196,7 @@ class MCPManager:
     def __init__(self) -> None:
         self._workers: dict[str, _ServerWorker] = {}
         self._sync_lock = asyncio.Lock()
+        self._scope_refs: dict[str, int] = {}
         self._tool_lifecycles: dict[str, ToolLifecycle] = {}
         # 내부 tool: 외부 MCP 서버 없이 파이썬 함수를 tool로 직접 노출.
         self._internal_tools: dict[str, dict] = {}
@@ -224,24 +227,43 @@ class MCPManager:
         self._pending_sources = []
         return out
 
-    async def enable_request_scope(self, server_ids: list[str]):
+    async def enable_request_scope(self, server_ids: list[str], *, client_scope: bool = False, explicit: bool = True):
         from services.mcp_config import build_servers_config, list_servers
         requested_ids = set(server_ids)
         selected = [server for server in await list_servers() if server.get("id") in requested_ids]
-        if not selected:
+        if not selected and not client_scope:
             return None
         selected_ids = {server["id"] for server in selected}
-        await self.connect_all(await build_servers_config(selected_ids))
-        return (_request_server_ids.set(frozenset(selected_ids)), _request_server_types.set(frozenset(server.get("type") for server in selected)))
+        for server_id in selected_ids:
+            self._scope_refs[server_id] = self._scope_refs.get(server_id, 0) + 1
+        try:
+            await self.connect_all(await build_servers_config(set(self._scope_refs)))
+        except BaseException:
+            self._release_scope_refs(selected_ids)
+            raise
+        return (_request_server_ids.set(frozenset(selected_ids)),
+                _request_server_types.set(frozenset(server.get("type") for server in selected)),
+                _client_scope.set(client_scope), _explicit_scope.set(explicit), selected_ids)
+
+    def _release_scope_refs(self, server_ids):
+        for server_id in server_ids:
+            count = self._scope_refs.get(server_id, 0) - 1
+            if count > 0:
+                self._scope_refs[server_id] = count
+            else:
+                self._scope_refs.pop(server_id, None)
 
     def reset_request_scope(self, tokens) -> None:
         if tokens is not None:
             _request_server_ids.reset(tokens[0])
             _request_server_types.reset(tokens[1])
+            _client_scope.reset(tokens[2])
+            _explicit_scope.reset(tokens[3])
+            self._release_scope_refs(tokens[4])
 
     def has_request_scope(self) -> bool:
         """현재 요청이 @로 MCP 하나를 명시 선택했는지 반환한다."""
-        return _request_server_ids.get() is not None
+        return _request_server_ids.get() is not None and _explicit_scope.get()
 
     def get_request_scope_server_ids(self) -> set[str] | None:
         """@로 선택한 MCP 서버 ID 집합. 일반 요청이면 None."""
@@ -328,6 +350,8 @@ class MCPManager:
                 new_cfg = desired.get(name)
                 if new_cfg is None or _cfg_key(new_cfg) != worker.cfg_key:
                     to_stop.append(name)
+            to_stop = [name for name in to_stop
+                       if self._workers[name].cfg.get("_server_id") not in self._scope_refs]
             for name in to_stop:
                 worker = self._workers.pop(name)
                 await worker.stop()
@@ -361,6 +385,8 @@ class MCPManager:
         try:
             from services.mcp_config import list_servers
             for s in await list_servers():
+                if _client_scope.get() and s.get("id") not in (selected_server_ids or frozenset()):
+                    continue
                 if s.get("type") == "web_search":
                     if not (s.get("enabled") or (selected_server_ids and s.get("id") in selected_server_ids)):
                         continue
@@ -414,6 +440,8 @@ class MCPManager:
                 })
         for name, spec in self._internal_tools.items():
             stype = spec.get("server_type")
+            if _client_scope.get() and (stype is None or stype not in (selected_server_types or frozenset())):
+                continue
             # 프로젝트 폴더가 연결된 요청에서는 code_tools가 기본 작업 수단이다.
             # @GitHub처럼 MCP를 명시 선택해도 선택 도구에 code_tools를 더해야 하며,
             # request scope 필터가 프로젝트 도구를 제거하면 안 된다.
@@ -464,6 +492,10 @@ class MCPManager:
         text만 결과 텍스트로 반환한다.
         """
         language = await get_tool_language()
+        if _client_scope.get():
+            available = {tool["function"]["name"] for tool in await self.get_tools()}
+            if prefixed_name not in available:
+                return tool_error(tool_message("invalid_name", language, tool=prefixed_name))
         safe_arguments = DebugLogSettings.redact_arguments(arguments or {})
         started_at = time.monotonic()
         DebugLogSettings.log("tool_execution_start", tool=prefixed_name, arguments=safe_arguments)

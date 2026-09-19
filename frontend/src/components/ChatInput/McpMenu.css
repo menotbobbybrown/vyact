@@ -25,7 +25,7 @@
     pointer-events: none;
 }
 .mcp-menu-popover { position: absolute; bottom: 45px; left: 0; z-index: 1000; display: flex; min-width: 240px; max-width: 320px; max-height: 50vh; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: 0 4px 16px rgba(0, 0, 0, .35); }
-.mcp-menu-header { flex-shrink: 0; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 600; }
+.mcp-menu-header { display:flex; align-items:center; gap:7px; flex-shrink: 0; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 600; }
 .mcp-menu-list { flex: 1; overflow-y: auto; }
 .mcp-menu-empty { padding: 14px; color: var(--muted); font-size: 13px; }
 .mcp-menu-server { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; transition: background .15s; }
@@ -38,3 +38,6 @@
 .mcp-menu-switch.busy { opacity: .6; }
 .mcp-menu-switch-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: left .2s; }
 .mcp-menu-switch.enabled .mcp-menu-switch-knob { left: 18px; }
+
+.mcp-menu-help { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; padding:0; flex-shrink:0; border:1px solid var(--border); border-radius:50%; background:transparent; color:var(--muted); font-size:11px; font-weight:700; line-height:1; cursor:help; }
+.mcp-menu-help:hover, .mcp-menu-help:focus-visible { color:var(--accent); border-color:var(--accent); outline:2px solid color-mix(in srgb,var(--accent) 20%,transparent); outline-offset:2px; }
