@@ -1,11 +1,14 @@
 """Local API used by the Vyact Chrome extension browser executor."""
+import json
 import time
 
 from fastapi import APIRouter, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from services.extension_browser import extension_browser
 from services.extension_tools import extension_tool_catalog
+from services.extension_settings import request_tool_settings, settings_events
 
 
 router = APIRouter(prefix="/browser-extension", tags=["browser-extension"])
@@ -92,3 +95,28 @@ async def command_result(command_id: str, payload: BrowserResult, request: Reque
 async def get_extension_tools(request: Request):
     _require_local(request)
     return {"servers": await extension_tool_catalog()}
+
+
+@router.get("/settings-events")
+async def desktop_settings_events(request: Request):
+    if request.client and request.client.host not in {"127.0.0.1", "::1"}:
+        raise HTTPException(status_code=403, detail="Local desktop access only")
+
+    async def stream():
+        async for event in settings_events():
+            yield f"data: {json.dumps(event)}\n\n" if event else ": heartbeat\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.post("/tools/{server_id}/settings")
+async def open_tool_settings(server_id: str, request: Request):
+    _require_local(request)
+    server = next((item for item in await extension_tool_catalog()
+                   if item["id"] == server_id and item["type"] == "web_search"), None)
+    if server is None:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    if not request_tool_settings(server_id):
+        raise HTTPException(status_code=503, detail="Desktop UI is not connected")
+    return {"ok": True}

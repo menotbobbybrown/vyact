@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld("ragAPI", {
     },
     platform: process.platform,
     version: process.versions.electron,
+    focusWindow: () => ipcRenderer.invoke("window-focus"),
     minimize: () => ipcRenderer.invoke("window-minimize"),
     maximize: () => ipcRenderer.invoke("window-maximize"),
     close: () => ipcRenderer.invoke("window-close"),

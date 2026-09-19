@@ -11,6 +11,7 @@ interface AppUpdateState {
 
 interface Window {
     ragAPI?: {
+        focusWindow?: () => Promise<void>;
         getShutdownNotice?: () => Promise<string[] | null>;
         dismissShutdownNotice?: () => Promise<void>;
         onShutdownBlocked?: (callback: (reasons: string[]) => void) => () => void;

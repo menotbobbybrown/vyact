@@ -1547,6 +1547,13 @@ ipcMain.handle("window-set-aspect-ratio", (_event, aspectRatio) => {
     return true;
 });
 
+ipcMain.handle("window-focus", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+});
+
 ipcMain.handle("window-minimize", () => mainWindow?.minimize());
 ipcMain.handle("window-maximize", () => {
     if (!mainWindow) return;

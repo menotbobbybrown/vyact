@@ -436,7 +436,17 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
             setOpenSettingsExternal(true);
         };
         window.addEventListener('vyact:open-settings', openSettings);
-        return () => window.removeEventListener('vyact:open-settings', openSettings);
+        const settingsEvents = new EventSource('/api/browser-extension/settings-events');
+        settingsEvents.onmessage = event => {
+            const detail = JSON.parse(event.data);
+            if (detail.tab !== 'api' || typeof detail.mcpServerId !== 'string') return;
+            window.dispatchEvent(new CustomEvent('vyact:open-settings', {detail}));
+            void window.ragAPI?.focusWindow?.();
+        };
+        return () => {
+            settingsEvents.close();
+            window.removeEventListener('vyact:open-settings', openSettings);
+        };
     }, []);
     const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [cmdPaletteQuery, setCmdPaletteQuery] = useState('');
