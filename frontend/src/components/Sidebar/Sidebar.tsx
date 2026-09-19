@@ -63,6 +63,7 @@ interface SidebarProps {
     onHoverLeave?: () => void;
     openSettings?: boolean;
     openSettingsTab?: string;
+    openSettingsMcpServerId?: string;
     onSettingsClosed?: () => void;
     activeProjectId?: string | null;
     onProjectChange?: (projectId: string | null) => void;
@@ -261,6 +262,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                              onHoverLeave,
                                              openSettings,
                                              openSettingsTab,
+                                             openSettingsMcpServerId,
                                              onSettingsClosed,
                                              activeProjectId,
                                              onProjectChange,
@@ -980,7 +982,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {isVyactModalOpen && <React.Suspense fallback={null}><VyactModelModal activeModelPath={currentProvider === 'vyact' ? selectedModel : undefined} onClose={() => setIsVyactModalOpen(false)} onSelected={async () => { await loadCurrentProvider(); await onProviderChange(); }}/></React.Suspense>}
             {modelSettingsPath && <React.Suspense fallback={null}><ModelSettingsModal modelPath={modelSettingsPath} runtime={modelSettingsPath.startsWith('mlx/') ? 'mlx' : 'gguf'} repository={modelSettingsPath.startsWith('mlx/') ? modelSettingsPath.slice(4) : undefined} activateOnApply forceActivateOnApply={modelSettingsPath !== selectedModel} mtpSupported={mtpSupported.includes(modelSettingsPath)} dflash2Supported={dflash2Supported.includes(modelSettingsPath)} onClose={() => setModelSettingsPath(null)} onApplied={async () => {await loadCurrentProvider(); await onProviderChange();}}/></React.Suspense>}
             {isSettingsOpen && <React.Suspense fallback={null}>
-                <SettingsModal isOpen onClose={() => setIsSettingsOpen(false)} initialTab={openSettingsTab}/>
+                <SettingsModal isOpen onClose={() => setIsSettingsOpen(false)} initialTab={openSettingsTab} initialMcpServerId={openSettingsMcpServerId}/>
             </React.Suspense>}
             {providerToDelete && <ConfirmModal
                 title={providerToDelete.name}

@@ -56,6 +56,21 @@ export interface McpServer {
     prompt?: string;
 }
 
+export interface WebSearchCreditSummary {
+    used: number | null;
+    limit: number | null;
+    remaining: number | null;
+}
+
+export type WebSearchUsage = {
+    status: 'ok';
+    estimated?: boolean;
+    available?: boolean;
+    plan: WebSearchCreditSummary;
+    paygo: WebSearchCreditSummary;
+    key: WebSearchCreditSummary;
+} | {status: 'missing_key' | 'invalid_key' | 'rate_limited' | 'unavailable'};
+
 export interface PluginSettingsDefinition {
     endpoint: string;
     fields: Array<{

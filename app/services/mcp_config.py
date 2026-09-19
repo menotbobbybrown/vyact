@@ -24,6 +24,8 @@ from typing import Any
 
 from logger import get_logger
 from services.db import INTEGRATION_SETTINGS_INDEX, get_es
+from services.tool_messages import get_tool_language
+from services.web_search_prompts import get_web_search_prompt
 
 logger = get_logger(__name__)
 
@@ -135,6 +137,13 @@ MCP_CATALOG: dict[str, dict] = {
         "singleton": True,
         "kind": "internal",
         "fields": [],
+    },
+    "web_search": {
+        "label": "Web Search (Tavily)",
+        "singleton": True,
+        "kind": "internal",
+        "fields": [{"key": "api_key", "label": "API Key", "type": "secret", "required": True}],
+        "default_prompt": get_web_search_prompt("en"),
     },
     "github": {
         "label": "GitHub",
@@ -313,7 +322,7 @@ MCP_CATALOG: dict[str, dict] = {
 
 
 def _default_config() -> dict:
-    """기본값: 비활성 filesystem·browser 도구."""
+    """기본값: 비활성 filesystem·browser·web_search 도구."""
     return {"servers": [
         {
             "id": uuid.uuid4().hex[:8],
@@ -322,16 +331,18 @@ def _default_config() -> dict:
             "config": {"directories": [str(Path.home())]},
         },
         {"id": uuid.uuid4().hex[:8], "type": "browser", "enabled": False, "config": {}},
+        {"id": uuid.uuid4().hex[:8], "type": "web_search", "enabled": False, "config": {}},
     ]}
 
 
 def _ensure_builtin_servers(cfg: dict) -> tuple[dict, bool]:
     """기존 설치에도 비활성 기본 internal 도구를 안전하게 추가한다."""
     servers = cfg.setdefault("servers", [])
-    if any(server.get("type") == "browser" for server in servers):
-        return cfg, False
-    servers.append({"id": uuid.uuid4().hex[:8], "type": "browser", "enabled": False, "config": {}})
-    return cfg, True
+    existing_types = {server.get("type") for server in servers}
+    missing_types = [type_ for type_ in ("browser", "web_search") if type_ not in existing_types]
+    for type_ in missing_types:
+        servers.append({"id": uuid.uuid4().hex[:8], "type": type_, "enabled": False, "config": {}})
+    return cfg, bool(missing_types)
 
 
 async def load_mcp_config() -> dict:
@@ -381,7 +392,7 @@ async def ensure_mcp_config() -> dict:
                     index=INTEGRATION_SETTINGS_INDEX, id=_MCP_DOC_ID,
                     document={"key": _MCP_DOC_ID, "value": value}, refresh=True,
                 )
-                logger.info("[mcp_config] default browser MCP config added")
+                logger.info("[mcp_config] default internal MCP configs added")
             return value
 
         cfg = _default_config()
@@ -407,7 +418,7 @@ async def add_server(type_: str, config: dict, enabled: bool = True, prompt: str
         raise ValueError(f"알 수 없는 MCP 타입: {type_}")
     cfg = await load_mcp_config()
     server = {"id": uuid.uuid4().hex[:8], "type": type_,
-              "enabled": enabled, "config": config or {},
+              "enabled": enabled and (type_ != "web_search" or bool((config or {}).get("api_key", "").strip())), "config": config or {},
               "prompt": (prompt or "").strip()}
     cfg.setdefault("servers", []).append(server)
     await save_mcp_config(cfg)
@@ -423,6 +434,8 @@ async def update_server(server_id: str, *, config: dict | None = None,
                 s["config"] = config
             if enabled is not None:
                 s["enabled"] = enabled
+            if s.get("type") == "web_search" and not (s.get("config") or {}).get("api_key", "").strip():
+                s["enabled"] = False
             if prompt is not None:
                 s["prompt"] = prompt.strip()
             break
@@ -470,7 +483,8 @@ async def get_active_mcp_prompt(selected_server_ids: set[str] | None = None) -> 
         p = (s.get("prompt") or "").strip()
         if not p:
             cat = MCP_CATALOG.get(s.get("type", ""), {})
-            p = cat.get("default_prompt", "")
+            p = (get_web_search_prompt(await get_tool_language())
+                 if s.get("type") == "web_search" else cat.get("default_prompt", ""))
         if p:
             parts.append(p)
     return "\n\n".join(parts)

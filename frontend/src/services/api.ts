@@ -9,6 +9,7 @@ import type {
     ArticleAttachment,
     McpCatalogEntry,
     McpServer,
+    WebSearchUsage,
     InstalledPlugin,
 } from '../types';
 import { assertOk, ApiError } from '../utils/apiError';
@@ -777,6 +778,12 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         return res.json();
     },
 
+    async getWebSearchUsage(serverId: string, refresh = false): Promise<WebSearchUsage> {
+        const res = await fetch(`${API_BASE}/mcp/servers/${encodeURIComponent(serverId)}/usage?refresh=${refresh}`, {cache: 'no-store'});
+        await assertOk(res, i18n.t('main:networkError.requestFailed'));
+        return res.json();
+    },
+
     async addMcpServer(type: string, config: Record<string, unknown>, enabled = true, prompt = ''): Promise<{ server: McpServer }> {
         const res = await fetch(`${API_BASE}/mcp/servers`, {
             method: 'POST',
@@ -793,6 +800,7 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(patch),
         });
+        await assertOk(res, i18n.t('main:networkError.requestFailed'));
         return res.json();
     },
 

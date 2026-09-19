@@ -7,6 +7,7 @@ interface ApiKeyFieldProps {
     keyPreview: string;
     onSave: (key: string) => Promise<void>;
     placeholderEmpty?: string;
+    allowRemoval?: boolean;
 }
 
 const EyeIcon = ({ off }: { off: boolean }) => (
@@ -24,16 +25,16 @@ const EyeIcon = ({ off }: { off: boolean }) => (
     )
 );
 
-function ApiKeyField({ hasKey, keyPreview, onSave, placeholderEmpty }: ApiKeyFieldProps) {
+function ApiKeyField({ hasKey, keyPreview, onSave, placeholderEmpty, allowRemoval = false }: ApiKeyFieldProps) {
     const { t } = useTranslation('settings');
     const [draft, setDraft] = useState('');
     const [visible, setVisible] = useState(false);
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState('');
 
-    const handleSave = async () => {
-        const key = draft.trim();
-        if (!key || saving) return;
+    const handleSave = async (remove = false) => {
+        const key = remove ? '' : draft.trim();
+        if ((!key && !remove) || saving) return;
         setSaving(true);
         setMsg('');
         try {
@@ -77,12 +78,14 @@ function ApiKeyField({ hasKey, keyPreview, onSave, placeholderEmpty }: ApiKeyFie
                 </div>
                 <button
                     className="api-key-save-btn"
-                    onClick={handleSave}
+                    onClick={() => void handleSave()}
                     disabled={!draft.trim() || saving}
                     type="button"
                 >
                     {saving ? t('apiKeyField.saving') : t('apiKeyField.save')}
                 </button>
+                {allowRemoval && hasKey && <button type="button" className="mcp-btn-ghost"
+                    disabled={saving} onClick={() => void handleSave(true)}>{t('mcp.delete')}</button>}
             </div>
             {msg && <span className={`api-key-msg${isFailed ? ' error' : ''}`}>{msg}</span>}
         </div>

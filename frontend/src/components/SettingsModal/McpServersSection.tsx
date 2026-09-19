@@ -7,6 +7,8 @@ import CustomSelect from '../CustomSelect/CustomSelect';
 import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
 import WorkspaceMailSettingsFields from './WorkspaceMailSettingsFields';
 import WorkspaceSetupGuide from './WorkspaceSetupGuide';
+import {WebSearchSetupGuide, WebSearchCredentials} from './WebSearchSettings';
+import McpPromptField from './McpPromptField';
 import McpFieldInput, {type McpField as Field} from './McpFieldInput';
 import './McpServersSection.css';
 
@@ -66,16 +68,26 @@ const GOOGLE_WORKSPACE_SERVICES = [
 
 type McpServersSectionScope = 'mcp' | 'google';
 
-export default function McpServersSection({scope = 'mcp'}: {scope?: McpServersSectionScope}) {
+export default function McpServersSection({scope = 'mcp', initialServerId}: {scope?: McpServersSectionScope; initialServerId?: string}) {
     const {t} = useTranslation('settings');
     const [catalog, setCatalog] = useState<Record<string, CatalogEntry>>({});
     const [servers, setServers] = useState<Server[]>([]);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(initialServerId || null);
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [adding, setAdding] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState('');
     const [googleReconnectRequired, setGoogleReconnectRequired] = useState(false);
+
+    const initialServerRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (initialServerId) setEditingId(initialServerId);
+    }, [initialServerId]);
+    useEffect(() => {
+        if (initialServerId && editingId === initialServerId) {
+            initialServerRef.current?.scrollIntoView({block: 'start'});
+        }
+    }, [initialServerId, editingId, servers]);
 
     const load = async () => {
         try {
@@ -107,6 +119,10 @@ export default function McpServersSection({scope = 'mcp'}: {scope?: McpServersSe
 
     const toggleEnabled = async (srv: Server) => {
         const next = !srv.enabled;
+        if (next && srv.type === 'web_search' && !srv.config?.api_key?.trim()) {
+            setEditingId(srv.id);
+            return;
+        }
 
         if (next && srv.type === 'google_workspace') {
             try {
@@ -199,7 +215,7 @@ export default function McpServersSection({scope = 'mcp'}: {scope?: McpServersSe
                         ? srv.config.name
                         : (t(`mcpCatalog.servers.${srv.type}`, {defaultValue: cat?.label || srv.type}));
                     return (
-                        <div key={srv.id} className="mcp-item">
+                        <div key={srv.id} className="mcp-item" ref={srv.id === initialServerId ? initialServerRef : undefined}>
                             {!isGoogleScope && <>
                                 <div className="mcp-item-row">
                                     <label className="mcp-switch">
@@ -253,7 +269,7 @@ export default function McpServersSection({scope = 'mcp'}: {scope?: McpServersSe
                                             ? srv.prompt
                                             : getLocalizedDefaultPrompt(t, srv.type, cat.default_prompt)
                                     }
-                                    hasDefaultPrompt={!!cat.default_prompt}
+                                    defaultPrompt={getLocalizedDefaultPrompt(t, srv.type, cat.default_prompt)}
                                     serverType={srv.type}
                                     serverId={srv.id}
                                     onRefresh={setServers}
@@ -266,6 +282,11 @@ export default function McpServersSection({scope = 'mcp'}: {scope?: McpServersSe
                                         }));
                                     }}
                                     onCancel={() => setEditingId(null)}
+                                    onWebSearchKeySave={async apiKey => {
+                                        const r = await api.updateMcpServer(srv.id, {config: {...srv.config, api_key: apiKey}});
+                                        setServers(r.servers || []);
+                                        emitMcpServersChanged(r.servers);
+                                    }}
                                     onGoogleConfigSave={async config => {
                                         const r = await api.updateMcpServer(srv.id, {config});
                                         setServers(r.servers || []);
@@ -583,19 +604,21 @@ function ServerForm({
     fields,
     initial,
     initialPrompt,
-    hasDefaultPrompt,
+    defaultPrompt,
     serverType,
+    serverId,
     onSave,
     onCancel,
     onGoogleConfigSave,
     onGoogleCredentialSave,
     onGoogleAuthChanged,
     onGoogleConnected,
+    onWebSearchKeySave,
 }: {
     fields: Field[];
     initial: Record<string, any>;
     initialPrompt: string;
-    hasDefaultPrompt?: boolean;
+    defaultPrompt: string;
     serverType?: string;
     serverId?: string;
     onSave: (config: Record<string, any>, prompt: string) => void | Promise<void>;
@@ -605,10 +628,12 @@ function ServerForm({
     onGoogleConnected?: (accountId: string) => void | Promise<void>;
     onGoogleConfigSave?: (config: Record<string, any>) => Promise<void>;
     onGoogleCredentialSave?: (config: Record<string, any>, prompt: string) => Promise<void>;
+    onWebSearchKeySave: (key: string) => Promise<void>;
 }) {
     const {t} = useTranslation('settings');
     const [values, setValues] = useState<Record<string, any>>(() => ({...initial}));
     const [prompt, setPrompt] = useState(initialPrompt);
+    const [savingWebSearchKey, setSavingWebSearchKey] = useState(false);
     const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
     const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isGoogle = serverType === 'google_workspace';
@@ -632,7 +657,8 @@ function ServerForm({
     const handleSave = async () => {
         setSaveState('saving');
         try {
-            await onSave(values, prompt);
+            await onSave(serverType === 'web_search' ? initial : values,
+                serverType === 'web_search' && prompt === defaultPrompt ? '' : prompt);
             setSaveState('saved');
             savedTimerRef.current = setTimeout(() => setSaveState('idle'), 2200);
         } catch {
@@ -643,6 +669,7 @@ function ServerForm({
 
     return (
         <div className="mcp-form">
+            {serverType === 'web_search' && <WebSearchSetupGuide/>}
             {isGoogle && <GoogleWorkspaceGuide/>}
             {isGoogle && <GoogleAccountsEditor value={values} onChange={handleValuesChange}
                                                 onPersist={onGoogleConfigSave}
@@ -652,6 +679,7 @@ function ServerForm({
                                                     onGoogleCredentialSave?.(config, prompt) ?? Promise.resolve()
                                                 )}/>}
             {!isGoogle && fields.map((field, index) => {
+                if (serverType === 'web_search' && field.key === 'api_key') return null;
                 const notificationField = fields[index + 1];
                 if (field.key === 'mail_notifications' && fields[index - 1]?.key === 'mail_mode') return null;
                 if (field.key === 'mail_mode' && notificationField?.key === 'mail_notifications') {
@@ -661,24 +689,18 @@ function ServerForm({
                 }
                 return <McpFieldInput key={field.key} field={field} value={values[field.key]} onChange={(v) => setV(field.key, v)}/>;
             })}
-            <div className={`mcp-field${isGoogle ? ' mcp-prompt-section' : ''}`}>
-                <label className="mcp-field-label">{t('mcp.promptLabel')}</label>
-                <textarea
-                    className="mcp-input mcp-prompt-textarea"
-                    placeholder={hasDefaultPrompt
-                        ? t('mcp.promptDefaultPlaceholder')
-                        : t('mcp.promptEmptyPlaceholder')}
-                    value={prompt}
-                    onChange={e => {
-                        markChanged();
-                        setPrompt(e.target.value);
-                    }}
-                />
-            </div>
+            {serverType === 'web_search' && serverId && <WebSearchCredentials
+                serverId={serverId} hasSavedKey={Boolean(initial.api_key)} onSave={async key => {
+                    setSavingWebSearchKey(true);
+                    try { await onWebSearchKeySave(key); }
+                    finally { setSavingWebSearchKey(false); }
+                }}/>}
+            <McpPromptField value={prompt} defaultValue={defaultPrompt} separated={isGoogle}
+                            onChange={value => { markChanged(); setPrompt(value); }}/>
             <div className="mcp-form-actions">
                 {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel}>{t('mcp.cancel')}</button>}
                 <button className={`mcp-btn-primary${saveState === 'saved' ? ' is-saved' : saveState === 'failed' ? ' is-failed' : ''}`}
-                        onClick={() => void handleSave()} disabled={saveState === 'saving'}>
+                        onClick={() => void handleSave()} disabled={saveState === 'saving' || savingWebSearchKey}>
                     {saveState === 'saving'
                         ? t('common:saving')
                         : saveState === 'saved'
@@ -727,9 +749,7 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
             defaults.active_account_id = account.id;
         }
         setValues(defaults);
-        // 새 서버의 프롬프트는 선택 입력값이다. 비워서 저장하면 서버 카탈로그의
-        // 기본 프롬프트가 런타임에 적용되므로, 추가 폼에는 미리 채우지 않는다.
-        setPrompt('');
+        setPrompt(getLocalizedDefaultPrompt(t, type, cat?.default_prompt));
         onErr('');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [type]);
@@ -769,17 +789,8 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
                 }
                 return <McpFieldInput key={field.key} field={field} value={values[field.key]} onChange={(v) => setV(field.key, v)}/>;
             })}
-            <div className={`mcp-field${isGoogle ? ' mcp-prompt-section' : ''}`}>
-                <label className="mcp-field-label">{t('mcp.promptLabel')}</label>
-                <textarea
-                    className="mcp-input mcp-prompt-textarea"
-                    placeholder={cat?.default_prompt
-                        ? t('mcp.promptDefaultPlaceholder')
-                        : t('mcp.promptEmptyPlaceholder')}
-                    value={prompt}
-                    onChange={e => setPrompt(e.target.value)}
-                />
-            </div>
+            <McpPromptField value={prompt} defaultValue={getLocalizedDefaultPrompt(t, type, cat?.default_prompt)}
+                            separated={isGoogle} onChange={setPrompt}/>
             {err && <div className="mcp-err">{err}</div>}
             <div className="mcp-form-actions">
                 {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel}>{t('mcp.cancel')}</button>}

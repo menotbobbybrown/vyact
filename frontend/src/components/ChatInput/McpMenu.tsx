@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Grid2x2Plus} from 'lucide-react';
+import {Wrench} from 'lucide-react';
 import {api} from '../../services/api';
 import {
     getGoogleWorkspaceStatus,
@@ -104,6 +104,14 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
     const toggle = async (srv: McpServer) => {
         if (busyId) return;
         const next = !srv.enabled;
+        const apiKey = srv.config?.api_key;
+        if (next && srv.type === 'web_search' && !(typeof apiKey === 'string' && apiKey.trim())) {
+            setOpen(false);
+            window.dispatchEvent(new CustomEvent('vyact:open-settings', {
+                detail: {tab: 'api', mcpServerId: srv.id},
+            }));
+            return;
+        }
 
         setBusyId(srv.id);
         // 낙관적 업데이트
@@ -140,7 +148,7 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
                 disabled={disabled}
                 aria-label={t('mcpMenu.title')}
             >
-                <Grid2x2Plus size={18}/>
+                <Wrench size={18}/>
                 {enabledCount > 0 && (
                     <span className="mcp-menu-count">{enabledCount}</span>
                 )}

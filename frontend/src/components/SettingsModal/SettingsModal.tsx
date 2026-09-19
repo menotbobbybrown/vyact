@@ -81,6 +81,7 @@ interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     initialTab?: string;
+    initialMcpServerId?: string;
 }
 
 type Tab = 'backup' | 'general' | 'runtime' | 'apiServer' | 'google' | 'microsoft' | 'api' | 'externalData' | 'plugins' | 'skills' | 'profile';
@@ -171,7 +172,7 @@ const KOKORO_VOICES: { value: string; name: string; lang: string }[] = [
     {value: 'pm_santa', name: 'Santa', lang: '🇧🇷'},
 ];
 
-const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTab}) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTab, initialMcpServerId}) => {
     const {t, i18n} = useTranslation('settings');
     const isKoreanLanguage = (i18n.resolvedLanguage || i18n.language).split('-')[0] === 'ko';
     const getBackupIndexHelp = (indexName: string) => {
@@ -1594,11 +1595,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                         )}
 
                         {tab === 'api' && (
-                            <div className="settings-general">
+                            <div className="settings-general settings-general--ai-tools">
 
                                 {/* ── MCP 서버 (신규 통합 관리) ── */}
                                 <div className="settings-general-section">
-                                    <McpServersSection/>
+                                    <McpServersSection initialServerId={initialMcpServerId}/>
                                 </div>
                             </div>
                         )}

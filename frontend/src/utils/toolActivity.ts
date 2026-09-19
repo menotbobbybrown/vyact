@@ -267,7 +267,7 @@ export function getToolActivityLabel(
         code_move_file: 'codeMoveFile', code_delete_file: 'codeDeleteFile',
         search_repositories: 'githubRepositories', get_file_contents: 'githubFile', list_commits: 'githubCommits',
         search_code: 'githubCode', create_issue: 'githubIssue',
-        browser_search: 'browserSearching', browser_open: 'browserOpening',
+        web_search: 'browserSearching', browser_search: 'browserSearching', browser_open: 'browserOpening',
         browser_read: 'browserReading', browser_read_urls: 'browserBatchReading',
         browser_inspect: 'browserInspecting', browser_type: 'browserTyping',
         browser_click: 'browserClicking', browser_scroll: 'browserScrolling',
@@ -325,7 +325,7 @@ export function getToolActivityDisplayLabel(
             return t('toolActivity.checkCompleted');
         }
         const browserCompletionKeys: Record<string, string> = {
-            browser_search: 'browserSearchCompleted',
+            web_search: 'browserSearchCompleted', browser_search: 'browserSearchCompleted',
             browser_open: 'browserOpenCompleted',
             browser_read: 'browserReadCompleted',
             browser_read_urls: 'browserBatchReadCompleted',

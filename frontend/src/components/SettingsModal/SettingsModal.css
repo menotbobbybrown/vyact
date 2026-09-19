@@ -817,6 +817,12 @@
     height: 100%;
 }
 
+.settings-general.settings-general--ai-tools {
+    height: auto;
+    flex: 0 0 auto;
+    padding-bottom: 24px;
+}
+
 /* 백업 탭: flex column으로 전체 높이 채우고, index-box만 늘어남 */
 .settings-backup {
     display: flex;

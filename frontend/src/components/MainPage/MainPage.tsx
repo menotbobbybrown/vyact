@@ -427,9 +427,11 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [openSettingsExternal, setOpenSettingsExternal] = useState(false);
     const [openSettingsTab, setOpenSettingsTab] = useState<string | undefined>(undefined);
+    const [openSettingsMcpServerId, setOpenSettingsMcpServerId] = useState<string>();
     useEffect(() => {
         const openSettings = (event: Event) => {
-            const tab = (event as CustomEvent<{tab?: string}>).detail?.tab;
+            const {tab, mcpServerId} = (event as CustomEvent<{tab?: string; mcpServerId?: string}>).detail || {};
+            setOpenSettingsMcpServerId(mcpServerId);
             setOpenSettingsTab(tab);
             setOpenSettingsExternal(true);
         };
@@ -739,6 +741,7 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
                             onHoverLeave={handleSidebarHoverLeave}
                             openSettings={openSettingsExternal}
                             openSettingsTab={openSettingsTab}
+                            openSettingsMcpServerId={openSettingsMcpServerId}
                             onSettingsClosed={() => {
                                 setOpenSettingsExternal(false);
                                 setOpenSettingsTab(undefined);

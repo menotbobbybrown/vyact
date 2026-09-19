@@ -21,6 +21,7 @@ from services.mcp_config import (
     build_servers_config,
 )
 from services.mcp_client import mcp_manager
+from services.web_search_credits import get_stored_web_search_usage, refresh_web_search_usage
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -138,12 +139,23 @@ async def get_servers():
     return {"servers": _mask(await list_servers())}
 
 
+@router.get("/mcp/servers/{server_id}/usage")
+async def get_server_usage(server_id: str, refresh: bool = True):
+    server = next((item for item in await list_servers() if item.get("id") == server_id), None)
+    if server is None or server.get("type") != "web_search":
+        raise HTTPException(404)
+    api_key = (server.get("config") or {}).get("api_key") or ""
+    return await refresh_web_search_usage(api_key) if refresh else await get_stored_web_search_usage(api_key)
+
+
 @router.post("/mcp/servers")
 async def create_server(req: AddServerReq):
     try:
         server = await add_server(req.type, req.config, req.enabled, req.prompt)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    if req.type == "web_search":
+        await refresh_web_search_usage((server.get("config") or {}).get("api_key", ""))
     _reconnect_bg()
     if req.type == "google_workspace":
         _request_notification_poll()
@@ -154,6 +166,9 @@ async def create_server(req: AddServerReq):
 async def patch_server(server_id: str, req: UpdateServerReq):
     existing = next((s for s in await list_servers() if s.get("id") == server_id), None)
     config = req.config
+    save_web_search_key = (existing and existing.get("type") == "web_search"
+                           and config is not None and "api_key" in config
+                           and config["api_key"] != "********")
     if config is not None:
         # 마스킹된 secret(********)이 그대로 오면 기존 값 유지
         if existing:
@@ -167,6 +182,8 @@ async def patch_server(server_id: str, req: UpdateServerReq):
         # (토큰이 바뀌었을 수 있으므로 옛 username을 남기지 않는다)
         config.pop("username", None)
     servers = await update_server(server_id, config=config, enabled=req.enabled, prompt=req.prompt)
+    if save_web_search_key:
+        await refresh_web_search_usage(config.get("api_key") or "")
     _reconnect_bg()
     if existing and existing.get("type") == "google_workspace":
         _request_notification_poll()

@@ -22,6 +22,8 @@ from typing import Any
 
 from logger import DebugLogSettings, get_logger
 from services.microsoft_workspace.auth import status as microsoft_auth_status
+from services.web_search_credits import web_search_available
+from services.tool_lifecycle import ToolExecution, ToolLifecycle, run_tool_execution
 from services.tool_messages import get_tool_language, tool_message, tool_error
 
 logger = get_logger(__name__)
@@ -192,6 +194,7 @@ class MCPManager:
     def __init__(self) -> None:
         self._workers: dict[str, _ServerWorker] = {}
         self._sync_lock = asyncio.Lock()
+        self._tool_lifecycles: dict[str, ToolLifecycle] = {}
         # 내부 tool: 외부 MCP 서버 없이 파이썬 함수를 tool로 직접 노출.
         self._internal_tools: dict[str, dict] = {}
         # tool 실행 결과에 딸려온 sources(기사 등)를 임시 보관 — call_tool 직후
@@ -199,6 +202,21 @@ class MCPManager:
         self._pending_sources: list[dict] = []
         # Google Workspace 인증 상태 캐시 (get_tools에서 참조)
         self._google_authenticated: bool = False
+
+    def set_tool_lifecycle(self, tool_name: str, lifecycle: ToolLifecycle | None) -> None:
+        """Attach/remove hooks by exact tool name (including external MCP prefix)."""
+        if lifecycle is None:
+            self._tool_lifecycles.pop(tool_name, None)
+        else:
+            self._tool_lifecycles[tool_name] = lifecycle
+
+    async def _execute_with_lifecycle(self, name: str, arguments: dict | None, handler):
+        async def operation(execution: ToolExecution):
+            return await handler(**execution.arguments)
+
+        return await run_tool_execution(
+            ToolExecution(name, arguments or {}), operation, self._tool_lifecycles.get(name),
+        )
 
     def drain_tool_sources(self) -> list[dict]:
         """직전 call_tool 실행에서 쌓인 sources를 꺼내고 비운다."""
@@ -247,7 +265,8 @@ class MCPManager:
     def register_internal_tool(self, name: str, description: str,
                                parameters: dict, handler,
                                server_type: str | None = None,
-                               single_shot: bool = False) -> None:
+                               single_shot: bool = False,
+                               lifecycle: ToolLifecycle | None = None) -> None:
         """외부 프로세스 없이 파이썬 함수를 tool로 등록한다.
 
         name: tool 이름 (prefix 없이. 내부 tool은 그대로 노출)
@@ -257,6 +276,7 @@ class MCPManager:
                  {"text": "...", "sources": [{"title","url","source","indexed_at"}, ...]}
                  형태의 dict를 반환하면, text는 tool 결과로 LLM에 전달되고
                  sources는 drain_tool_sources()로 꺼내 "참고" 목록에 붙일 수 있다.
+        lifecycle: 선택적 실행 전/후 콜백. 후속 처리는 실패·취소 시에도 실행한다.
         server_type: 이 tool이 속한 MCP 서버 타입(예: "naver_news").
                      지정 시 해당 타입 서버가 enabled일 때만 노출된다.
                      None이면 항상 노출.
@@ -265,6 +285,7 @@ class MCPManager:
                      되묻지 않는다). 검색 결과를 그대로 최종 답변에 반영하면
                      충분한 tool(예: 웹/뉴스 검색)에 적합하다.
         """
+        self.set_tool_lifecycle(name, lifecycle)
         self._internal_tools[name] = {
             "description": description,
             "parameters": parameters or {"type": "object", "properties": {}},
@@ -279,6 +300,7 @@ class MCPManager:
         to_remove = [n for n, s in self._internal_tools.items() if s.get("server_type") == server_type]
         for n in to_remove:
             del self._internal_tools[n]
+            self.set_tool_lifecycle(n, None)
         if to_remove:
             logger.info("[mcp] %d internal tools removed (type=%s)", len(to_remove), server_type)
         return len(to_remove)
@@ -339,6 +361,11 @@ class MCPManager:
         try:
             from services.mcp_config import list_servers
             for s in await list_servers():
+                if s.get("type") == "web_search":
+                    if not (s.get("enabled") or (selected_server_ids and s.get("id") in selected_server_ids)):
+                        continue
+                    if not await web_search_available((s.get("config") or {}).get("api_key", "")):
+                        continue
                 if s.get("enabled") or (selected_server_ids and s.get("id") in selected_server_ids):
                     enabled_types.add(s.get("type"))
                     if s.get("id"):
@@ -443,7 +470,7 @@ class MCPManager:
         spec = self._internal_tools.get(prefixed_name)
         if spec is not None:
             try:
-                result = await spec["handler"](**(arguments or {}))
+                result = await self._execute_with_lifecycle(prefixed_name, arguments, spec["handler"])
                 if isinstance(result, dict):
                     srcs = result.get("sources") or []
                     if srcs:
@@ -471,7 +498,10 @@ class MCPManager:
             return tool_error(tool_message("unknown_server", language, server=server_name))
 
         try:
-            result = await worker.server.session.call_tool(tool_name, arguments or {})
+            async def invoke_external(**tool_arguments):
+                return await worker.server.session.call_tool(tool_name, tool_arguments)
+
+            result = await self._execute_with_lifecycle(prefixed_name, arguments, invoke_external)
         except Exception as e:
             DebugLogSettings.log("tool_execution_error", tool=prefixed_name, error=str(e))
             logger.warning("[mcp] call_tool failed %s: %s", prefixed_name, e)

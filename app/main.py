@@ -16,6 +16,7 @@ import warnings
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
+from services.web_search_tools import register_web_search_tools
 from services.shutdown_guard import guard as shutdown_guard, ShutdownPending, interruptible_download_pids
 
 trace_startup("import:uvicorn", "begin")
@@ -366,6 +367,7 @@ async def lifespan(app: FastAPI):
             register_browser_tools()
         except Exception as e:
             logger.warning("[mcp] Browser tool registration failed: %s", e)
+        register_web_search_tools(mcp_manager)
         await mcp_manager.connect_all(await build_servers_config())
         # Google Workspace 인증 상태 확인
         try:
