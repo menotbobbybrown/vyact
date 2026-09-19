@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+import {useTranslation} from 'react-i18next';
 import LogCopyButton from './LogCopyButton';
 import {useMemo} from 'react';
 import {ChevronRight} from 'lucide-react';
@@ -13,7 +15,7 @@ function valueText(value: unknown): string {
 function timestampText(value: unknown): string {
     if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value)) return valueText(value);
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString(i18n.resolvedLanguage || i18n.language || 'en');
 }
 
 export function parseRequestLogs(content: string) {
@@ -49,7 +51,9 @@ function JsonFields({value, depth = 1}: {value: unknown; depth?: number}) {
 }
 
 export default function RequestLogEntries({content, onInspect}: {content: string; onInspect: () => void}) {
-    const entries = useMemo(() => parseRequestLogs(content), [content]);
+    const {i18n: currentI18n} = useTranslation();
+    const language = currentI18n.resolvedLanguage || currentI18n.language;
+    const entries = useMemo(() => parseRequestLogs(content), [content, language]);
     return <div className="request-log-entries">
         {entries.map(entry => <details className="request-log-entry" key={entry.key}>
             <summary onClick={onInspect}>

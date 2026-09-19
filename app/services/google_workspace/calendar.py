@@ -75,10 +75,23 @@ async def get_calendar_event(event_id: str = "", calendar_id: str = "primary", *
     return _format_event(event)
 
 
+def _event_timezone(service, calendar_id: str, requested: str, existing: dict | None = None) -> str:
+    if requested:
+        return requested
+    if existing:
+        for boundary in ("start", "end"):
+            if existing.get(boundary, {}).get("timeZone"):
+                return existing[boundary]["timeZone"]
+    calendar = service.calendars().get(calendarId=calendar_id).execute()
+    if not calendar.get("timeZone"):
+        raise ValueError("Calendar time zone is unavailable; specify timezone explicitly")
+    return calendar["timeZone"]
+
+
 async def create_calendar_event(summary: str = "", start: str = "", end: str = "",
                                 description: str = "", location: str = "",
                                 calendar_id: str = "primary",
-                                timezone: str = "Asia/Seoul", **_) -> str:
+                                timezone: str = "", **_) -> str:
     service = await _build_service("calendar", "v3")
     event_body: dict[str, Any] = {"summary": summary}
     if description:
@@ -87,6 +100,7 @@ async def create_calendar_event(summary: str = "", start: str = "", end: str = "
         event_body["location"] = location
     # 종일 일정 vs 시간 지정
     if "T" in start:
+        timezone = _event_timezone(service, calendar_id, timezone)
         event_body["start"] = {"dateTime": start, "timeZone": timezone}
         event_body["end"] = {"dateTime": end, "timeZone": timezone}
     else:
@@ -99,11 +113,13 @@ async def create_calendar_event(summary: str = "", start: str = "", end: str = "
 async def update_calendar_event(event_id: str = "", calendar_id: str = "primary",
                                 summary: str = "", start: str = "", end: str = "",
                                 description: str = "", location: str = "",
-                                timezone: str = "Asia/Seoul", **_) -> str:
+                                timezone: str = "", **_) -> str:
     if not event_id:
         return "event_id를 지정해주세요."
     service = await _build_service("calendar", "v3")
     event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+    if "T" in start or "T" in end:
+        timezone = _event_timezone(service, calendar_id, timezone, event)
     if summary:
         event["summary"] = summary
     if description:
