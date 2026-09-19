@@ -55,3 +55,22 @@ class RequestCancellationTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):
             await task
         self.assertTrue(cancelled.is_set())
+
+    async def test_monitor_exits_when_receive_swallows_cancellation(self):
+        polling = asyncio.Event()
+
+        class CancellationSwallowingRequest:
+            async def is_disconnected(self):
+                polling.set()
+                try:
+                    await asyncio.Event().wait()
+                except asyncio.CancelledError:
+                    return False
+
+        async def operation():
+            await polling.wait()
+            return 'ok'
+
+        self.assertEqual(await asyncio.wait_for(
+            await_while_connected(CancellationSwallowingRequest(), operation()), 1
+        ), 'ok')

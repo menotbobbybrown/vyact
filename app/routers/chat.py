@@ -1470,6 +1470,9 @@ def _clean_translate_for_history(raw_answer: str) -> str:
 
 @router.post("/translate")
 async def translate(req: TranslateRequest, request: Request):
+    # Reject interactive translation actions before starting disconnect monitoring.
+    if chat_request_lock.locked():
+        raise HTTPException(status_code=409, detail={"code": "ai_busy"})
     t_start = datetime.now(timezone.utc)
     logger.info(
         "[translate] start target_lang=%s save_history=%s conv_id=%s text_len=%d preview=%r",
@@ -1482,7 +1485,9 @@ async def translate(req: TranslateRequest, request: Request):
         )
         gen_stats: dict = {}  # query_llm이 provider 토큰수/처리시간 통계를 채움
         async def translate_when_available():
-            if request.headers.get("x-vyact-reject-if-busy") == "1" and chat_request_lock.locked():
+            # Translation actions must return immediately while another request
+            # owns the model, including clients without the optional busy header.
+            if chat_request_lock.locked():
                 raise HTTPException(status_code=409, detail={"code": "ai_busy"})
             async with chat_request_lock:
                 return await query_llm(

@@ -6,8 +6,13 @@ from fastapi import Request
 
 async def await_while_connected(request: Request, operation):
     async def wait_for_disconnect():
-        while not await request.is_disconnected():
+        # Starlette's receive cancel scope can swallow a task cancellation.
+        # Also stop when work completes so cleanup cannot hold the response open.
+        while not work.done():
+            if await request.is_disconnected():
+                return True
             await asyncio.sleep(0.1)
+        return False
 
     work = asyncio.create_task(operation)
     disconnect = asyncio.create_task(wait_for_disconnect())
@@ -15,8 +20,7 @@ async def await_while_connected(request: Request, operation):
         done, _ = await asyncio.wait(
             {work, disconnect}, return_when=asyncio.FIRST_COMPLETED
         )
-        if disconnect in done:
-            await disconnect
+        if disconnect in done and await disconnect:
             raise asyncio.CancelledError("HTTP client disconnected")
         return await work
     finally:

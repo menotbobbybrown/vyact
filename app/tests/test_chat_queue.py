@@ -70,7 +70,7 @@ async def test_stream_fallback_does_not_wait_on_its_own_lock(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_translation_waits_for_chat_owner(monkeypatch):
+async def test_translation_runs_when_model_is_available(monkeypatch):
     lock = asyncio.Lock()
     monkeypatch.setattr(chat, 'chat_request_lock', lock)
     llm = AsyncMock(return_value='translated')
@@ -78,27 +78,29 @@ async def test_translation_waits_for_chat_owner(monkeypatch):
     request = AsyncMock()
     request.headers = {}
     request.is_disconnected.return_value = False
-    await lock.acquire()
-    task = asyncio.create_task(chat.translate(chat.TranslateRequest(text='hello', target_lang='ko'), request))
-    await asyncio.sleep(0)
-    llm.assert_not_awaited()
-    lock.release()
-    await asyncio.wait_for(task, 2)
+    result = await asyncio.wait_for(
+        chat.translate(chat.TranslateRequest(text='hello', target_lang='ko'), request), 1
+    )
+    assert result['translated'] == 'translated'
     llm.assert_awaited_once()
     assert not lock.locked()
 
 @pytest.mark.asyncio
-async def test_extension_translation_rejects_busy_chat(monkeypatch):
+@pytest.mark.parametrize('headers', [{}, {'x-vyact-reject-if-busy': '1'}])
+@pytest.mark.parametrize('save_history', [False, True])
+async def test_extension_translation_rejects_busy_chat(monkeypatch, headers, save_history):
     lock = asyncio.Lock()
     monkeypatch.setattr(chat, 'chat_request_lock', lock)
     llm = AsyncMock()
     monkeypatch.setattr(chat, 'query_llm', llm)
     request = AsyncMock()
-    request.headers = {'x-vyact-reject-if-busy': '1'}
+    request.headers = headers
     request.is_disconnected.return_value = False
     async with lock:
         with pytest.raises(chat.HTTPException) as error:
-            await chat.translate(chat.TranslateRequest(text='hello', target_lang='ko'), request)
+            await asyncio.wait_for(chat.translate(
+                chat.TranslateRequest(text='hello', target_lang='ko', save_history=save_history), request
+            ), 0.5)
         assert error.value.status_code == 409
         assert error.value.detail == {'code': 'ai_busy'}
         assert lock.locked()
