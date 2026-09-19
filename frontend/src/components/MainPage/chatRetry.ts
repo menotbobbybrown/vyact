@@ -36,3 +36,7 @@ export function getUnansweredQuestionIndex(messages: Message[]): number {
     }
     return -1;
 }
+
+export function prepareRetryTurn(messages: Message[], userMessage: Message) {
+    return {userMessage, history: removeRetryTurn(messages)};
+}

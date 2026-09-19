@@ -1193,7 +1193,8 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         articles?: ArticleAttachment[],
         systemPromptOverride?: string,
         voiceMode?: boolean,
-        reasoning: boolean | 'none' | 'low' | 'medium' | 'high' | 'xhigh' = true
+        reasoning: boolean | 'none' | 'low' | 'medium' | 'high' | 'xhigh' = true,
+        userTimestamp?: string
     ): Promise<ChatResponse> {
         const res = await fetch(`${API_BASE}/query`, {
             method: 'POST',
@@ -1205,7 +1206,7 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
                 attachments,
                 articles: articles ?? [],
                 article_selection_explicit: true,
-                user_timestamp: new Date().toISOString(),
+                user_timestamp: userTimestamp || new Date().toISOString(),
                 reasoning,
                 ...(systemPromptOverride !== undefined && {system_prompt: systemPromptOverride}),
                 ...(voiceMode && {voice_mode: true}),

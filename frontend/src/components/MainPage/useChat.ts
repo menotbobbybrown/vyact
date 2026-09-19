@@ -1,4 +1,4 @@
-import {getUnansweredQuestionIndex, markResponseStopped, removeRetryTurn} from './chatRetry';
+import {getUnansweredQuestionIndex, markResponseStopped, prepareRetryTurn} from './chatRetry';
 import {isAudioChatFile} from '../../utils/fileValidation';
 import React from 'react';
 import {useState} from 'react';
@@ -173,7 +173,7 @@ export function useChat(deps: UseChatDeps) {
     const {
         currentConvId, currentConvIdRef, messagesRef, selectedModel, activeProjectId,
         pendingArticles, showVoiceChatModalRef,
-        setConvId, addLocalConversation, completeLocalConversation, setMessagesWithRef, setMessagesForConversation, getMessagesForConversation, setPendingArticles, mapMsg,
+        setConvId, addLocalConversation, completeLocalConversation, setMessagesForConversation, getMessagesForConversation, setPendingArticles, mapMsg,
         clearConversation, setResetTrigger,
         openPluginModal,
         setShowRememberModal,
@@ -265,9 +265,10 @@ export function useChat(deps: UseChatDeps) {
         externalResourceIds?: string[],
         externalDocumentSelections?: ExternalDocumentSelection[],
         uploadedAttachments: any[] = [],
+        retryTurn?: {userMessage: Message; history: Message[]},
     ): Promise<boolean> => {
         const requestConvId = currentConvIdRef.current || currentConvId;
-        const articlesSnapshot = extraArticles?.length
+        const articlesSnapshot = retryTurn ? [...(extraArticles || [])] : extraArticles?.length
             ? [...extraArticles]
             : [...pendingArticles];
 
@@ -438,15 +439,15 @@ export function useChat(deps: UseChatDeps) {
         const reasoningEnabledForRequest = reasoningRequestValue !== false
             && reasoningRequestValue !== 'none';
 
-        const userTs = new Date().toISOString();  // 전송 시각 — 화면/서버 동일하게 사용
+        const userTs = retryTurn?.userMessage.timestamp || new Date().toISOString();  // 전송 시각 — 화면/서버 동일하게 사용
         failedRequest.userTimestamp = userTs;
-        const userMessage: Message = {
+        const userMessage: Message = retryTurn?.userMessage || {
             role: 'user', content: query, timestamp: userTs,
             attachments: attachments.length > 0 ? attachments : undefined,
             articleSources: articlesSnapshot.length > 0 ? articlesSnapshot : undefined,
         };
         // 업로드 진행 표시용 임시 메시지는 히스토리에서 제외
-        const prevMessagesSnapshot = uploadStreamId
+        const prevMessagesSnapshot = retryTurn ? retryTurn.history : uploadStreamId
             ? messagesRef.current.filter(m => m.id !== uploadStreamId)
             : [...messagesRef.current];
         // 이전 메시지의 첨부는 화면 기록으로만 유지하고 다음 요청에는 다시 보내지 않는다.
@@ -459,7 +460,7 @@ export function useChat(deps: UseChatDeps) {
         // 업로드 진행 메시지 제거 후 유저 메시지 추가
         if (uploadStreamId) setConversationRequestState(requestConvId, {streamingMessageId: null});
         setMessagesForConversation(requestConvId, prev => [
-            ...(uploadStreamId ? prev.filter(m => m.id !== uploadStreamId) : prev),
+            ...(retryTurn ? retryTurn.history : uploadStreamId ? prev.filter(m => m.id !== uploadStreamId) : prev),
             userMessage
         ]);
         setConversationRequestState(requestConvId, {isLoading: true});
@@ -835,7 +836,7 @@ export function useChat(deps: UseChatDeps) {
                 attachments.length > 0 ? attachments : undefined,
                 articlesSnapshot.length > 0 ? articlesSnapshot : undefined,
                 systemPromptOverride, voiceMode,
-                reasoningRequestValue);
+                reasoningRequestValue, userTs);
 
             const isNewConv = !requestConvId;
             if (response.conv_id && isNewConv) {
@@ -917,7 +918,7 @@ export function useChat(deps: UseChatDeps) {
 
     const handleRetry = async () => {
         if (isSendingRef.current || hasActiveRequests) return;
-        const messages = messagesRef.current;
+        const messages = getMessagesForConversation(currentConvIdRef.current || currentConvId);
         const unansweredIndex = getUnansweredQuestionIndex(messages);
         const last = messages[messages.length - 1];
         const userMessage = unansweredIndex >= 0 ? messages[unansweredIndex]
@@ -932,7 +933,7 @@ export function useChat(deps: UseChatDeps) {
                 attachments: userMessage.attachments || [],
                 extraArticles: userMessage.articleSources,
             };
-        setMessagesWithRef(removeRetryTurn);
+        const retryTurn = prepareRetryTurn(messages, userMessage);
         setLastFailedQuery(null);
         isSendingRef.current = true;
         try {
@@ -948,6 +949,7 @@ export function useChat(deps: UseChatDeps) {
                 failedRequest.externalResourceIds,
                 failedRequest.externalDocumentSelections,
                 failedRequest.attachments,
+                retryTurn,
             );
         } finally {
             isSendingRef.current = false;
