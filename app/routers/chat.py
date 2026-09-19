@@ -1482,6 +1482,8 @@ async def translate(req: TranslateRequest, request: Request):
         )
         gen_stats: dict = {}  # query_llm이 provider 토큰수/처리시간 통계를 채움
         async def translate_when_available():
+            if request.headers.get("x-vyact-reject-if-busy") == "1" and chat_request_lock.locked():
+                raise HTTPException(status_code=409, detail={"code": "ai_busy"})
             async with chat_request_lock:
                 return await query_llm(
                     prompt, [], "", [], [],

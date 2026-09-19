@@ -76,6 +76,7 @@ async def test_translation_waits_for_chat_owner(monkeypatch):
     llm = AsyncMock(return_value='translated')
     monkeypatch.setattr(chat, 'query_llm', llm)
     request = AsyncMock()
+    request.headers = {}
     request.is_disconnected.return_value = False
     await lock.acquire()
     task = asyncio.create_task(chat.translate(chat.TranslateRequest(text='hello', target_lang='ko'), request))
@@ -85,3 +86,20 @@ async def test_translation_waits_for_chat_owner(monkeypatch):
     await asyncio.wait_for(task, 2)
     llm.assert_awaited_once()
     assert not lock.locked()
+
+@pytest.mark.asyncio
+async def test_extension_translation_rejects_busy_chat(monkeypatch):
+    lock = asyncio.Lock()
+    monkeypatch.setattr(chat, 'chat_request_lock', lock)
+    llm = AsyncMock()
+    monkeypatch.setattr(chat, 'query_llm', llm)
+    request = AsyncMock()
+    request.headers = {'x-vyact-reject-if-busy': '1'}
+    request.is_disconnected.return_value = False
+    async with lock:
+        with pytest.raises(chat.HTTPException) as error:
+            await chat.translate(chat.TranslateRequest(text='hello', target_lang='ko'), request)
+        assert error.value.status_code == 409
+        assert error.value.detail == {'code': 'ai_busy'}
+        assert lock.locked()
+        llm.assert_not_awaited()

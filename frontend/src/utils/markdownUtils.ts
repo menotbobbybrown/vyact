@@ -34,28 +34,7 @@ const LANG_TO_EXT: Record<string, string> = {
 const MARKDOWN_PROTECTED_TOKEN_PREFIX = `${String.fromCharCode(0)}P`;
 const MARKDOWN_PROTECTED_TOKEN_SUFFIX = String.fromCharCode(0);
 
-export const formatTimestamp = (timestamp: string): string => {
-    if (!timestamp) return '';
-    try {
-        const date = new Date(timestamp);
-        if (isNaN(date.getTime())) return '';
-        const now = new Date();
-        const diff = now.getTime() - date.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        if (hours < 24 && date.getDate() === now.getDate()) {
-            return date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit', hour12: false});
-        }
-        return date.toLocaleString('ko-KR', {
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    } catch {
-        return '';
-    }
-};
+export {formatTimestamp} from './messageTimestamp';
 
 export const linkify = (html: string): string => {
     const urlRegex = /(?<!['"=])(https?:\/\/[^\s<>"'）】)]+)/g;
