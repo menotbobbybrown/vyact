@@ -75,7 +75,7 @@ const StreamingTextGroup: React.FC<{
 
 const Message: React.FC<MessageProps> = ({
                                              messageId, role, content, timestamp, sources, model, attachments,
-                                             isError, errorTitle, onRetry, isGeneratedImage, articleSources,
+                                             isError, isStopped, errorTitle, onRetry, isGeneratedImage, articleSources,
                                              pdfFile, pdfParams, onPdfEdit, injectedContext, onShowInjectedContext, onOpenMemo, onOpenQuickMemo,
                                              isStreaming = false, conversationId, requestStartedAt, toolStatus, activityLog, progressMessages, stats,
                                              truncated,
@@ -597,6 +597,12 @@ const Message: React.FC<MessageProps> = ({
                     </div>
                 )}
             </div>
+            {isStopped && onRetry && !isStreaming && (
+                <button type="button" onClick={onRetry} className="message-retry message-retry-stopped">
+                    <RotateCcw size={14}/>{t('message.retry')}
+                </button>
+            )}
+
 
             {tableImgViewer && (
                 <ImageViewer

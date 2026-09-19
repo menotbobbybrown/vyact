@@ -502,8 +502,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                                 model={msg.model}
                                 attachments={msg.attachments}
                                 isError={msg.isError}
+                                isStopped={msg.isStopped}
                                 errorTitle={msg.errorTitle}
-                                onRetry={msg.isError ? onRetry : undefined}
+                                onRetry={(msg.isError || msg.isStopped) && idx === messages.length - 1 && !isLoading ? onRetry : undefined}
                                 isGeneratedImage={msg.isGeneratedImage}
                                 articleSources={msg.articleSources}
                                 pdfFile={msg.pdfFile}

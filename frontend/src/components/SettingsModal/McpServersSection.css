@@ -357,5 +357,6 @@
 .mcp-drag-handle:active { cursor: grabbing; }
 .mcp-drag-handle:disabled { cursor: default; opacity: .45; }
 .mcp-drag-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.mcp-item.dragging { opacity: .45; }
+.mcp-item-row { background: var(--surface); }
+.mcp-item.dragging { opacity: .85; }
 .mcp-item.drag-over { border-color: var(--accent); }

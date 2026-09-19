@@ -163,6 +163,7 @@ export interface Message {
     model?: string;
     attachments?: MessageAttachment[];
     isError?: boolean;
+    isStopped?: boolean;
     errorTitle?: string;
     errorCode?: 'model_no_response' | 'tool_call_failed' | 'reasoning_token_limit';
     toolStatus?: ToolActivity;  // MCP/code tool 실행 진행표시

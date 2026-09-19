@@ -1,3 +1,4 @@
+import {markResponseStopped, removeRetryTurn} from './chatRetry';
 import {isAudioChatFile} from '../../utils/fileValidation';
 import React from 'react';
 import {useState} from 'react';
@@ -119,6 +120,7 @@ interface ConversationRequestState {
 }
 
 interface FailedRequest {
+    retryMessageId?: string;
     query: string;
     attachments: any[];
     systemPromptOverride?: string;
@@ -417,6 +419,7 @@ export function useChat(deps: UseChatDeps) {
         // 대화 화면의 출처 기록은 userMessage/articleSources에 남지만 다음 요청에는 자동 재주입하지 않는다.
         if (articlesSnapshot.length > 0) setPendingArticles([]);
 
+        setLastFailedQuery(null);
         const failedRequest: FailedRequest = {
             query,
             attachments,
@@ -794,17 +797,10 @@ export function useChat(deps: UseChatDeps) {
                     flushStreamText();
                     // 사용자가 직접 중지한 경우 — 에러 아님
                     if (streamErr instanceof DOMException && streamErr.name === 'AbortError') {
+                        setLastFailedQuery({...failedRequest, retryMessageId: streamId});
                         setMessagesForConversation(requestConvId, prev => prev.map(m =>
-                            m.id === streamId && !m.content?.trim()
-                                ? {
-                                    ...m,
-                                    content: t('toolActivity.stopped'),
-                                    isError: false,
-                                    toolStatus: undefined,
-                                    activityLog: m.activityLog?.map(activity => activity.phase === 'completed'
-                                        ? activity
-                                        : {...activity, phase: 'completed', completedAt: Date.now()}),
-                                }
+                            m.id === streamId
+                                ? markResponseStopped(m, t('toolActivity.stopped'))
                                 : m));
                     } else {
                         // HTTP 레벨 실패(ApiError)나 네트워크 중단 등 — onError(서버가 보낸 SSE error
@@ -920,12 +916,8 @@ export function useChat(deps: UseChatDeps) {
     const handleRetry = async () => {
         if (!lastFailedQuery || isSendingRef.current || hasActiveRequests) return;
         const failedRequest = lastFailedQuery;
-        setMessagesWithRef(prev => {
-            const next = [...prev];
-            if (next.length > 0 && next[next.length - 1].isError) next.pop();
-            if (next.length > 0 && next[next.length - 1].role === 'user') next.pop();
-            return next;
-        });
+        if (failedRequest.retryMessageId && messagesRef.current[messagesRef.current.length - 1]?.id !== failedRequest.retryMessageId) return;
+        setMessagesWithRef(removeRetryTurn);
         setLastFailedQuery(null);
         isSendingRef.current = true;
         try {
@@ -956,12 +948,6 @@ export function useChat(deps: UseChatDeps) {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
         }
-        // 빈 스트리밍 말풍선 제거, 내용 있으면 유지
-        setMessagesForConversation(requestConvId, prev => {
-            const last = prev[prev.length - 1];
-            if (last?.role === 'assistant' && !last.content?.trim()) return prev.slice(0, -1);
-            return prev;
-        });
         // 대화 ID가 스트리밍 도중 확정되거나 전환된 경우 이전 ID의 요청 상태가
         // 남을 수 있다. 모델 변경처럼 전체 응답을 중지하는 경로에서는 활성 상태를
         // 모두 해제해 히스토리를 다시 열었을 때 로딩 표시가 고착되지 않게 한다.
