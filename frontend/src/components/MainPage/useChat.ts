@@ -612,6 +612,11 @@ export function useChat(deps: UseChatDeps) {
                                 return {...m, content: '', progressMessages};
                             }));
                         },
+                        onQueue: ({waiting}) => {
+                            setToolStatus(waiting
+                                ? {phase: 'judging', group: 'analysis', label: t('toolActivity.queued')}
+                                : undefined);
+                        },
                         onTool: (data) => {
                             if (data.phase === 'approval_required') {
                                 window.dispatchEvent(new CustomEvent('vyact:tool-approval-required', {detail: data}));

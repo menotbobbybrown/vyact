@@ -1038,6 +1038,7 @@
     }
   },
   "toolActivity": {
+    "queued": "Đang chờ phản hồi khác hoàn tất…",
     "ariaLabel": "Hoạt động công cụ",
     "working": "Đang xử lý…",
     "workingFor": "Đang làm việc trong {{duration}}",

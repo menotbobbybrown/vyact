@@ -113,3 +113,17 @@ describe('chat stream completion and cancellation', () => {
         expect(body.locked).toBe(false);
     });
 });
+
+it('reports cross-client queue state before streaming the response', async () => {
+    respond([
+        frame('queue', {waiting: true}) + frame('queue', {waiting: false})
+        + frame('token', {text: 'Answer'}) + frame('done', {}),
+    ]);
+    const onQueue = vi.fn();
+    const onToken = vi.fn();
+    const work = streamSSE('/api/query/stream', {}, {onQueue, onToken});
+    await vi.runAllTimersAsync();
+    await work;
+    expect(onQueue.mock.calls).toEqual([[{waiting: true}], [{waiting: false}]]);
+    expect(onToken).toHaveBeenCalledWith('Answer');
+});

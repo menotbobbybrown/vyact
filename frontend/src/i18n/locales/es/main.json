@@ -1037,6 +1037,7 @@
     }
   },
   "toolActivity": {
+    "queued": "Esperando a que termine otra respuesta…",
     "ariaLabel": "Actividad de herramientas",
     "working": "Trabajando…",
     "workingFor": "Trabajando durante {{duration}}",

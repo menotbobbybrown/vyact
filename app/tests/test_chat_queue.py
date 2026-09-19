@@ -1,0 +1,87 @@
+import asyncio
+from unittest.mock import AsyncMock
+
+import pytest
+
+from routers import chat
+from services import chat_queue
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('first_client', ['desktop', 'chrome'])
+async def test_clients_wait_and_cancel_without_blocking_following_requests(monkeypatch, first_client):
+    lock = asyncio.Lock()
+    monkeypatch.setattr(chat, 'chat_request_lock', lock)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = []
+
+    async def respond(req):
+        calls.append(req.question)
+        if req.question == first_client:
+            started.set()
+            await release.wait()
+        return {'answer': req.question}
+
+    monkeypatch.setattr(chat, '_query_serialized', respond)
+    first = asyncio.create_task(chat.query(chat.QueryRequest(question=first_client)))
+    await started.wait()
+    cancelled = asyncio.create_task(chat.query(chat.QueryRequest(question='cancelled')))
+    following = asyncio.create_task(chat.query(chat.QueryRequest(question='following')))
+    await asyncio.sleep(0)
+    assert calls == [first_client]
+    cancelled.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await cancelled
+    release.set()
+    await first
+    assert await following == {'answer': 'following'}
+    assert calls == [first_client, 'following']
+    assert not lock.locked()
+
+
+@pytest.mark.asyncio
+async def test_stream_reports_waiting_and_cancellation_does_not_release_owner(monkeypatch):
+    lock = asyncio.Lock()
+    monkeypatch.setattr(chat, 'chat_request_lock', lock)
+    await lock.acquire()
+    response = await chat.query_stream(chat.QueryRequest(question='waiting'))
+    stream = response.body_iterator
+    queued = await anext(stream)
+    assert '"waiting": true' in queued
+    waiting = asyncio.create_task(anext(stream))
+    await asyncio.sleep(0)
+    waiting.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiting
+    assert lock.locked()
+    lock.release()
+
+
+@pytest.mark.asyncio
+async def test_stream_fallback_does_not_wait_on_its_own_lock(monkeypatch):
+    monkeypatch.setattr(chat, '_query_response', AsyncMock(return_value={'answer': 'ok'}))
+    token = chat.current_approval_context.set(chat.ApprovalContext(interactive=True))
+    try:
+        async with chat.chat_request_lock:
+            assert await asyncio.wait_for(chat.query(chat.QueryRequest(question='fallback')), 1) == {'answer': 'ok'}
+    finally:
+        chat.current_approval_context.reset(token)
+
+
+@pytest.mark.asyncio
+async def test_translation_waits_for_chat_owner(monkeypatch):
+    lock = asyncio.Lock()
+    monkeypatch.setattr(chat, 'chat_request_lock', lock)
+    llm = AsyncMock(return_value='translated')
+    monkeypatch.setattr(chat, 'query_llm', llm)
+    request = AsyncMock()
+    request.is_disconnected.return_value = False
+    await lock.acquire()
+    task = asyncio.create_task(chat.translate(chat.TranslateRequest(text='hello', target_lang='ko'), request))
+    await asyncio.sleep(0)
+    llm.assert_not_awaited()
+    lock.release()
+    await asyncio.wait_for(task, 2)
+    llm.assert_awaited_once()
+    assert not lock.locked()

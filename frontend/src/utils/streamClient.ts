@@ -10,6 +10,7 @@ const PAINT_FALLBACK_MS = 50;
 // (EventSource는 GET/커스텀헤더 제약이 있어 POST body가 필요한 이 API엔 fetch 스트림을 쓴다.)
 
 export interface StreamHandlers {
+    onQueue?: (data: {waiting: boolean}) => void;
     onMeta?: (data: { model?: string; sources?: any[] }) => void;
     onToken?: (text: string) => void;
     /** 판정 스트림이 서두를 relay한 뒤 tool 호출로 전환된 케이스 — 표시 중인 답변 초기화 */
@@ -70,6 +71,7 @@ export async function streamSSE(
             return null;
         }
         switch (event) {
+            case 'queue': handlers.onQueue?.(payload); break;
             case 'meta':  handlers.onMeta?.(payload); break;
             case 'token': if (payload.text) handlers.onToken?.(payload.text); break;
             case 'reset': handlers.onReset?.(payload); break;

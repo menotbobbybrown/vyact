@@ -1038,6 +1038,7 @@
     }
   },
   "toolActivity": {
+    "queued": "別の応答が完了するまで待機中…",
     "ariaLabel": "ツールの進行状況",
     "working": "処理中…",
     "workingFor": "{{duration}}間作業中です",

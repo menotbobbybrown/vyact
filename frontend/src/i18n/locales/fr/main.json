@@ -1038,6 +1038,7 @@
     }
   },
   "toolActivity": {
+    "queued": "En attente de la fin d’une autre réponse…",
     "ariaLabel": "Activité des outils",
     "working": "En cours…",
     "workingFor": "Travail en cours depuis {{duration}}",

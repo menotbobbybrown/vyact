@@ -1038,6 +1038,7 @@
     }
   },
   "toolActivity": {
+    "queued": "正在等待其他回复完成…",
     "ariaLabel": "工具执行进度",
     "working": "正在处理…",
     "workingFor": "已工作 {{duration}}",

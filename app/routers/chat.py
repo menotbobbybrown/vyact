@@ -4,6 +4,8 @@ routers/chat.py – 채팅 / 검색 / 인덱스
 import uuid
 import re
 import asyncio
+from contextlib import aclosing
+from services.chat_queue import chat_request_lock
 from datetime import datetime, timezone
 from urllib.parse import parse_qsl, urlencode, urlparse
 
@@ -505,7 +507,18 @@ async def _index_attachments_sequential(conv_id: str, attachments: list):
 
 
 @router.post("/query")
-async def query(req: QueryRequest):
+async def query(req: QueryRequest, request: Request = None):
+    if current_approval_context.get().interactive:
+        return await _query_response(req)
+    async def run_queued():
+        async with chat_request_lock:
+            return await _query_serialized(req)
+    if request is not None:
+        return await await_while_connected(request, run_queued())
+    return await run_queued()
+
+
+async def _query_serialized(req: QueryRequest):
     # A stream fallback keeps its existing interactive approval channel.
     if current_approval_context.get().interactive:
         return await _query_response(req)
@@ -1357,7 +1370,16 @@ async def query_stream(req: QueryRequest):
                 except Exception as e:
                     logger.warning("[query_stream] 중단 시 저장 실패: %s", e)
 
-    return StreamingResponse(stream(), media_type="text/event-stream")
+    async def queued_stream():
+        if chat_request_lock.locked():
+            yield _sse("queue", {"waiting": True})
+        async with chat_request_lock:
+            yield _sse("queue", {"waiting": False})
+            async with aclosing(stream()) as response:
+                async for event in response:
+                    yield event
+
+    return StreamingResponse(queued_stream(), media_type="text/event-stream")
 
 
 class UndoCodeChangesRequest(BaseModel):
@@ -1459,18 +1481,21 @@ async def translate(req: TranslateRequest, request: Request):
             f"번역 결과만 출력하고 설명은 하지 마:\n\n{req.text}"
         )
         gen_stats: dict = {}  # query_llm이 provider 토큰수/처리시간 통계를 채움
-        answer = await await_while_connected(request, query_llm(
-            prompt, [], "", [], [],
-            timeout=300.0,
-            format_instruction_override="",
-            inject_user_profile=False,
-            use_tools=False,
-            num_predict=1024,
-            reasoning=False,  # 번역은 추론 스위치와 무관하게 항상 off
-            call_reason="translate",
-            stats_out=gen_stats,
-            include_response_language=req.include_response_language,
-        ))
+        async def translate_when_available():
+            async with chat_request_lock:
+                return await query_llm(
+                    prompt, [], "", [], [],
+                    timeout=300.0,
+                    format_instruction_override="",
+                    inject_user_profile=False,
+                    use_tools=False,
+                    num_predict=1024,
+                    reasoning=False,  # 번역은 추론 스위치와 무관하게 항상 off
+                    call_reason="translate",
+                    stats_out=gen_stats,
+                    include_response_language=req.include_response_language,
+                )
+        answer = await await_while_connected(request, translate_when_available())
         translated = answer.strip()
 
         conv_id = req.conv_id

@@ -1037,6 +1037,7 @@
     }
   },
   "toolActivity": {
+    "queued": "Waiting for another response to finish…",
     "ariaLabel": "Tool activity",
     "working": "Working…",
     "workingFor": "Working for {{duration}}",
