@@ -785,3 +785,6 @@
 .msg-retry-btn { opacity: 1; }
 .msg-meta.user .msg-copy-btn + .msg-retry-btn { margin-left: -8px; }
 .msg-retry-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.msg .msg-retry-btn:disabled { opacity: .35; cursor: default; color: var(--muted); transform: none; }
+.msg .message-retry:disabled { opacity: .35; cursor: default; pointer-events: none; }

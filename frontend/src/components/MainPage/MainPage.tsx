@@ -769,6 +769,7 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
                                 isEmpty={conv.messages.length === 0}
                                 projectName={activeProjectName}
                                 onRetry={handleRetry}
+                                retryDisabled={chat.hasActiveRequests || models.isModelLoading}
                                 imageGenProgress={chat.imageGenProgress}
                                 imageGenMessage={chat.imageGenMessage}
                                 loadingMessage=""

@@ -108,6 +108,7 @@ interface ChatAreaProps {
     isEmpty: boolean;
     projectName?: string;
     onRetry?: () => void;
+    retryDisabled?: boolean;
     imageGenProgress?: number;
     imageGenMessage?: string;
     loadingMessage?: string;
@@ -147,6 +148,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                                                isEmpty,
                                                projectName,
                                                onRetry,
+                                               retryDisabled = false,
                                                imageGenProgress = 0,
                                                imageGenMessage = '',
                                                loadingMessage = '',
@@ -504,6 +506,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                                 attachments={msg.attachments}
                                 isError={msg.isError}
                                 errorTitle={msg.errorTitle}
+                                retryDisabled={retryDisabled}
                                 onRetry={!isLoading && (
                                     (msg.isError && idx === messages.length - 1)
                                     || (msg.role === 'user' && idx === getUnansweredQuestionIndex(messages))

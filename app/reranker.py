@@ -5,6 +5,7 @@ sentence-transformers 5.6.x 기준
 """
 import asyncio
 import time
+from threading import Lock
 
 import torch
 from huggingface_hub import try_to_load_from_cache
@@ -15,7 +16,10 @@ from logger import get_logger
 logger = get_logger(__name__)
 
 _reranker = None
-_executor = ThreadPoolExecutor(max_workers=2)
+# Cancelling an asyncio waiter does not stop inference already running in a thread.
+# Keep GPU inference serialized even when the next request starts immediately.
+_executor = ThreadPoolExecutor(max_workers=1)
+_inference_lock = Lock()
 MODEL_NAME = "BAAI/bge-reranker-v2-m3"
 RERANK_PASSAGE_MAX_CHARS = 1200
 RERANKER_WARMUP_QUERY = "로컬 검색과 관련된 문서를 찾아주세요."
@@ -75,11 +79,12 @@ def warmup_reranker() -> bool:
 
     started_at = time.perf_counter()
     try:
-        _reranker.rank(
-            RERANKER_WARMUP_QUERY,
-            list(RERANKER_WARMUP_PASSAGES),
-            return_documents=False,
-        )
+        with _inference_lock:
+            _reranker.rank(
+                RERANKER_WARMUP_QUERY,
+                list(RERANKER_WARMUP_PASSAGES),
+                return_documents=False,
+            )
         logger.info(
             "[reranker] Inference warm-up done (duration_ms=%.1f, passages=%d)",
             (time.perf_counter() - started_at) * 1000,
@@ -102,7 +107,8 @@ def _rerank_sync(query: str, docs: list[dict], top_k: int) -> list[dict]:
         heading_path = " > ".join(document.get("heading_path") or [])
         metadata = "\n".join(part for part in (document.get("title", ""), heading_path) if part)
         passages.append(f"{metadata}\n{document.get('content', '')[:RERANK_PASSAGE_MAX_CHARS]}")
-    ranks = _reranker.rank(query, passages, return_documents=False)
+    with _inference_lock:
+        ranks = _reranker.rank(query, passages, return_documents=False)
 
     # ranks: [{"corpus_id": int, "score": float}, ...]
     ranked_docs = []

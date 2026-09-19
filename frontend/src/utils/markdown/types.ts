@@ -12,6 +12,7 @@ export interface MessageProps {
     isError?: boolean;
     errorTitle?: string;
     onRetry?: () => void;
+    retryDisabled?: boolean;
     isGeneratedImage?: boolean;
     articleSources?: ArticleAttachment[];
     pdfFile?: string;

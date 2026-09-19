@@ -75,7 +75,7 @@ const StreamingTextGroup: React.FC<{
 
 const Message: React.FC<MessageProps> = ({
                                              messageId, role, content, timestamp, sources, model, attachments,
-                                             isError, errorTitle, onRetry, isGeneratedImage, articleSources,
+                                             isError, errorTitle, onRetry, retryDisabled = false, isGeneratedImage, articleSources,
                                              pdfFile, pdfParams, onPdfEdit, injectedContext, onShowInjectedContext, onOpenMemo, onOpenQuickMemo,
                                              isStreaming = false, conversationId, requestStartedAt, toolStatus, activityLog, progressMessages, stats,
                                              truncated,
@@ -349,7 +349,7 @@ const Message: React.FC<MessageProps> = ({
                             <span>{errorDetail || t('message.unknownError')}</span>
                         </div>
                         {onRetry && (
-                            <button type="button" onClick={onRetry} className="message-retry">
+                            <button type="button" onClick={onRetry} disabled={retryDisabled} className="message-retry">
                                 <RotateCcw size={14}/>
                                 {t('message.retry')}
                             </button>
@@ -820,7 +820,7 @@ const Message: React.FC<MessageProps> = ({
                             </button>
                             {onRetry && (
                                 <button type="button" className="msg-copy-btn msg-retry-btn"
-                                        onClick={onRetry} aria-label={t('message.retry')}>
+                                        onClick={onRetry} disabled={retryDisabled} aria-label={t('message.retry')}>
                                     <RotateCcw size={14}/>
                                 </button>
                             )}
