@@ -358,7 +358,15 @@ async def load_mcp_config() -> dict:
             if res.get("found"):
                 value = res["_source"].get("value")
                 if value and isinstance(value.get("servers"), list):
-                    return _ensure_builtin_servers(value)[0]
+                    value, changed = _ensure_builtin_servers(value)
+                    if changed:
+                        # Persist generated IDs before exposing them to callers; otherwise
+                        # the next read creates different IDs and deletion cannot match.
+                        await es.index(
+                            index=INTEGRATION_SETTINGS_INDEX, id=_MCP_DOC_ID,
+                            document={"key": _MCP_DOC_ID, "value": value}, refresh=True,
+                        )
+                    return value
         finally:
             await es.close()
     except Exception as e:

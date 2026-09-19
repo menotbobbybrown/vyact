@@ -133,8 +133,11 @@ def test_defaults_and_existing_config_migration():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('server_type', ['filesystem', 'web_search', 'browser'])
-async def test_deleted_builtin_stays_removed_after_reload_and_startup(monkeypatch, server_type):
+@pytest.mark.parametrize('legacy_config', [False, True])
+async def test_deleted_builtin_stays_removed_after_reload_and_startup(monkeypatch, server_type, legacy_config):
     stored = deepcopy(mcp_config._default_config())
+    if legacy_config:
+        stored['servers'] = [s for s in stored['servers'] if s['type'] == 'filesystem']
     es = AsyncMock()
     es.exists.return_value = True
 
@@ -148,10 +151,14 @@ async def test_deleted_builtin_stays_removed_after_reload_and_startup(monkeypatc
     es.get.side_effect = get
     es.index.side_effect = index
     monkeypatch.setattr(mcp_config, 'get_es', lambda: es)
-    target = next(server for server in stored['servers'] if server['type'] == server_type)
-    remaining = [server for server in stored['servers'] if server['id'] != target['id']]
+    listed = await mcp_config.list_servers()
+    target = next(server for server in listed if server['type'] == server_type)
+    remaining = [server for server in listed if server['id'] != target['id']]
+    assert await mcp_config.list_servers() == listed
 
-    assert await mcp_config.remove_server(target['id']) == remaining
+    monkeypatch.setattr(mcp_router, '_reconnect_bg', lambda: None)
+    response = await mcp_router.delete_server(target['id'])
+    assert response['servers'] == remaining
     assert await mcp_config.list_servers() == remaining
     assert (await mcp_config.ensure_mcp_config())['servers'] == remaining
     assert await mcp_config.list_servers() == remaining
