@@ -211,6 +211,22 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
     // ── hooks ─────────────────────────────────────────────────────
     const attach = useAttachments(modelType, externalDropFiles, onExternalDropHandled, resetTrigger, supportsImageInput, supportsAudioInput);
+    const autocompleteRange = useRef<{start: number; end: number} | null>(null);
+    const removeAutocompleteToken = () => {
+        const range = autocompleteRange.current;
+        if (!range) return;
+        setValue(current => current.slice(0, range.start) + current.slice(range.end));
+        autocompleteRange.current = null;
+        requestAnimationFrame(() => {
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(range.start, range.start);
+        });
+    };
+    const selectMention = (server: MentionMcpServer) => {
+        setSelectedMcps(current => current.some(item => item.id === server.id) ? current : [...current, server]);
+        removeAutocompleteToken();
+        setMcpMentionQuery(null);
+    };
     const slash = useSlashCommand([], undefined, setValue);
     const {clearSuggestions} = slash;
     const hasAutocompleteSuggestions = mcpMentionQuery !== null || slash.slashSuggestions.length > 0;
@@ -315,7 +331,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const insertCommand = (cmd: string) => {
         setShowCommandModal(false);
         slash.clearSuggestions();
-        setValue('');
+        removeAutocompleteToken();
         const pluginCommand = findPluginCommand(cmd);
         if (pluginCommand) {
             openPluginModal(pluginCommand.modalId);
@@ -399,12 +415,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
             if (e.key === 'Enter' && !e.shiftKey && visibleMcpServers[mcpMentionIndex]) {
                 e.preventDefault();
                 e.stopPropagation();
-                setSelectedMcps(current => current.some(server => server.id === visibleMcpServers[mcpMentionIndex].id) ? current : [...current, visibleMcpServers[mcpMentionIndex]]);
-                setValue('');
-                setMcpMentionQuery(null);
+                selectMention(visibleMcpServers[mcpMentionIndex]);
                 return;
             }
-            if (e.key === 'Escape') { e.preventDefault(); setMcpMentionQuery(null); setValue(''); return; }
+            if (e.key === 'Escape') { e.preventDefault(); setMcpMentionQuery(null); return; }
         }
         const consumed = slash.handleKeyDown(e, insertCommand);
         if (consumed) return;
@@ -429,7 +443,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 onDragOver={e => e.preventDefault()}
                 style={{position: 'relative'}}
             >
-                {mcpMentionQuery !== null && <div ref={promptSuggestionsRef}><McpMentionMenu query={mcpMentionQuery} selectedIds={selectedMcps.map(server => server.id)} activeIndex={mcpMentionIndex} onActiveIndexChange={setMcpMentionIndex} onVisibleServersChange={setVisibleMcpServers} onSelect={server => { setSelectedMcps(current => current.some(item => item.id === server.id) ? current : [...current, server]); setValue(''); setMcpMentionQuery(null); textareaRef.current?.focus(); }}/></div>}
+                {mcpMentionQuery !== null && <div ref={promptSuggestionsRef}><McpMentionMenu query={mcpMentionQuery} selectedIds={selectedMcps.map(server => server.id)} activeIndex={mcpMentionIndex} onActiveIndexChange={setMcpMentionIndex} onVisibleServersChange={setVisibleMcpServers} onSelect={selectMention}/></div>}
 
                 {/* / 슬래시 자동완성 */}
                 {slash.slashSuggestions.length > 0 && (
@@ -519,10 +533,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
                                 readOnly={isModelLoading}
                                 onChange={e => {
                                     if (isModelLoading) return;
-                                    const mention = e.target.value.match(/^@([^\s]*)$/);
-                                    setMcpMentionQuery(mention ? mention[1] : null);
-                                    if (mention) setMcpMentionIndex(0);
-                                    if (!mention) slash.handleValueChange(e.target.value);
+                                    const cursor = e.target.selectionStart;
+                                    const token = e.target.value.slice(0, cursor).match(/[@/][^\s@/]*$/);
+                                    autocompleteRange.current = token ? {start: token.index!, end: cursor} : null;
+                                    const mention = token?.[0].startsWith('@') ? token[0].slice(1) : null;
+                                    setMcpMentionQuery(mention);
+                                    if (mention !== null) {
+                                        setMcpMentionIndex(0);
+                                        slash.clearSuggestions();
+                                    } else {
+                                        slash.handleValueChange(token?.[0] ?? '');
+                                    }
                                     setValue(e.target.value);
                                     autoResize();
                                 }}
