@@ -184,18 +184,6 @@
 .mcp-btn-connect:disabled { opacity: 0.5; cursor: default; }
 .mcp-err { font-size: 13px; color: #e5484d; }
 
-/* 삭제 확인 */
-.mcp-confirm {
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 10px; border-top: 1px solid var(--border, rgba(255,255,255,0.08));
-    background: rgba(229, 72, 77, 0.06);
-}
-.mcp-confirm-text { font-size: 14px; color: var(--text); }
-.mcp-btn-danger {
-    border: none; background: var(--del-fg-soft); color: var(--on-accent);
-    padding: 6px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;
-}
-.mcp-btn-danger:hover { background: var(--del-fg); }
 /* Google OAuth */
 .google-oauth-status {
     display: flex;
@@ -347,3 +335,11 @@
     background: rgba(255,255,255,0.03);
     line-height: 1.5;
 }
+
+.mcp-browser-help { display: grid; gap: 12px; padding: 4px; white-space: normal; line-height: 1.5; }
+.mcp-browser-help p, .mcp-browser-help dl, .mcp-browser-help dd { margin: 0; }
+.mcp-browser-help-intro { font-weight: 600; }
+.mcp-browser-help-features { display: grid; gap: 9px; }
+.mcp-browser-help-features dt { font-weight: 600; color: var(--text); }
+.mcp-browser-help-features dd { color: var(--text-secondary); font-size: 12px; }
+.mcp-browser-help-notes { display: grid; gap: 5px; border-top: 1px solid var(--border); padding-top: 10px; color: var(--text-secondary); font-size: 11px; }

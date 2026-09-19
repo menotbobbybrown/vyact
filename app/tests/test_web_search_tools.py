@@ -132,6 +132,38 @@ def test_defaults_and_existing_config_migration():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('server_type', ['filesystem', 'web_search', 'browser'])
+async def test_deleted_builtin_stays_removed_after_reload_and_startup(monkeypatch, server_type):
+    stored = deepcopy(mcp_config._default_config())
+    es = AsyncMock()
+    es.exists.return_value = True
+
+    async def get(**kwargs):
+        return {'found': True, '_source': {'value': deepcopy(stored)}}
+
+    async def index(**kwargs):
+        nonlocal stored
+        stored = deepcopy(kwargs['document']['value'])
+
+    es.get.side_effect = get
+    es.index.side_effect = index
+    monkeypatch.setattr(mcp_config, 'get_es', lambda: es)
+    target = next(server for server in stored['servers'] if server['type'] == server_type)
+    remaining = [server for server in stored['servers'] if server['id'] != target['id']]
+
+    assert await mcp_config.remove_server(target['id']) == remaining
+    assert await mcp_config.list_servers() == remaining
+    assert (await mcp_config.ensure_mcp_config())['servers'] == remaining
+    assert await mcp_config.list_servers() == remaining
+
+    # Explicitly adding the tool remains possible after deleting its default entry.
+    added = await mcp_config.add_server(server_type, {}, enabled=False)
+    assert added in await mcp_config.list_servers()
+    await mcp_config.remove_server(added['id'])
+    assert await mcp_config.list_servers() == remaining
+
+
+@pytest.mark.asyncio
 async def test_explicit_selection_uses_configured_disabled_search(monkeypatch, setup):
     manager = MCPManager()
     web_search_tools.register_web_search_tools(manager)

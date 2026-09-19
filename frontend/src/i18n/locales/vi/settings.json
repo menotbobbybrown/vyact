@@ -362,6 +362,17 @@
     "show": "Hiện"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "AI trực tiếp điều khiển Chrome trên máy tính của bạn.",
+      "readTitle": "Tìm kiếm và đọc",
+      "readDescription": "Tìm kiếm trên web, mở trang và đọc nội dung",
+      "interactTitle": "Nhấp và nhập",
+      "interactDescription": "Nhấp liên kết, nút; nhập vào ô tìm kiếm và ô văn bản",
+      "navigateTitle": "Điều hướng và chờ",
+      "navigateDescription": "Cuộn, quay lại và chờ trang tải",
+      "setup": "Cài đặt và kết nối tiện ích Vyact trong Chrome.",
+      "project": "Tác vụ dự án sử dụng trình duyệt trong ứng dụng."
+    },
     "title": "Công cụ AI",
     "googleTitle": "Google Workspace",
     "googleDesc": "Kết nối và quản lý tài khoản Google cùng quyền dịch vụ.",

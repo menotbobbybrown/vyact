@@ -30,6 +30,7 @@ from services.web_search_prompts import get_web_search_prompt
 logger = get_logger(__name__)
 
 _MCP_DOC_ID = "mcp"
+_BUILTIN_MIGRATION_TYPES = ("browser", "web_search")
 
 # 서버 타입별 노출 tool 화이트리스트.
 # 작은 모델(gemma4:e4b 등)은 tool이 많으면 선택 정확도가 급락하므로,
@@ -339,7 +340,11 @@ def _ensure_builtin_servers(cfg: dict) -> tuple[dict, bool]:
     """기존 설치에도 비활성 기본 internal 도구를 안전하게 추가한다."""
     servers = cfg.setdefault("servers", [])
     existing_types = {server.get("type") for server in servers}
-    missing_types = [type_ for type_ in ("browser", "web_search") if type_ not in existing_types]
+    removed_types = set(cfg.get("removed_builtin_server_types", []))
+    missing_types = [
+        type_ for type_ in _BUILTIN_MIGRATION_TYPES
+        if type_ not in existing_types and type_ not in removed_types
+    ]
     for type_ in missing_types:
         servers.append({"id": uuid.uuid4().hex[:8], "type": type_, "enabled": False, "config": {}})
     return cfg, bool(missing_types)
@@ -445,6 +450,13 @@ async def update_server(server_id: str, *, config: dict | None = None,
 
 async def remove_server(server_id: str) -> list[dict]:
     cfg = await load_mcp_config()
+    removed_types = set(cfg.get("removed_builtin_server_types", []))
+    removed_types.update(
+        server["type"] for server in cfg.get("servers", [])
+        if server.get("id") == server_id and server.get("type") in _BUILTIN_MIGRATION_TYPES
+    )
+    if removed_types:
+        cfg["removed_builtin_server_types"] = sorted(removed_types)
     cfg["servers"] = [s for s in cfg.get("servers", []) if s.get("id") != server_id]
     await save_mcp_config(cfg)
     return cfg["servers"]

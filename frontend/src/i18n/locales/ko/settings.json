@@ -427,6 +427,17 @@
     "show": "보기"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "AI가 내 PC의 Chrome을 직접 조작합니다.",
+      "readTitle": "검색·읽기",
+      "readDescription": "웹 검색, 페이지 열기, 내용 읽기",
+      "interactTitle": "클릭·입력",
+      "interactDescription": "링크·버튼 클릭, 검색창·입력란에 글 입력",
+      "navigateTitle": "이동·대기",
+      "navigateDescription": "스크롤, 뒤로 가기, 페이지 로딩 대기",
+      "setup": "Chrome에 Vyact 확장 프로그램을 설치하고 연결하세요.",
+      "project": "프로젝트 작업에서는 앱 내 브라우저를 사용합니다."
+    },
     "title": "AI 도구",
     "googleTitle": "Google Workspace",
     "googleDesc": "Google 계정과 서비스 권한을 연결하고 관리합니다.",

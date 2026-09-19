@@ -398,6 +398,17 @@
     "show": "Show"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "AI operates Chrome on your computer.",
+      "readTitle": "Search & read",
+      "readDescription": "Search the web, open pages, and read their content",
+      "interactTitle": "Click & type",
+      "interactDescription": "Click links and buttons; fill search boxes and text fields",
+      "navigateTitle": "Navigate & wait",
+      "navigateDescription": "Scroll, go back, and wait for pages to load",
+      "setup": "Install and connect the Vyact extension in Chrome.",
+      "project": "Project tasks use the in-app browser."
+    },
     "title": "AI Tools",
     "googleTitle": "Google Workspace",
     "googleDesc": "Connect and manage Google accounts and service permissions.",

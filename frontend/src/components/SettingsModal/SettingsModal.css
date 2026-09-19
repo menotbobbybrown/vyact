@@ -345,7 +345,8 @@
     cursor: pointer;
 }
 
-.settings-index-item .settings-tooltip { flex-shrink: 0; width: 15px; height: 15px; font-size: 10px; }
+.settings-index-item .settings-tooltip,
+.mcp-item-row .settings-tooltip { flex-shrink: 0; width: 15px; height: 15px; font-size: 10px; }
 
 .settings-index-info {
     flex: 1;

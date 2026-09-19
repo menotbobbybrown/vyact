@@ -12,6 +12,7 @@ tool 진행 이벤트는 on_event 콜백(coroutine)으로 알린다:
 import base64
 import json
 
+from .tool_trace import record_tool_context
 from .config import (
     IMAGES_DIR, LLM_TEMPERATURE, LLM_MAX_TOKENS,
     LOCAL_TOOL_CALL_MAX_ROUNDS, CLOUD_TOOL_CALL_MAX_ROUNDS,
@@ -360,6 +361,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                          is_tool_judgment=True, round_no=_round)
             tool_calls_by_index: dict[int, dict] = {}
             _mark_llm_call_started(usage)
+            record_tool_context("openai", body)
             async with client.stream("POST", base_url, headers=headers, json=body) as resp:
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
@@ -534,6 +536,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
     log_llm_call(call_reason, "openai", model, streaming=True, reasoning=reasoning,
                  is_tool_judgment=False if unified else None)
     _mark_llm_call_started(usage)
+    record_tool_context("openai", body)
     async with client.stream("POST", base_url, headers=headers, json=body) as resp:
         resp.raise_for_status()
         async for line in resp.aiter_lines():
@@ -636,6 +639,7 @@ async def gemini_stream(client, model, api_key, system_message, user_prompt,
             }
             log_llm_call(call_reason, "gemini", model, streaming=False, reasoning=reasoning,
                          is_tool_judgment=True, round_no=_round)
+            record_tool_context("gemini", body)
             resp = await client.post(gen_url, json=body)
             resp.raise_for_status()
             data = resp.json()
@@ -729,6 +733,7 @@ async def gemini_stream(client, model, api_key, system_message, user_prompt,
     ):
         body["tools"] = to_gemini_tools(unified)
     log_llm_call(call_reason, "gemini", model, streaming=True, reasoning=reasoning)
+    record_tool_context("gemini", body)
     async with client.stream("POST", stream_url, json=body) as resp:
         resp.raise_for_status()
         async for line in resp.aiter_lines():
@@ -806,6 +811,7 @@ async def claude_stream(client, model, api_key, system_message, user_prompt,
                     "system": system_text, "messages": messages, "tools": cl_tools}
             log_llm_call(call_reason, "claude", model, streaming=False, reasoning=reasoning,
                          is_tool_judgment=True, round_no=_round)
+            record_tool_context("claude", body)
             resp = await client.post(base_url, headers=headers, json=body)
             resp.raise_for_status()
             data = resp.json()
@@ -896,6 +902,7 @@ async def claude_stream(client, model, api_key, system_message, user_prompt,
     ):
         body["tools"] = to_claude_tools(unified)
     log_llm_call(call_reason, "claude", model, streaming=True, reasoning=reasoning)
+    record_tool_context("claude", body)
     async with client.stream("POST", base_url, headers=headers, json=body) as resp:
         resp.raise_for_status()
         async for line in resp.aiter_lines():

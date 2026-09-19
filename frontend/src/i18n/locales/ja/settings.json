@@ -362,6 +362,17 @@
     "show": "表示"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "AIがPCのChromeを直接操作します。",
+      "readTitle": "検索・読み取り",
+      "readDescription": "ウェブ検索、ページを開く、内容の読み取り",
+      "interactTitle": "クリック・入力",
+      "interactDescription": "リンクやボタンのクリック、検索欄や入力欄への文字入力",
+      "navigateTitle": "移動・待機",
+      "navigateDescription": "スクロール、前のページに戻る、読み込み待機",
+      "setup": "ChromeにVyact拡張機能をインストールして接続してください。",
+      "project": "プロジェクト作業ではアプリ内ブラウザーを使用します。"
+    },
     "title": "AIツール",
     "googleTitle": "Google Workspace",
     "googleDesc": "Google アカウントとサービス権限を連携・管理します。",

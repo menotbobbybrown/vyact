@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 
 import httpx
 
+from routers.deps import load_config_async
+from .tool_trace import tool_trace, record_tool_event
+
 from prompts import build_user_prompt
 from .config import (
     IMAGES_DIR, get_provider_config, log_llm_call, log_llm_interaction, logger,
@@ -84,6 +87,8 @@ async def chat_stream_with_tools(
         model = provider_config["model"]
         collected: list[str] = []
         tools_used: list[str] = []
+        trace = {"executions": [], "model_requests": []} if (await load_config_async()).get("llm_logging", False) else None
+        trace_token = tool_trace.set(trace)
         log_entry = {
             "request_id": str(uuid.uuid4()),
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -122,6 +127,7 @@ async def chat_stream_with_tools(
             _queue: "asyncio.Queue[dict]" = asyncio.Queue()
 
             async def _on_tool_event(ev: dict):
+                record_tool_event(ev)
                 if ev.get("phase") == "reset":
                     await _queue.put({"type": "reset"})
                     return
@@ -233,6 +239,9 @@ async def chat_stream_with_tools(
         finally:
             log_entry["response"] = "".join(collected)
             log_entry["tools_used"] = tools_used or None
+            if trace is not None:
+                log_entry["tool_trace"] = trace
+            tool_trace.reset(trace_token)
             try:
                 await log_llm_interaction(log_entry)
             except Exception as _le:

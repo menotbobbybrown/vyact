@@ -10,6 +10,12 @@ function valueText(value: unknown): string {
     return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
+function timestampText(value: unknown): string {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value)) return valueText(value);
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
 export function parseRequestLogs(content: string) {
     const occurrences = new Map<string, number>();
     return content.split('\n').filter(line => line.trim()).map(line => {
@@ -21,7 +27,7 @@ export function parseRequestLogs(content: string) {
         const occurrence = occurrences.get(identity) ?? 0;
         occurrences.set(identity, occurrence + 1);
         const summary = record
-            ? [record.timestamp, record.model, record.user_prompt || record.error || record.response || record.request_id]
+            ? [record.timestamp == null ? null : timestampText(record.timestamp), record.model, record.user_prompt || record.error || record.response || record.request_id]
                 .filter(item => item !== undefined && item !== null && item !== '')
                 .map(valueText).join(' · ')
             : line;
@@ -37,7 +43,7 @@ function JsonFields({value, depth = 1}: {value: unknown; depth?: number}) {
             <span className="request-log-key">{key}</span>
             {depth < MAX_TREE_DEPTH && child !== null && typeof child === 'object'
                 ? <JsonFields value={child} depth={depth + 1}/>
-                : <span className="request-log-value">{valueText(child)}</span>}
+                : <span className="request-log-value">{key === 'timestamp' ? timestampText(child) : valueText(child)}</span>}
         </div>)}
     </div>;
 }

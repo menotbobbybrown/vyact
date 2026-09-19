@@ -5,6 +5,7 @@ import {waitForGoogleWorkspaceConnection} from '../../services/googleWorkspaceSt
 import {emitGoogleWorkspaceStatusChanged, emitMcpServersChanged} from '../../utils/mcpEvents';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
+import {Tooltip} from '../common/Tooltip/Tooltip';
 import WorkspaceMailSettingsFields from './WorkspaceMailSettingsFields';
 import WorkspaceSetupGuide from './WorkspaceSetupGuide';
 import {WebSearchSetupGuide, WebSearchCredentials} from './WebSearchSettings';
@@ -223,6 +224,28 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
                                                onChange={() => toggleEnabled(srv)}/>
                                         <span className="mcp-slider"/>
                                     </label>
+                                    {srv.type === 'browser' && (
+                                        <Tooltip content={
+                                            <div className="mcp-browser-help">
+                                                <p className="mcp-browser-help-intro">{t('mcp.browserHelp.intro')}</p>
+                                                <dl className="mcp-browser-help-features">
+                                                    {['read', 'interact', 'navigate'].map(feature => (
+                                                        <div key={feature}>
+                                                            <dt>{t(`mcp.browserHelp.${feature}Title`)}</dt>
+                                                            <dd>{t(`mcp.browserHelp.${feature}Description`)}</dd>
+                                                        </div>
+                                                    ))}
+                                                </dl>
+                                                <div className="mcp-browser-help-notes">
+                                                    <p>{t('mcp.browserHelp.setup')}</p>
+                                                    <p>{t('mcp.browserHelp.project')}</p>
+                                                </div>
+                                            </div>
+                                        } multiline size="medium">
+                                            <span className="settings-tooltip" tabIndex={0}
+                                                  aria-label={t('mcp.browserHelp.intro')}>?</span>
+                                        </Tooltip>
+                                    )}
                                     <span className="mcp-item-label">{displayName}</span>
                                     <div className="mcp-item-actions">
                                         <button className="mcp-icon-btn"
@@ -241,23 +264,20 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
                                     </div>
                                 )}
                                 {confirmId === srv.id && (
-                                    <div className="mcp-confirm">
-                                        <span className="mcp-confirm-text">
-                                            {t('mcp.confirmDelete', {name: displayName})}
-                                        </span>
-                                        <div className="mcp-form-actions">
-                                            <button className="mcp-btn-ghost"
-                                                    onClick={() => setConfirmId(null)}>{t('mcp.cancel')}
-                                            </button>
-                                            <button className="mcp-btn-danger"
-                                                    onClick={() => {
-                                                        setConfirmId(null);
-                                                        handleRemove(srv.id);
-                                                    }}
-                                                    disabled={busy}>{t('mcp.delete')}
-                                            </button>
-                                        </div>
-                                    </div>
+                                    <ConfirmModal
+                                        title={t('mcp.delete')}
+                                        description={t('mcp.confirmDelete', {name: displayName})}
+                                        options={[
+                                            {label: t('mcp.cancel'), value: 'cancel'},
+                                            {label: t('mcp.delete'), value: 'delete', variant: 'danger'},
+                                        ]}
+                                        actionLayout="horizontal"
+                                        onClose={() => setConfirmId(null)}
+                                        onSelect={value => {
+                                            setConfirmId(null);
+                                            if (value === 'delete') void handleRemove(srv.id);
+                                        }}
+                                    />
                                 )}
                             </>}
                             {(isGoogleScope || editingId === srv.id) && cat && (

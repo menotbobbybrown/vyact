@@ -362,6 +362,17 @@
     "show": "แสดง"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "AI ควบคุม Chrome บนคอมพิวเตอร์ของคุณโดยตรง",
+      "readTitle": "ค้นหาและอ่าน",
+      "readDescription": "ค้นหาบนเว็บ เปิดหน้าเว็บ และอ่านเนื้อหา",
+      "interactTitle": "คลิกและพิมพ์",
+      "interactDescription": "คลิกลิงก์และปุ่ม พิมพ์ในช่องค้นหาและช่องข้อความ",
+      "navigateTitle": "นำทางและรอ",
+      "navigateDescription": "เลื่อนหน้า ย้อนกลับ และรอหน้าเว็บโหลด",
+      "setup": "ติดตั้งและเชื่อมต่อส่วนขยาย Vyact ใน Chrome",
+      "project": "งานโปรเจกต์จะใช้เบราว์เซอร์ภายในแอป"
+    },
     "title": "เครื่องมือ AI",
     "googleTitle": "Google Workspace",
     "googleDesc": "เชื่อมต่อและจัดการบัญชี Google และสิทธิ์บริการ",

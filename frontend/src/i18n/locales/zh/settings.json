@@ -362,6 +362,17 @@
     "show": "显示"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "AI 直接操作您电脑上的 Chrome。",
+      "readTitle": "搜索与阅读",
+      "readDescription": "搜索网页、打开页面、读取内容",
+      "interactTitle": "点击与输入",
+      "interactDescription": "点击链接和按钮，在搜索框和输入框中输入文字",
+      "navigateTitle": "导航与等待",
+      "navigateDescription": "滚动、返回上一页、等待页面加载",
+      "setup": "请在 Chrome 中安装并连接 Vyact 扩展。",
+      "project": "项目任务使用应用内浏览器。"
+    },
     "title": "AI 工具",
     "googleTitle": "Google Workspace",
     "googleDesc": "连接并管理 Google 帐号和服务权限。",

@@ -362,6 +362,17 @@
     "show": "Afficher"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "L’IA pilote Chrome sur votre ordinateur.",
+      "readTitle": "Rechercher et lire",
+      "readDescription": "Rechercher sur le web, ouvrir des pages et lire leur contenu",
+      "interactTitle": "Cliquer et saisir",
+      "interactDescription": "Cliquer sur des liens et boutons ; remplir les champs de recherche et de texte",
+      "navigateTitle": "Naviguer et attendre",
+      "navigateDescription": "Faire défiler, revenir en arrière et attendre le chargement",
+      "setup": "Installez et connectez l’extension Vyact dans Chrome.",
+      "project": "Les tâches de projet utilisent le navigateur intégré."
+    },
     "title": "Outils d’IA",
     "googleTitle": "Google Workspace",
     "googleDesc": "Connectez et gérez les comptes Google et les autorisations des services.",

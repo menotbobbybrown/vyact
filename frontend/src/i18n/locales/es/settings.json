@@ -362,6 +362,17 @@
     "show": "Mostrar"
   },
   "mcp": {
+    "browserHelp": {
+      "intro": "La IA controla Chrome en tu equipo.",
+      "readTitle": "Buscar y leer",
+      "readDescription": "Buscar en la web, abrir páginas y leer su contenido",
+      "interactTitle": "Clic y escritura",
+      "interactDescription": "Pulsar enlaces y botones; escribir en buscadores y campos de texto",
+      "navigateTitle": "Navegar y esperar",
+      "navigateDescription": "Desplazarse, volver atrás y esperar a que carguen las páginas",
+      "setup": "Instala y conecta la extensión de Vyact en Chrome.",
+      "project": "Las tareas de proyectos usan el navegador integrado."
+    },
     "title": "Herramientas de IA",
     "googleTitle": "Google Workspace",
     "googleDesc": "Conecta y administra cuentas de Google y permisos de servicios.",
