@@ -768,9 +768,7 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
                                 responseStartedAt={chat.responseStartedAt}
                                 isEmpty={conv.messages.length === 0}
                                 projectName={activeProjectName}
-                                onRetry={chat.lastFailedQuery && (!chat.lastFailedQuery.retryMessageId
-                                    || conv.messages[conv.messages.length - 1]?.id === chat.lastFailedQuery.retryMessageId)
-                                    ? handleRetry : undefined}
+                                onRetry={handleRetry}
                                 imageGenProgress={chat.imageGenProgress}
                                 imageGenMessage={chat.imageGenMessage}
                                 loadingMessage=""

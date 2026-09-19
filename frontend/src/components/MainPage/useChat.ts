@@ -1,4 +1,4 @@
-import {markResponseStopped, removeRetryTurn} from './chatRetry';
+import {getUnansweredQuestionIndex, markResponseStopped, removeRetryTurn} from './chatRetry';
 import {isAudioChatFile} from '../../utils/fileValidation';
 import React from 'react';
 import {useState} from 'react';
@@ -121,6 +121,7 @@ interface ConversationRequestState {
 
 interface FailedRequest {
     retryMessageId?: string;
+    userTimestamp?: string;
     query: string;
     attachments: any[];
     systemPromptOverride?: string;
@@ -438,6 +439,7 @@ export function useChat(deps: UseChatDeps) {
             && reasoningRequestValue !== 'none';
 
         const userTs = new Date().toISOString();  // 전송 시각 — 화면/서버 동일하게 사용
+        failedRequest.userTimestamp = userTs;
         const userMessage: Message = {
             role: 'user', content: query, timestamp: userTs,
             attachments: attachments.length > 0 ? attachments : undefined,
@@ -914,9 +916,22 @@ export function useChat(deps: UseChatDeps) {
     };
 
     const handleRetry = async () => {
-        if (!lastFailedQuery || isSendingRef.current || hasActiveRequests) return;
-        const failedRequest = lastFailedQuery;
-        if (failedRequest.retryMessageId && messagesRef.current[messagesRef.current.length - 1]?.id !== failedRequest.retryMessageId) return;
+        if (isSendingRef.current || hasActiveRequests) return;
+        const messages = messagesRef.current;
+        const unansweredIndex = getUnansweredQuestionIndex(messages);
+        const last = messages[messages.length - 1];
+        const userMessage = unansweredIndex >= 0 ? messages[unansweredIndex]
+            : last?.isError && messages[messages.length - 2]?.role === 'user'
+                ? messages[messages.length - 2] : undefined;
+        if (!userMessage) return;
+        const failedRequest: FailedRequest = lastFailedQuery?.userTimestamp === userMessage.timestamp
+            && lastFailedQuery?.query === userMessage.content
+            ? lastFailedQuery
+            : {
+                query: userMessage.content,
+                attachments: userMessage.attachments || [],
+                extraArticles: userMessage.articleSources,
+            };
         setMessagesWithRef(removeRetryTurn);
         setLastFailedQuery(null);
         isSendingRef.current = true;

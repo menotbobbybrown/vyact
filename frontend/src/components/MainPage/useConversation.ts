@@ -140,13 +140,7 @@ export function useConversation() {
         // assistant 저장 content 말미의 <followups> 블록을 분리
         let content = msg.content;
         let followups: string[] | undefined = msg.followups;
-        let errorCode = msg.error_code || msg.errorCode;
-        // 이전 버전은 모델의 빈 응답을 실패 메타데이터 없이 저장했다.
-        // tool_calls 메시지는 아래에서 별도로 제외되므로, 남은 빈 assistant 응답은
-        // 과거의 model_no_response 기록으로 복원한다.
-        if (msg.role === 'assistant' && !msg.tool_calls && !content?.trim() && !errorCode) {
-            errorCode = 'model_no_response';
-        }
+        const errorCode = msg.error_code || msg.errorCode;
         let errorTitle = msg.errorTitle;
         if (msg.role === 'assistant' && errorCode) {
             if (errorCode === 'tool_call_failed') {

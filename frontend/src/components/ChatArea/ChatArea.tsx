@@ -1,3 +1,4 @@
+import {getUnansweredQuestionIndex, isUnansweredResponse} from '../MainPage/chatRetry';
 import LogPanel from '../LogPanel/LogPanel';
 import DocumentPreviewPanel from '../DocumentPreviewPanel/DocumentPreviewPanel';
 import React, {useRef, useEffect, useCallback, useMemo, useState} from 'react';
@@ -488,7 +489,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                     <div className="chat-area-content">
                         {isEmpty && !isLoading && <WelcomeGreeting projectName={projectName}/>}
 
-                        {messages.map((msg, idx) => msg.isStopped && !msg.content.trim() ? null : (
+                        {messages.map((msg, idx) => msg.id !== streamingMessageId && isUnansweredResponse(msg) ? null : (
                             <div
                                 key={msg.id || msg.timestamp || idx}
                                 className={`chat-message-row chat-message-row--${msg.role}`}
@@ -505,7 +506,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                                 errorTitle={msg.errorTitle}
                                 onRetry={!isLoading && (
                                     (msg.isError && idx === messages.length - 1)
-                                    || (msg.role === 'user' && idx === messages.length - 2 && messages[idx + 1]?.isStopped)
+                                    || (msg.role === 'user' && idx === getUnansweredQuestionIndex(messages))
                                 ) ? onRetry : undefined}
                                 isGeneratedImage={msg.isGeneratedImage}
                                 articleSources={msg.articleSources}

@@ -859,6 +859,7 @@ async def query_stream(req: QueryRequest):
         conv_id = req.conv_id or str(uuid.uuid4())
         user_ts = req.user_timestamp or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         original_question = req.question
+        articles = req.articles or []
         try:
             approval_context_token = current_approval_context.set(ApprovalContext(
                 mode=req.approval_mode, conversation_id=req.conv_id, project_id=req.project_id,
@@ -1343,7 +1344,7 @@ async def query_stream(req: QueryRequest):
                     partial = "".join(parts).strip() if 'parts' in dir() else ""
                     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
                     msgs = req.messages + [
-                        {"role": "user", "content": original_question, "timestamp": user_ts},
+                        build_user_message(original_question, user_ts, req.attachments, articles),
                     ]
                     if partial:
                         msgs.append({"role": "assistant", "content": partial + "\n\n*(중단됨)*",
