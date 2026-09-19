@@ -355,7 +355,7 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
                             setServers(nextServers);
                             emitMcpServersChanged(nextServers);
                             setAdding(false);
-                            if (type === 'google_workspace') setEditingId(result.server.id);
+                            if (type === 'google_workspace' || type === 'web_search') setEditingId(result.server.id);
                             await load();
                             return result.server;
                         } catch (e: any) {
@@ -754,6 +754,7 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
     const [values, setValues] = useState<Record<string, any>>({});
     const [prompt, setPrompt] = useState('');
     const registeringGoogleRef = useRef(false);
+    const [registeringWebSearch, setRegisteringWebSearch] = useState(false);
 
     useEffect(() => {
         const cat = catalog[type];
@@ -793,13 +794,15 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
                 <CustomSelect
                     options={types.map(tp => ({value: tp, label: t(`mcpCatalog.servers.${tp}`, {defaultValue: catalog[tp].label})}))}
                     value={type}
-                    onChange={setType}
+                    onChange={setType} disabled={registeringWebSearch}
                 />
             </div>}
+            {type === 'web_search' && <WebSearchSetupGuide/>}
             {isGoogle && <GoogleWorkspaceGuide/>}
             {isGoogle && <GoogleAccountsEditor value={values} onChange={setValues}
                                                 onCredentialUpload={registerGoogle}/>}
             {!isGoogle && cat?.fields.map((field, index) => {
+                if (type === 'web_search' && field.key === 'api_key') return null;
                 const notificationField = cat.fields[index + 1];
                 if (field.key === 'mail_notifications' && cat.fields[index - 1]?.key === 'mail_mode') return null;
                 if (field.key === 'mail_mode' && notificationField?.key === 'mail_notifications') {
@@ -809,15 +812,25 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
                 }
                 return <McpFieldInput key={field.key} field={field} value={values[field.key]} onChange={(v) => setV(field.key, v)}/>;
             })}
+            {type === 'web_search' && <WebSearchCredentials hasSavedKey={false} onSave={async key => {
+                setRegisteringWebSearch(true);
+                try {
+                    const defaultPrompt = getLocalizedDefaultPrompt(t, type, cat?.default_prompt);
+                    const server = await onAdd(type, {...values, api_key: key}, prompt === defaultPrompt ? '' : prompt);
+                    if (!server) throw new Error(t('mcp.addFailed'));
+                } finally {
+                    setRegisteringWebSearch(false);
+                }
+            }}/>}
             <McpPromptField value={prompt} defaultValue={getLocalizedDefaultPrompt(t, type, cat?.default_prompt)}
                             separated={isGoogle} onChange={setPrompt}/>
             {err && <div className="mcp-err">{err}</div>}
             <div className="mcp-form-actions">
-                {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel}>{t('mcp.cancel')}</button>}
-                <button className="mcp-btn-primary"
+                {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel} disabled={registeringWebSearch}>{t('mcp.cancel')}</button>}
+                <button className="mcp-btn-primary" disabled={registeringWebSearch}
                         onClick={() => isGoogle
                             ? registerGoogle(values)
-                            : onAdd(type, values, prompt)}>
+                            : onAdd(type, values, type === 'web_search' && prompt === getLocalizedDefaultPrompt(t, type, cat?.default_prompt) ? '' : prompt)}>
                     {isGoogle ? t('mcp.save') : t('mcp.add')}
                 </button>
             </div>

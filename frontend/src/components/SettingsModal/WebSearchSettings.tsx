@@ -23,7 +23,7 @@ export function WebSearchSetupGuide() {
 }
 
 export function WebSearchCredentials({serverId, hasSavedKey, onSave}: {
-    serverId: string;
+    serverId?: string;
     hasSavedKey: boolean;
     onSave: (key: string) => Promise<void>;
 }) {
@@ -38,7 +38,7 @@ export function WebSearchCredentials({serverId, hasSavedKey, onSave}: {
 }
 
 export function WebSearchUsagePanel({serverId, hasSavedKey, savedRevision = 0}: {
-    serverId: string;
+    serverId?: string;
     hasSavedKey: boolean;
     savedRevision?: number;
 }) {
@@ -51,7 +51,7 @@ export function WebSearchUsagePanel({serverId, hasSavedKey, savedRevision = 0}: 
     useEffect(() => { setUsage(null); }, [serverId, savedRevision]);
     useEffect(() => {
         let current = true;
-        if (!hasSavedKey) {
+        if (!hasSavedKey || !serverId) {
             setUsage(null);
             setError(null);
             setLoading(false);
