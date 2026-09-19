@@ -299,11 +299,6 @@ MCP_CATALOG: dict[str, dict] = {
             {"key": "args", "label": "인자 (줄바꿈 구분)", "type": "lines", "required": False},
             {"key": "env", "label": "환경변수 (KEY=VALUE, 줄바꿈)", "type": "env", "required": False},
         ],
-        "default_prompt": (
-            "## Context7 사용 규칙 (예시 — @upstash/context7-mcp 등록 시 참고)\n"
-            "라이브러리/API/프레임워크/docker-compose 관련 요청에서는 반드시 Context7 MCP를 먼저 호출합니다.\n"
-            "Context7 조회 전에는 코드를 생성하지 않습니다."
-        ),
     },
     "custom_remote": {
         "label": "커스텀 MCP 서버 (Remote)",
