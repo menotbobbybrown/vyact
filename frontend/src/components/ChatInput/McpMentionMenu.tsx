@@ -1,3 +1,4 @@
+import {orderMcpServersForDisplay} from '../../utils/mcpOrder';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Check, Wrench} from 'lucide-react';
@@ -36,7 +37,7 @@ export default function McpMentionMenu({query, selectedIds, activeIndex, onActiv
         });
     }, [catalog, t]);
     const normalized = query.toLowerCase();
-    const visible = useMemo(() => servers.filter(server => {
+    const visible = useMemo(() => orderMcpServersForDisplay(servers).filter(server => {
         return serverName(server).toLowerCase().includes(normalized);
     }), [servers, normalized, serverName]);
     useEffect(() => onVisibleServersChange(visible), [visible, onVisibleServersChange]);

@@ -423,6 +423,30 @@ async def list_servers() -> list[dict]:
     return (await load_mcp_config()).get("servers", [])
 
 
+async def reorder_servers(server_ids: list[str]) -> list[dict]:
+    """Reorder existing records without changing the backup schema or credentials."""
+    es = get_es()
+    try:
+        result = await es.get(index=INTEGRATION_SETTINGS_INDEX, id=_MCP_DOC_ID)
+        cfg = result["_source"]["value"]
+        servers = cfg["servers"]
+        by_id = {server["id"]: server for server in servers}
+        requested_ids = set(server_ids)
+        if len(server_ids) != len(requested_ids) or not requested_ids <= by_id.keys():
+            raise ValueError("Invalid MCP server order")
+        ordered = iter(by_id[server_id] for server_id in server_ids)
+        cfg["servers"] = [next(ordered) if server["id"] in requested_ids else server for server in servers]
+        # Fail on concurrent edits and storage errors rather than reporting a false success.
+        await es.index(
+            index=INTEGRATION_SETTINGS_INDEX, id=_MCP_DOC_ID,
+            document={**result["_source"], "value": cfg}, refresh=True,
+            if_seq_no=result["_seq_no"], if_primary_term=result["_primary_term"],
+        )
+        return cfg["servers"]
+    finally:
+        await es.close()
+
+
 async def add_server(type_: str, config: dict, enabled: bool = True, prompt: str = "") -> dict:
     if type_ not in MCP_CATALOG:
         raise ValueError(f"알 수 없는 MCP 타입: {type_}")

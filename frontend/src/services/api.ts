@@ -773,6 +773,16 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         return mcpCatalogRequest;
     },
 
+    async reorderMcpServers(serverIds: string[]): Promise<{ servers: McpServer[] }> {
+        const res = await fetch(`${API_BASE}/mcp/servers/order`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({server_ids: serverIds}),
+        });
+        await assertOk(res, i18n.t('settings:mcp.saveFailed'));
+        return res.json();
+    },
+
     async getMcpServers(): Promise<{ servers: McpServer[] }> {
         const res = await fetch(`${API_BASE}/mcp/servers`);
         return res.json();

@@ -352,3 +352,10 @@
     border-top: 1px solid var(--border);
 }
 .mcp-approval-setting .mcp-field-label { line-height: 1.5; }
+
+.mcp-drag-handle { display: inline-flex; align-items: center; padding: 4px 0; border: 0; background: transparent; color: var(--muted); cursor: grab; flex-shrink: 0; }
+.mcp-drag-handle:active { cursor: grabbing; }
+.mcp-drag-handle:disabled { cursor: default; opacity: .45; }
+.mcp-drag-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mcp-item.dragging { opacity: .45; }
+.mcp-item.drag-over { border-color: var(--accent); }

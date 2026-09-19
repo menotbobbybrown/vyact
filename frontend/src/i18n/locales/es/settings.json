@@ -362,6 +362,7 @@
     "show": "Mostrar"
   },
   "mcp": {
+    "reorder": "Arrastra o usa las flechas arriba/abajo para reordenar",
     "browserHelp": {
       "intro": "La IA controla Chrome en tu equipo.",
       "readTitle": "Buscar y leer",

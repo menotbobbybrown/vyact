@@ -362,6 +362,7 @@
     "show": "显示"
   },
   "mcp": {
+    "reorder": "拖动或使用上下方向键调整顺序",
     "browserHelp": {
       "intro": "AI 直接操作您电脑上的 Chrome。",
       "readTitle": "搜索与阅读",

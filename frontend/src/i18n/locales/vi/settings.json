@@ -362,6 +362,7 @@
     "show": "Hiện"
   },
   "mcp": {
+    "reorder": "Kéo hoặc dùng phím mũi tên lên/xuống để đổi thứ tự",
     "browserHelp": {
       "intro": "AI trực tiếp điều khiển Chrome trên máy tính của bạn.",
       "readTitle": "Tìm kiếm và đọc",

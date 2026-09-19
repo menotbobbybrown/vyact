@@ -1,3 +1,5 @@
+import {hasSeparateMcpSettings} from '../../utils/mcpOrder';
+import {GripVertical} from 'lucide-react';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import {useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -78,6 +80,9 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [adding, setAdding] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [draggedId, setDraggedId] = useState<string | null>(null);
+    const [dragOverId, setDragOverId] = useState<string | null>(null);
+    const reorderingRef = useRef(false);
     const [err, setErr] = useState('');
     const [googleReconnectRequired, setGoogleReconnectRequired] = useState(false);
 
@@ -185,10 +190,35 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
 
     const isGoogleScope = scope === 'google';
     const visibleServers = servers.filter(server =>
-        isGoogleScope ? server.type === 'google_workspace' : server.type !== 'google_workspace'
+        isGoogleScope ? server.type === 'google_workspace' : !hasSeparateMcpSettings(server.type)
     );
+    const reorderServer = async (sourceId: string, targetId: string) => {
+        setDraggedId(null);
+        setDragOverId(null);
+        if (busy || reorderingRef.current || sourceId === targetId) return;
+        const ids = visibleServers.map(server => server.id);
+        const from = ids.indexOf(sourceId);
+        const to = ids.indexOf(targetId);
+        if (from < 0 || to < 0) return;
+        ids.splice(to, 0, ids.splice(from, 1)[0]);
+        reorderingRef.current = true;
+        setBusy(true);
+        setErr('');
+        try {
+            const result = await api.reorderMcpServers(ids);
+            setServers(result.servers);
+            emitMcpServersChanged(result.servers);
+        } catch {
+            setErr(t('mcp.saveFailed'));
+            await load();
+        } finally {
+            reorderingRef.current = false;
+            setBusy(false);
+        }
+    };
+
     const visibleCatalog = Object.fromEntries(Object.entries(catalog).filter(([type]) =>
-        isGoogleScope ? type === 'google_workspace' : type !== 'google_workspace' && type !== 'microsoft_workspace'
+        isGoogleScope ? type === 'google_workspace' : !hasSeparateMcpSettings(type)
     ));
 
     return (
@@ -215,11 +245,46 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
                     const cat = catalog[srv.type];
                     const displayName = getCustomMcpName(srv) ?? (t(`mcpCatalog.servers.${srv.type}`, {defaultValue: cat?.label || srv.type}));
                     return (
-                        <div key={srv.id} className="mcp-item" ref={srv.id === initialServerId ? initialServerRef : undefined}>
+                        <div key={srv.id} className={`mcp-item${draggedId === srv.id ? ' dragging' : ''}${dragOverId === srv.id ? ' drag-over' : ''}`}
+                             onDragOver={event => {
+                                 if (!draggedId || busy) return;
+                                 event.preventDefault();
+                                 event.dataTransfer.dropEffect = 'move';
+                                 setDragOverId(srv.id === draggedId ? null : srv.id);
+                             }}
+                             onDragLeave={event => {
+                                 if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOverId(null);
+                             }}
+                             onDrop={event => {
+                                 event.preventDefault();
+                                 if (draggedId) void reorderServer(draggedId, srv.id);
+                             }} ref={srv.id === initialServerId ? initialServerRef : undefined}>
                             {!isGoogleScope && <>
                                 <div className="mcp-item-row">
+                                    <button type="button" className="mcp-drag-handle" draggable={!busy}
+                                            disabled={busy} aria-label={t('mcp.reorder')}
+                                            onDragStart={event => {
+                                                event.dataTransfer.effectAllowed = 'move';
+                                                event.dataTransfer.setData('text/plain', srv.id);
+                                                const row = event.currentTarget.closest<HTMLElement>('.mcp-item-row');
+                                                if (row) {
+                                                    const bounds = row.getBoundingClientRect();
+                                                    event.dataTransfer.setDragImage(
+                                                        row, event.clientX - bounds.left, event.clientY - bounds.top,
+                                                    );
+                                                }
+                                                setDraggedId(srv.id);
+                                            }}
+                                            onDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
+                                            onKeyDown={event => {
+                                                if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                                                event.preventDefault();
+                                                const index = visibleServers.findIndex(server => server.id === srv.id);
+                                                const target = visibleServers[index + (event.key === 'ArrowUp' ? -1 : 1)];
+                                                if (target) void reorderServer(srv.id, target.id);
+                                            }}><GripVertical size={16} aria-hidden="true"/></button>
                                     <label className="mcp-switch">
-                                        <input type="checkbox" checked={srv.enabled}
+                                        <input type="checkbox" checked={srv.enabled} disabled={busy}
                                                onChange={() => toggleEnabled(srv)}/>
                                         <span className="mcp-slider"/>
                                     </label>

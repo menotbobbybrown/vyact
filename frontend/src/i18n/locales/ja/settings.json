@@ -362,6 +362,7 @@
     "show": "表示"
   },
   "mcp": {
+    "reorder": "ドラッグまたは上下矢印キーで並べ替え",
     "browserHelp": {
       "intro": "AIがPCのChromeを直接操作します。",
       "readTitle": "検索・読み取り",

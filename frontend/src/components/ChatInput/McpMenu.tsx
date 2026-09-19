@@ -1,3 +1,4 @@
+import {orderMcpServersForDisplay} from '../../utils/mcpOrder';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -137,7 +138,7 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
         return t('settings:mcpCatalog.servers.' + srv.type, {defaultValue: labels[srv.type] || srv.type});
     };
 
-    const visibleServers = servers.filter(
+    const visibleServers = orderMcpServersForDisplay(servers).filter(
         server => server.type !== 'google_workspace' || googleConnected === true,
     );
     const enabledCount = visibleServers.filter(server => server.enabled).length;

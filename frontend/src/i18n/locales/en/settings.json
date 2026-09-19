@@ -398,6 +398,7 @@
     "show": "Show"
   },
   "mcp": {
+    "reorder": "Drag or use the up/down arrow keys to reorder",
     "browserHelp": {
       "intro": "AI operates Chrome on your computer.",
       "readTitle": "Search & read",

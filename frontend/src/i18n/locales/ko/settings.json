@@ -427,6 +427,7 @@
     "show": "보기"
   },
   "mcp": {
+    "reorder": "드래그하거나 위·아래 방향키로 순서 변경",
     "browserHelp": {
       "intro": "AI가 내 PC의 Chrome을 직접 조작합니다.",
       "readTitle": "검색·읽기",

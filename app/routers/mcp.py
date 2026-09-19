@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from services.mcp_config import (
     MCP_CATALOG, list_servers, add_server, update_server, remove_server,
-    build_servers_config,
+    build_servers_config, reorder_servers,
 )
 from services.mcp_client import mcp_manager
 from services.web_search_credits import get_stored_web_search_usage, refresh_web_search_usage
@@ -33,6 +33,10 @@ class AddServerReq(BaseModel):
     config: dict = {}
     enabled: bool = True
     prompt: str = ""
+
+
+class ReorderServersReq(BaseModel):
+    server_ids: list[str]
 
 
 class UpdateServerReq(BaseModel):
@@ -160,6 +164,14 @@ async def create_server(req: AddServerReq):
     if req.type == "google_workspace":
         _request_notification_poll()
     return {"server": _mask([server])[0]}
+
+
+@router.put("/mcp/servers/order")
+async def reorder_server_list(req: ReorderServersReq):
+    try:
+        return {"servers": _mask(await reorder_servers(req.server_ids))}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.patch("/mcp/servers/{server_id}")

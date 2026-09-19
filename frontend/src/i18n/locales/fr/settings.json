@@ -362,6 +362,7 @@
     "show": "Afficher"
   },
   "mcp": {
+    "reorder": "Glissez ou utilisez les flèches haut/bas pour réorganiser",
     "browserHelp": {
       "intro": "L’IA pilote Chrome sur votre ordinateur.",
       "readTitle": "Rechercher et lire",
