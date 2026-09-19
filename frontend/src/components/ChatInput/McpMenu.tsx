@@ -1,3 +1,4 @@
+import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Wrench} from 'lucide-react';
@@ -131,8 +132,8 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
     };
 
     const serverName = (srv: McpServer): string => {
-        const customName = srv.config?.name;
-        if (srv.type === 'custom' && typeof customName === 'string') return customName;
+        const customName = getCustomMcpName(srv);
+        if (customName) return customName;
         return t('settings:mcpCatalog.servers.' + srv.type, {defaultValue: labels[srv.type] || srv.type});
     };
 

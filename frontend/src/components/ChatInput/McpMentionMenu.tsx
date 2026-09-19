@@ -1,3 +1,4 @@
+import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Check, Wrench} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
@@ -28,8 +29,8 @@ export default function McpMentionMenu({query, selectedIds, activeIndex, onActiv
         return onMcpServersChanged(() => void load());
     }, []);
     const serverName = useCallback((server: MentionMcpServer): string => {
-        const customName = server.config?.name;
-        if (server.type === 'custom' && typeof customName === 'string') return customName;
+        const customName = getCustomMcpName(server);
+        if (customName) return customName;
         return t(`settings:mcpCatalog.servers.${server.type}`, {
             defaultValue: catalog[server.type]?.label || server.type,
         });

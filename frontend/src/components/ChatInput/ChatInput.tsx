@@ -1,3 +1,4 @@
+import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import React, {KeyboardEvent, useEffect, useRef, useState} from 'react';
 import ImageViewer from '../ImageViewer/ImageViewer';
 import type {ArticleAttachment, KnowledgeCollection} from '../../types';
@@ -497,7 +498,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                             const customName = typeof server.config?.name === 'string' ? server.config.name : server.type;
                             return <div className="selected-mcp-chip" key={server.id}>
                             <span className="selected-mcp-chip-icon"><Wrench size={12} aria-hidden="true"/></span>
-                            <span>{['custom', 'custom_remote'].includes(server.type) ? customName : t(`settings:mcpCatalog.servers.${server.type}`, {defaultValue: customName})}</span>
+                            <span>{getCustomMcpName(server) ?? t(`settings:mcpCatalog.servers.${server.type}`, {defaultValue: customName})}</span>
                             <button type="button" aria-label={t('mcpMenu.removeSelected')} onClick={() => setSelectedMcps(current => current.filter(item => item.id !== server.id))}><X size={10}/></button>
                         </div>})}
                     </div>}

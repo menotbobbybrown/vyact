@@ -1,3 +1,4 @@
+import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import {useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {api} from '../../services/api';
@@ -212,9 +213,7 @@ export default function McpServersSection({scope = 'mcp', initialServerId}: {sco
             <div className="mcp-list">
                 {visibleServers.map(srv => {
                     const cat = catalog[srv.type];
-                    const displayName = ((srv.type === 'custom' || srv.type === 'custom_remote') && srv.config?.name)
-                        ? srv.config.name
-                        : (t(`mcpCatalog.servers.${srv.type}`, {defaultValue: cat?.label || srv.type}));
+                    const displayName = getCustomMcpName(srv) ?? (t(`mcpCatalog.servers.${srv.type}`, {defaultValue: cat?.label || srv.type}));
                     return (
                         <div key={srv.id} className="mcp-item" ref={srv.id === initialServerId ? initialServerRef : undefined}>
                             {!isGoogleScope && <>
