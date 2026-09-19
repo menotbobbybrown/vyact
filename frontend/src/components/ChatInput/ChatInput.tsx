@@ -135,7 +135,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const promptSuggestionsRef = useRef<HTMLDivElement | null>(null);
     const slashSuggestionsRef = useRef<HTMLDivElement | null>(null);
     const shouldScrollSlashSuggestionRef = useRef(false);
-    const consumeNextEnterRef = useRef(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [selectedMcps, setSelectedMcps] = useState<MentionMcpServer[]>([]);
     const [mcpMentionQuery, setMcpMentionQuery] = useState<string | null>(null);
@@ -382,10 +381,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     };
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && consumeNextEnterRef.current) {
+        if (e.nativeEvent.isComposing) return;
+        if (e.key === 'Enter' && e.repeat) {
             e.preventDefault();
             e.stopPropagation();
-            consumeNextEnterRef.current = false;
             return;
         }
         if (
@@ -400,7 +399,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
             if (e.key === 'Enter' && !e.shiftKey && visibleMcpServers[mcpMentionIndex]) {
                 e.preventDefault();
                 e.stopPropagation();
-                consumeNextEnterRef.current = true;
                 setSelectedMcps(current => current.some(server => server.id === visibleMcpServers[mcpMentionIndex].id) ? current : [...current, visibleMcpServers[mcpMentionIndex]]);
                 setValue('');
                 setMcpMentionQuery(null);
@@ -411,7 +409,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
         const consumed = slash.handleKeyDown(e, insertCommand);
         if (consumed) return;
         if (e.key === 'Enter' && !e.shiftKey) {
-            if (e.nativeEvent.isComposing) return;
             e.preventDefault();
             if (!disabled) handleSend();
         }
