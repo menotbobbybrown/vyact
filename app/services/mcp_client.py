@@ -24,6 +24,7 @@ from logger import DebugLogSettings, get_logger
 from services.microsoft_workspace.auth import status as microsoft_auth_status
 from services.web_search_credits import web_search_available
 from services.tool_lifecycle import ToolExecution, ToolLifecycle, run_tool_execution
+from services.mcp_sources import extract_mcp_sources
 from services.tool_messages import get_tool_language, tool_message, tool_error
 
 logger = get_logger(__name__)
@@ -560,6 +561,7 @@ class MCPManager:
             logger.warning("[mcp] call_tool failed %s: %s", prefixed_name, e)
             return tool_error(tool_message("execution_failed", language, tool=prefixed_name, detail=str(e)))
 
+        self._pending_sources.extend(extract_mcp_sources(result))
         result_text = self._result_to_text(result, language)
         DebugLogSettings.log(
             "tool_execution_end", tool=prefixed_name,
