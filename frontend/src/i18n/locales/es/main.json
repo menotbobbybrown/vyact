@@ -10,7 +10,7 @@
     "project": "¿Qué creamos en {{projectName}}?"
   },
   "chatInput": {
-    "placeholder": "Pregunta algo… / comandos · @ prompts",
+    "placeholder": "Pregunta algo… / comandos · @ herramientas de IA",
     "modelLoading": "Cargando modelo...",
     "modelLoadingWithName": "Cargando {{model}}...",
     "imageEditPlaceholder": "🎨 Adjunta una imagen o escribe un prompt para editar... (Enter: Generar)",

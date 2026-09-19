@@ -10,7 +10,7 @@
     "project": "{{projectName}}에서 무엇을 만들어볼까요?"
   },
   "chatInput": {
-    "placeholder": "무엇이든 물어보세요… / 명령어 · @ 프롬프트",
+    "placeholder": "무엇이든 물어보세요… / 명령어 · @ AI 도구",
     "modelLoading": "모델 로딩 중...",
     "modelLoadingWithName": "{{model}} 로딩 중...",
     "imageEditPlaceholder": "🎨 텍스트 프롬프트 또는 이미지를 첨부하여 편집하세요... (Enter: 생성)",

@@ -10,7 +10,7 @@
     "project": "{{projectName}}で何を作りましょうか？"
   },
   "chatInput": {
-    "placeholder": "何でも聞いてください… / コマンド · @ プロンプト",
+    "placeholder": "何でも聞いてください… / コマンド · @ AIツール",
     "modelLoading": "モデル読み込み中...",
     "modelLoadingWithName": "{{model}} を読み込み中...",
     "imageEditPlaceholder": "🎨 テキストプロンプトまたは画像を添付して編集... (Enter: 生成)",

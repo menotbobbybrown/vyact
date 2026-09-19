@@ -10,7 +10,7 @@
     "project": "Chúng ta sẽ tạo gì trong {{projectName}}?"
   },
   "chatInput": {
-    "placeholder": "Hỏi bất cứ gì… / lệnh · @ prompt",
+    "placeholder": "Hỏi bất cứ gì… / lệnh · @ công cụ AI",
     "modelLoading": "Đang tải mô hình...",
     "modelLoadingWithName": "Đang tải {{model}}...",
     "imageEditPlaceholder": "🎨 Đính kèm ảnh hoặc nhập prompt để chỉnh sửa... (Enter: Tạo)",

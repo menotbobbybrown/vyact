@@ -10,7 +10,7 @@
     "project": "想在 {{projectName}} 中创建什么？"
   },
   "chatInput": {
-    "placeholder": "随便问… / 命令 · @ 提示词",
+    "placeholder": "随便问… / 命令 · @ AI 工具",
     "modelLoading": "模型加载中...",
     "modelLoadingWithName": "正在加载 {{model}}...",
     "imageEditPlaceholder": "🎨 输入文字提示或附加图片进行编辑... (Enter: 生成)",

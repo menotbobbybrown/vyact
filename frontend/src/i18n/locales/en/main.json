@@ -10,7 +10,7 @@
     "project": "What shall we create in {{projectName}}?"
   },
   "chatInput": {
-    "placeholder": "Ask anything… / commands · @ prompts",
+    "placeholder": "Ask anything… / commands · @ AI tools",
     "modelLoading": "Loading model...",
     "modelLoadingWithName": "Loading {{model}}...",
     "imageEditPlaceholder": "🎨 Attach an image or enter a prompt to edit... (Enter: Generate)",

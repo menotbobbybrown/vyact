@@ -10,7 +10,7 @@
     "project": "มาสร้างอะไรใน {{projectName}} กันดี?"
   },
   "chatInput": {
-    "placeholder": "ถามได้เลย… / คำสั่ง · @ พรอมต์",
+    "placeholder": "ถามได้เลย… / คำสั่ง · @ เครื่องมือ AI",
     "modelLoading": "กำลังโหลดโมเดล...",
     "modelLoadingWithName": "กำลังโหลด {{model}}...",
     "imageEditPlaceholder": "🎨 แนบรูปภาพหรือป้อนพรอมป์ตเพื่อแก้ไข... (Enter: สร้าง)",

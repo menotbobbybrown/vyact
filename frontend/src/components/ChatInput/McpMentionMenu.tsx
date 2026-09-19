@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Check, Grid2x2Plus} from 'lucide-react';
+import {Check, Wrench} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import {api} from '../../services/api';
 import {onMcpServersChanged} from '../../utils/mcpEvents';
@@ -45,7 +45,7 @@ export default function McpMentionMenu({query, selectedIds, activeIndex, onActiv
     }, [activeIndex]);
     return <div className="mcp-mention-menu">
         <div className="mcp-mention-header">
-            <Grid2x2Plus size={15}/><span>{t('mcpMenu.mentionTitle')}</span>
+            <Wrench size={15}/><span>{t('mcpMenu.mentionTitle')}</span>
             <small>{t('mcpMenu.mentionHint')}</small>
         </div>
         <div ref={listRef} className="mcp-mention-list">{visible.map((server, index) => {
