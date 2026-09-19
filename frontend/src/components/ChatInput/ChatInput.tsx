@@ -3,7 +3,7 @@ import ImageViewer from '../ImageViewer/ImageViewer';
 import type {ArticleAttachment, KnowledgeCollection} from '../../types';
 import {api} from '../../services/api';
 import {useCodePanel} from '../../contexts/CodePanelContext';
-import {Check, Database, FileText, Settings, WandSparkles, X} from 'lucide-react';
+import {Check, Database, FileText, Settings, WandSparkles, Wrench, X} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 
 import {useAttachments} from './useAttachments';
@@ -496,8 +496,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
                         {selectedMcps.map(server => {
                             const customName = typeof server.config?.name === 'string' ? server.config.name : server.type;
                             return <div className="selected-mcp-chip" key={server.id}>
-                            <span className="selected-mcp-chip-icon">⌘</span>
-                            <span>{server.type === 'custom' ? customName : server.type}</span>
+                            <span className="selected-mcp-chip-icon"><Wrench size={12} aria-hidden="true"/></span>
+                            <span>{['custom', 'custom_remote'].includes(server.type) ? customName : t(`settings:mcpCatalog.servers.${server.type}`, {defaultValue: customName})}</span>
                             <button type="button" aria-label={t('mcpMenu.removeSelected')} onClick={() => setSelectedMcps(current => current.filter(item => item.id !== server.id))}><X size={10}/></button>
                         </div>})}
                     </div>}
