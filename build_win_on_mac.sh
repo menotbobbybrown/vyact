@@ -25,16 +25,6 @@ echo "============================================"
 echo "  Vyact Windows Build (on macOS)"
 echo "============================================"
 
-restore() {
-    echo ""
-    echo "[RESTORE] 원본 파일 복원 중..."
-    [ -f "electron/package.json.mac_backup" ]  && cp "electron/package.json.mac_backup"  "electron/package.json"
-    rm -f "electron/package.json.mac_backup"
-    rm -f "electron/icon.ico"
-    echo "[RESTORE] 원본 복원 완료"
-}
-trap restore EXIT
-
 if $UPDATE_BEFORE_BUILD; then
     echo ""
     echo "[0/5] Git pull..."
@@ -45,7 +35,24 @@ fi
 # ── 1. 원본 파일 백업 ─────────────────────────
 echo ""
 echo "[1/5] 원본 파일 백업..."
-cp "electron/package.json"   "electron/package.json.mac_backup"
+BUILD_ROOT="$PWD"
+BACKUP_DIR="$(mktemp -d)"
+cp "electron/package.json" "$BACKUP_DIR/package.json"
+if [ -f "electron/icon.ico" ]; then
+    cp "electron/icon.ico" "$BACKUP_DIR/icon.ico"
+fi
+restore() {
+    echo "[RESTORE] Restoring original build files..."
+    cp "$BACKUP_DIR/package.json" "$BUILD_ROOT/electron/package.json" || return 1
+    if [ -f "$BACKUP_DIR/icon.ico" ]; then
+        cp "$BACKUP_DIR/icon.ico" "$BUILD_ROOT/electron/icon.ico" || return 1
+    else
+        rm -f "$BUILD_ROOT/electron/icon.ico"
+    fi
+    rm -rf "$BACKUP_DIR"
+}
+trap restore EXIT
+
 echo "[OK] 백업 완료"
 
 # ── 2. 윈도우 전용 파일 교체 ──────────────────
