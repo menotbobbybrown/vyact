@@ -78,6 +78,8 @@
     border-radius: 8px; margin-top: 6px;
 }
 .mcp-field { display: flex; flex-direction: column; gap: 10px; }
+.mcp-field.mcp-toggle-field { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; }
+.mcp-toggle-field > .mcp-field-label { min-width: 0; }
 .mcp-field-label { font-size: 13px; color: var(--muted, #999); }
 .mcp-prompt-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .mcp-prompt-heading .mcp-icon-btn { flex-shrink: 0; }
@@ -343,3 +345,10 @@
 .mcp-browser-help-features dt { font-weight: 600; color: var(--text); }
 .mcp-browser-help-features dd { color: var(--text-secondary); font-size: 12px; }
 .mcp-browser-help-notes { display: grid; gap: 5px; border-top: 1px solid var(--border); padding-top: 10px; color: var(--text-secondary); font-size: 11px; }
+
+.mcp-approval-setting {
+    margin-top: 4px;
+    padding: 16px 0 4px;
+    border-top: 1px solid var(--border);
+}
+.mcp-approval-setting .mcp-field-label { line-height: 1.5; }

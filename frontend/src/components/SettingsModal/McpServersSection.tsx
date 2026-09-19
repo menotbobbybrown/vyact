@@ -698,6 +698,7 @@ function ServerForm({
                                                     onGoogleCredentialSave?.(config, prompt) ?? Promise.resolve()
                                                 )}/>}
             {!isGoogle && fields.map((field, index) => {
+                if (field.key === ANNOTATION_TRUST_FIELD) return null;
                 if (serverType === 'web_search' && field.key === 'api_key') return null;
                 const notificationField = fields[index + 1];
                 if (field.key === 'mail_notifications' && fields[index - 1]?.key === 'mail_mode') return null;
@@ -716,6 +717,7 @@ function ServerForm({
                 }}/>}
             <McpPromptField value={prompt} defaultValue={defaultPrompt} separated={isGoogle}
                             onChange={value => { markChanged(); setPrompt(value); }}/>
+            <McpApprovalSetting fields={fields} values={values} onChange={setV}/>
             <div className="mcp-form-actions">
                 {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel}>{t('mcp.cancel')}</button>}
                 <button className={`mcp-btn-primary${saveState === 'saved' ? ' is-saved' : saveState === 'failed' ? ' is-failed' : ''}`}
@@ -801,6 +803,7 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
             {isGoogle && <GoogleAccountsEditor value={values} onChange={setValues}
                                                 onCredentialUpload={registerGoogle}/>}
             {!isGoogle && cat?.fields.map((field, index) => {
+                if (field.key === ANNOTATION_TRUST_FIELD) return null;
                 if (type === 'web_search' && field.key === 'api_key') return null;
                 const notificationField = cat.fields[index + 1];
                 if (field.key === 'mail_notifications' && cat.fields[index - 1]?.key === 'mail_mode') return null;
@@ -823,6 +826,7 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
             }}/>}
             <McpPromptField value={prompt} defaultValue={getLocalizedDefaultPrompt(t, type, cat?.default_prompt)}
                             separated={isGoogle} onChange={setPrompt}/>
+            <McpApprovalSetting fields={cat?.fields || []} values={values} onChange={setV}/>
             {err && <div className="mcp-err">{err}</div>}
             <div className="mcp-form-actions">
                 {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel} disabled={registeringWebSearch}>{t('mcp.cancel')}</button>}
@@ -835,6 +839,20 @@ function AddServerForm({catalog, servers, fixedType, err, onErr, onAdd, onCancel
             </div>
         </div>
     );
+}
+
+const ANNOTATION_TRUST_FIELD = 'trust_tool_annotations';
+
+function McpApprovalSetting({fields, values, onChange}: {
+    fields: Field[];
+    values: Record<string, unknown>;
+    onChange: (key: string, value: unknown) => void;
+}) {
+    const field = fields.find(item => item.key === ANNOTATION_TRUST_FIELD);
+    if (!field) return null;
+    return <div className="mcp-approval-setting">
+        <McpFieldInput field={field} value={values[field.key]} onChange={value => onChange(field.key, value)}/>
+    </div>;
 }
 
 // ── 필드 타입별 입력 위젯 ────────────────────────────────────────────
