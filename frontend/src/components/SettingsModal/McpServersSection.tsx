@@ -1,3 +1,5 @@
+import SettingsSaveButton from './SettingsSaveButton';
+import {useSettingsSaveFeedback} from './useSettingsSaveFeedback';
 import {hasSeparateMcpSettings} from '../../utils/mcpOrder';
 import {GripVertical} from 'lucide-react';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
@@ -718,18 +720,9 @@ function ServerForm({
     const [values, setValues] = useState<Record<string, any>>(() => ({...initial}));
     const [prompt, setPrompt] = useState(initialPrompt);
     const [savingWebSearchKey, setSavingWebSearchKey] = useState(false);
-    const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
-    const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const {saveState, resetSaveFeedback: markChanged, saveWithFeedback} = useSettingsSaveFeedback();
     const isGoogle = serverType === 'google_workspace';
 
-    useEffect(() => () => {
-        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-    }, []);
-
-    const markChanged = () => {
-        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-        setSaveState('idle');
-    };
     const setV = (k: string, v: any) => {
         markChanged();
         setValues(prev => ({...prev, [k]: v}));
@@ -739,16 +732,10 @@ function ServerForm({
         setValues(nextValues);
     };
     const handleSave = async () => {
-        setSaveState('saving');
         try {
-            await onSave(serverType === 'web_search' ? initial : values,
-                serverType === 'web_search' && prompt === defaultPrompt ? '' : prompt);
-            setSaveState('saved');
-            savedTimerRef.current = setTimeout(() => setSaveState('idle'), 2200);
-        } catch {
-            setSaveState('failed');
-            savedTimerRef.current = setTimeout(() => setSaveState('idle'), 2200);
-        }
+            await saveWithFeedback(() => onSave(serverType === 'web_search' ? initial : values,
+                serverType === 'web_search' && prompt === defaultPrompt ? '' : prompt));
+        } catch { /* Save failure is displayed by the shared button. */ }
     };
 
     return (
@@ -785,16 +772,8 @@ function ServerForm({
             <McpApprovalSetting fields={fields} values={values} onChange={setV}/>
             <div className="mcp-form-actions">
                 {!isGoogle && <button className="mcp-btn-ghost" onClick={onCancel}>{t('mcp.cancel')}</button>}
-                <button className={`mcp-btn-primary${saveState === 'saved' ? ' is-saved' : saveState === 'failed' ? ' is-failed' : ''}`}
-                        onClick={() => void handleSave()} disabled={saveState === 'saving' || savingWebSearchKey}>
-                    {saveState === 'saving'
-                        ? t('common:saving')
-                        : saveState === 'saved'
-                            ? `✓ ${t('apiKeyField.savedMsg')}`
-                            : saveState === 'failed'
-                                ? t('mcp.saveFailed')
-                                : t('mcp.save')}
-                </button>
+                <SettingsSaveButton state={saveState} disabled={savingWebSearchKey}
+                                    onClick={() => void handleSave()}/>
             </div>
         </div>
     );

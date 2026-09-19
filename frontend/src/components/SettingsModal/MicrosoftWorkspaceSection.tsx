@@ -1,3 +1,5 @@
+import SettingsSaveButton from './SettingsSaveButton';
+import {useSettingsSaveFeedback} from './useSettingsSaveFeedback';
 import {notifyWorkspaceError} from '../../utils/workspaceError';
 import {useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -13,6 +15,7 @@ export default function MicrosoftWorkspaceSection() {
     const [status, setStatus] = useState<MicrosoftStatus | null>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+    const {saveState, resetSaveFeedback, saveWithFeedback} = useSettingsSaveFeedback();
     const mounted = useRef(true);
     const busyRef = useRef(false);
     useEffect(() => {
@@ -32,6 +35,7 @@ export default function MicrosoftWorkspaceSection() {
     const perform = async (action: () => Promise<unknown>) => {
         if (busyRef.current) return;
         busyRef.current = true;
+        resetSaveFeedback();
         setBusy(true); setError('');
         try { await action(); } catch (error) { if (mounted.current) setError(notifyWorkspaceError(error)); }
         finally { busyRef.current = false; if (mounted.current) setBusy(false); }
@@ -80,7 +84,7 @@ export default function MicrosoftWorkspaceSection() {
             </WorkspaceSetupGuide>
             <div className="google-accounts">
             <label className="mcp-field"><span className="mcp-field-label">{t('microsoft.clientId')}</span>
-                <input className="mcp-input" value={config.client_id} onChange={event => setConfig({...config, client_id: event.target.value.trim()})} disabled={busy}/>
+                <input className="mcp-input" value={config.client_id} onChange={event => { resetSaveFeedback(); setConfig({...config, client_id: event.target.value.trim()}); }} disabled={busy}/>
             </label>
             {config.accounts.map((account, index) => {
                 const connection = status?.accounts.find(item => item.id === account.id);
@@ -113,8 +117,8 @@ export default function MicrosoftWorkspaceSection() {
                 return persist({...config, accounts: [...config.accounts, account], active_account_id: config.active_account_id || account.id});
             })}>{t('microsoft.addAccount')}</button>
             </div>
-            <label className="mcp-field mcp-prompt-section"><span className="mcp-field-label">{t('mcp.promptLabel')}</span><textarea className="mcp-input mcp-prompt-textarea" value={config.prompt || ''} onChange={event => setConfig({...config, prompt: event.target.value})} disabled={busy}/></label>
-            <div className="mcp-form-actions"><button className="mcp-btn-primary" disabled={busy} onClick={() => void perform(() => persist(config))}>{t(busy ? 'common:saving' : 'mcp.save')}</button></div>
+            <label className="mcp-field mcp-prompt-section"><span className="mcp-field-label">{t('mcp.promptLabel')}</span><textarea className="mcp-input mcp-prompt-textarea" value={config.prompt || ''} onChange={event => { resetSaveFeedback(); setConfig({...config, prompt: event.target.value}); }} disabled={busy}/></label>
+            <div className="mcp-form-actions"><SettingsSaveButton state={saveState} disabled={busy} onClick={() => void perform(() => saveWithFeedback(() => persist(config)))}/></div>
             {error && <div className="mcp-err" role="alert">{error}</div>}
         </div></div></div>
     </div>;
