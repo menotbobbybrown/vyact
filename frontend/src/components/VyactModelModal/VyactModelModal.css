@@ -160,3 +160,9 @@
 :is(.vyact-model-editor, .setup-hub-browser) .vyact-model-installed { line-height: 1.2; }
 
 .vyact-model-results .vyact-model-files { grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); }
+
+/* Each row sizes its trailing content independently. */
+.vyact-model-editor .vyact-model-file-row { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; }
+.vyact-model-editor .vyact-model-file-row > .vyact-model-file-meta,
+.vyact-model-editor .vyact-model-file-row > .vyact-model-file-stats { grid-row: 1; }
+.vyact-model-editor .vyact-model-file-row > .vyact-model-file-name:only-child { grid-column: 1 / -1; }

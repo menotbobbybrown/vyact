@@ -520,23 +520,25 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                                         const displayName = model.runtime === 'mlx' ? model.id.split('/').pop() || model.id : filename;
                                         return (
                                             <button type="button" aria-pressed={isSelected} className={`${isSelected ? 'is-selected ' : ''}memory-${getModelMemoryTone(fileSize, hardware)}`} key={filename} onClick={() => void selectModelFile(model, filename, fileSize)} disabled={busy}>
-                                                <span className="vyact-model-file-name">
-                                                    {model.runtime === 'mlx' && <span className="vyact-mtp-badge">{t('modelSelector.mlxOnly')}</span>}
-                                                    {supportsMtp && <span className="vyact-mtp-badge">MTP</span>}
-                                                    {supportsDFlash2 && <span className="vyact-mtp-badge">DFlash2</span>}
-                                                    <ModelCapabilityIcons image={visionSupportedModels.includes(modelPath) || modelDetailsCache[modelDetailsKey(model.runtime, model.id, filename, model.revision)]?.metadata.modalities?.includes('image')} audio={audioSupportedModels.includes(modelPath) || modelDetailsCache[modelDetailsKey(model.runtime, model.id, filename, model.revision)]?.metadata.modalities?.includes('audio')}/>
-                                                    <OverflowTooltipText text={displayName}/>
-                                                </span>
-                                                {(showsPublisher || fileSize > 0) && <small className="vyact-model-file-meta">
-                                                    {showsPublisher && <span className="vyact-model-publisher">@{publisher}</span>}
-                                                    {showsPublisher && fileSize > 0 && <span aria-hidden="true">·</span>}
-                                                    {fileSize > 0 && <>{t('modelSelector.modelFileSize')} · {formatBytes(fileSize)}</>}
-                                                </small>}
-                                                <span className="vyact-model-file-status">
-                                                    <span className="vyact-model-file-status-top">
-                                                        {showsCompactDownloads && <span className="vyact-model-file-downloads">{formatCompactDownloads(model.downloads)}</span>}
-                                                        <span className="vyact-model-file-check" aria-hidden="true"><Check size={15}/></span>
+                                                <span className="vyact-model-file-row">
+                                                    <span className="vyact-model-file-name">
+                                                        {model.runtime === 'mlx' && <span className="vyact-mtp-badge">{t('modelSelector.mlxOnly')}</span>}
+                                                        {supportsMtp && <span className="vyact-mtp-badge">MTP</span>}
+                                                        {supportsDFlash2 && <span className="vyact-mtp-badge">DFlash2</span>}
+                                                        <ModelCapabilityIcons image={visionSupportedModels.includes(modelPath) || modelDetailsCache[modelDetailsKey(model.runtime, model.id, filename, model.revision)]?.metadata.modalities?.includes('image')} audio={audioSupportedModels.includes(modelPath) || modelDetailsCache[modelDetailsKey(model.runtime, model.id, filename, model.revision)]?.metadata.modalities?.includes('audio')}/>
+                                                        <OverflowTooltipText text={displayName}/>
                                                     </span>
+                                                    {(showsCompactDownloads || isSelected) && <span className="vyact-model-file-status-top">
+                                                        {showsCompactDownloads && <span className="vyact-model-file-downloads">{formatCompactDownloads(model.downloads)}</span>}
+                                                        {isSelected && <span className="vyact-model-file-check" aria-hidden="true"><Check size={15}/></span>}
+                                                    </span>}
+                                                </span>
+                                                <span className="vyact-model-file-row">
+                                                    {(showsPublisher || fileSize > 0) && <small className="vyact-model-file-meta">
+                                                        {showsPublisher && <span className="vyact-model-publisher">@{publisher}</span>}
+                                                        {showsPublisher && fileSize > 0 && <span aria-hidden="true">·</span>}
+                                                        {fileSize > 0 && <>{t('modelSelector.modelFileSize')} · {formatBytes(fileSize)}</>}
+                                                    </small>}
                                                     <span className="vyact-model-file-stats">
                                                         {quantization && <span className="vyact-mtp-badge">{quantization}</span>}
                                                         {isInstalled && <span className="vyact-model-installed">{t('modelSelector.installed')}</span>}
