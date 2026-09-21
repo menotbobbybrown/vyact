@@ -144,8 +144,8 @@ const SkillsSection: React.FC = () => {
                                  onClick={() => openView(skill)}>
                                 <div className="skills-item-main">
                                     <div className="skills-name-row">
+                                        <span className={`skills-origin-badge skills-origin-badge--${skill.origin === 'builtin' ? 'builtin' : 'user'}`}>{t(skill.origin === 'builtin' ? 'skills.builtin' : 'skills.user')}</span>
                                         <div className="skills-item-name">{skill.name}</div>
-                                        <span className="skills-origin-badge">{t(skill.origin === 'builtin' ? 'skills.builtin' : 'skills.user')}</span>
                                     </div>
                                     <div className="skills-item-desc">{skill.description}</div>
                                 </div>
@@ -175,8 +175,8 @@ const SkillsSection: React.FC = () => {
                     </div>}
                 </div>
                 <div className="skills-name-row">
+                    <span className={`skills-origin-badge skills-origin-badge--${selectedSkill.origin === 'builtin' ? 'builtin' : 'user'}`}>{t(selectedSkill.origin === 'builtin' ? 'skills.builtin' : 'skills.user')}</span>
                     <div className="skills-detail-name">{selectedSkill.name}</div>
-                    <span className="skills-origin-badge">{t(selectedSkill.origin === 'builtin' ? 'skills.builtin' : 'skills.user')}</span>
                 </div>
                 {selectedSkill.origin === 'builtin' && <p className="skills-desc">{t('skills.builtinHint', {version: selectedSkill.version ?? 1})}</p>}
                 <div className="skills-detail-section">

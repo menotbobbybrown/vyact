@@ -19,8 +19,7 @@ async function requestSkills(): Promise<Skill[]> {
     const response = await fetch('/api/skills');
     if (!response.ok) throw new Error(i18n.t('main:networkError.requestFailed'));
     const skills = await response.json();
-    cachedSkills = skills;
-    return skills;
+    return updateSkillsCache(skills);
 }
 
 export function getSkills(): Promise<Skill[]> {
@@ -42,6 +41,10 @@ export function refreshSkills(): Promise<Skill[]> {
 }
 
 export function updateSkillsCache(skills: Skill[]): Skill[] {
-    cachedSkills = skills;
-    return skills;
+    cachedSkills = [...skills].sort((left, right) => {
+        const originOrder = Number(left.origin === 'builtin') - Number(right.origin === 'builtin');
+        const createdAt = (skill: Skill) => Date.parse(skill.created_at) || 0;
+        return originOrder || createdAt(right) - createdAt(left) || left.id.localeCompare(right.id);
+    });
+    return cachedSkills;
 }
