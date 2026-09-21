@@ -429,6 +429,9 @@
     "connected": "Connected"
   },
   "skills": {
+    "builtin": "Integrada",
+    "user": "Usuario",
+    "builtinHint": "Habilidad integrada · Versión {{version}}. Solo se puede activar o desactivar y se excluye de las copias de seguridad y la restauración.",
     "title": "Gestión de habilidades",
     "addNew": "+ Nueva habilidad",
     "desc": "Las habilidades registradas proporcionan instrucciones al LLM automáticamente cuando se hacen preguntas relevantes.",

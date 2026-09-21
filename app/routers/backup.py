@@ -39,6 +39,8 @@ from services.db import (
 )
 from services.google_workspace.auth import revoke_all_tokens
 from services.prompts import load_prompts_cache
+from services.default_skills import SKILLS_INDEX
+from services.skill_restore import filter_restored_skills, filter_skill_backup_documents
 from logger import get_logger
 
 logger = get_logger(__name__)
@@ -306,7 +308,7 @@ async def preview_backup(file: UploadFile = File(...)):
     backup, doc_files, memo_files, knowledge_mail_image_files = await _read_backup(file)
     grouped_counts = {}
     for name, payload in backup["indices"].items():
-        docs = payload.get("docs", [])
+        docs = filter_skill_backup_documents(name, payload.get("docs", []))
         logical_name = _logical_index_name(name)
         grouped_counts[logical_name] = grouped_counts.get(logical_name, 0) + len(docs)
     indices = [{"name": name, "count": count} for name, count in sorted(grouped_counts.items())]
@@ -352,7 +354,7 @@ async def export_backup(req: ExportRequest = None):
 
         for idx in index_names:
             schema = await _get_schema(es, idx)
-            docs = await _scroll_all(es, idx)
+            docs = filter_skill_backup_documents(idx, await _scroll_all(es, idx))
             backup["indices"][idx] = {"schema": schema, "docs": docs}
             logger.info("[backup] %s: %s건", idx, len(docs))
 
@@ -503,6 +505,11 @@ async def import_backup(
                 result[index] = {"inserted": 0, "skipped": 0, "schema_created": schema_created}
                 continue
 
+            deduplicated_count = 0
+            original_count = len(docs)
+            if index == SKILLS_INDEX:
+                docs, deduplicated_count = await filter_restored_skills(es, docs)
+
             actions = []
             for doc in docs:
                 doc_id = doc.get("_id")
@@ -510,17 +517,17 @@ async def import_backup(
                 if not doc_id or not source:
                     continue
                 # 설정 및 상태 인덱스는 복원본으로 기존 문서를 갱신한다.
-                if index in _UPSERT_INDICES:
+                if index in _UPSERT_INDICES or index == SKILLS_INDEX:
                     actions.append({"index": {"_index": index, "_id": doc_id}})
                 else:
                     actions.append({"create": {"_index": index, "_id": doc_id}})
                 actions.append(source)
 
             if not actions:
-                result[index] = {"inserted": 0, "skipped": 0, "schema_created": schema_created}
+                result[index] = {"inserted": 0, "skipped": deduplicated_count, "schema_created": schema_created}
                 continue
 
-            inserted = skipped = 0
+            inserted, skipped = 0, deduplicated_count
             try:
                 resp = await es.bulk(operations=actions, refresh=True)
                 for item in resp.get("items", []):
@@ -531,7 +538,7 @@ async def import_backup(
                         skipped += 1
             except Exception as e:
                 logger.warning("[restore] %s bulk 실패: %s", index, e)
-                result[index] = {"inserted": 0, "skipped": len(docs), "schema_created": schema_created, "error": "backup_index_restore_failed"}
+                result[index] = {"inserted": 0, "skipped": original_count, "schema_created": schema_created, "error": "backup_index_restore_failed"}
                 continue
 
             result[index] = {"inserted": inserted, "skipped": skipped, "schema_created": schema_created}
@@ -643,7 +650,7 @@ async def export_backup_to_drive(req: ExportRequest = None):
 
         for idx in index_names:
             schema = await _get_schema(es, idx)
-            docs = await _scroll_all(es, idx)
+            docs = filter_skill_backup_documents(idx, await _scroll_all(es, idx))
             backup["indices"][idx] = {"schema": schema, "docs": docs}
             logger.info("[backup-drive] %s: %s건", idx, len(docs))
 

@@ -429,6 +429,9 @@
     "connected": "Connected"
   },
   "skills": {
+    "builtin": "Tích hợp",
+    "user": "Người dùng",
+    "builtinHint": "Kỹ năng tích hợp · Phiên bản {{version}}. Chỉ có thể bật/tắt và không được sao lưu hoặc khôi phục.",
     "title": "Quản lý Kỹ năng",
     "addNew": "+ Kỹ năng mới",
     "desc": "Các kỹ năng đã đăng ký sẽ tự động cung cấp hướng dẫn cho LLM khi có câu hỏi liên quan.",

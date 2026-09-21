@@ -429,6 +429,9 @@
     "connected": "Connected"
   },
   "skills": {
+    "builtin": "Intégrée",
+    "user": "Utilisateur",
+    "builtinHint": "Compétence intégrée · Version {{version}}. Seule son activation peut être modifiée ; elle est exclue des sauvegardes et restaurations.",
     "title": "Gestion des compétences",
     "addNew": "+ Nouvelle compétence",
     "desc": "Les compétences enregistrées fournissent automatiquement des instructions au LLM lorsque des questions pertinentes sont posées.",

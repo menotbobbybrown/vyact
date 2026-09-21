@@ -13,6 +13,26 @@ import json
 
 from .config import logger
 
+RECIPIENT_ACTION_TOOLS = frozenset({
+    "send_email", "reply_email", "create_email_draft", "create_calendar_event",
+    "update_calendar_event", "microsoft_send_email", "microsoft_create_calendar_event",
+})
+
+RECIPIENT_VERIFICATION_INSTRUCTION = (
+    "\n\n[Recipient verification — before person-directed actions]\n"
+    "Before addressing a draft, sending mail, replying, or inviting attendees, resolve every "
+    "recipient from exact addresses supplied by the user or evidence from available mail/calendar tools. "
+    "For names or groups, use the user's exact names and project context in read-only searches; "
+    "check relevant messages or events rather than choosing the first or most frequent match. "
+    "Do not invent addresses, merge similar names, or expand 'the team' to all historical participants. "
+    "If several candidates remain, ask a concise clarification in the user's language before any "
+    "addressed draft or write action. If lookup tools are unavailable, ask for the exact address. "
+    "Respect explicitly supplied addresses and resolved identities without repeatedly asking. "
+    "Only perform sending or invitation actions that the user requested, and follow the existing "
+    "tool approval flow. A selected MCP or a requirement to call a tool does not authorize "
+    "guessing recipients or performing an unrequested write; use read-only tools first when needed."
+)
+
 
 def tool_result_failed(result_text: str) -> bool:
     if result_text.startswith(("[오류]", "[tool 오류]")):
@@ -217,6 +237,9 @@ async def build_tool_directive(tool_names: list[str]) -> str:
             "말고, 실행하지 못했다고 정확히 답하라. 여러 파일 요청은 요청된 모든 파일에 대해 도구 결과를 "
             "확인한 뒤에만 완료라고 답하라."
         )
+
+    if RECIPIENT_ACTION_TOOLS.intersection(tool_names):
+        directive += RECIPIENT_VERIFICATION_INSTRUCTION
 
     return directive
 

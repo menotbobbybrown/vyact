@@ -429,6 +429,9 @@
     "connected": "Connected"
   },
   "skills": {
+    "builtin": "内置",
+    "user": "用户",
+    "builtinHint": "内置技能 · 版本 {{version}}。仅支持启用或禁用，不参与备份和恢复。",
     "title": "技能管理",
     "addNew": "+ 新技能",
     "desc": "注册技能后，与问题相关的技能指令将自动传递给 LLM。",

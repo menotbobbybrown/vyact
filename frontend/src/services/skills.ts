@@ -6,6 +6,8 @@ export interface Skill {
     description: string;
     instructions: string;
     enabled: boolean;
+    origin?: 'builtin' | 'user';
+    version?: number;
     created_at: string;
     updated_at: string;
 }

@@ -429,6 +429,9 @@
     "connected": "Connected"
   },
   "skills": {
+    "builtin": "標準",
+    "user": "ユーザー",
+    "builtinHint": "標準スキル · バージョン {{version}}。オン・オフのみ変更でき、バックアップ・復元の対象外です。",
     "title": "スキル管理",
     "addNew": "+ 新規スキル",
     "desc": "スキルを登録すると、質問に関連するスキルの指示が自動的にLLMに渡されます。",

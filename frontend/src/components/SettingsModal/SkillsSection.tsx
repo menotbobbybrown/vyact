@@ -103,6 +103,7 @@ const SkillsSection: React.FC = () => {
     };
 
     const openEdit = (skill: Skill) => {
+        if (skill.origin === 'builtin') return;
         setSelectedSkill(skill);
         setForm({name: skill.name, description: skill.description, instructions: skill.instructions});
         setMode('edit');
@@ -142,7 +143,10 @@ const SkillsSection: React.FC = () => {
                             <div key={skill.id} className={`skills-item${skill.enabled ? '' : ' disabled'}`}
                                  onClick={() => openView(skill)}>
                                 <div className="skills-item-main">
-                                    <div className="skills-item-name">{skill.name}</div>
+                                    <div className="skills-name-row">
+                                        <div className="skills-item-name">{skill.name}</div>
+                                        <span className="skills-origin-badge">{t(skill.origin === 'builtin' ? 'skills.builtin' : 'skills.user')}</span>
+                                    </div>
                                     <div className="skills-item-desc">{skill.description}</div>
                                 </div>
                                 <div className="skills-item-actions" onClick={e => e.stopPropagation()}>
@@ -165,12 +169,16 @@ const SkillsSection: React.FC = () => {
             <div className="skills-section">
                 <div className="skills-detail-header">
                     <button className="skills-back-btn" onClick={goBack}>{t('skills.backToList')}</button>
-                    <div className="skills-detail-actions">
+                    {selectedSkill.origin !== 'builtin' && <div className="skills-detail-actions">
                         <button className="skills-edit-btn" onClick={() => openEdit(selectedSkill)}>{t('common:edit')}</button>
                         <button className="skills-delete-btn" onClick={() => setSkillToDelete(selectedSkill)}>{t('common:delete')}</button>
-                    </div>
+                    </div>}
                 </div>
-                <div className="skills-detail-name">{selectedSkill.name}</div>
+                <div className="skills-name-row">
+                    <div className="skills-detail-name">{selectedSkill.name}</div>
+                    <span className="skills-origin-badge">{t(selectedSkill.origin === 'builtin' ? 'skills.builtin' : 'skills.user')}</span>
+                </div>
+                {selectedSkill.origin === 'builtin' && <p className="skills-desc">{t('skills.builtinHint', {version: selectedSkill.version ?? 1})}</p>}
                 <div className="skills-detail-section">
                     <div className="skills-detail-label">{t('skills.description')}</div>
                     <div className="skills-detail-text">{selectedSkill.description}</div>

@@ -465,6 +465,9 @@
     "googleNote": "After adding the server, a browser will open for Google authentication on first connection. Once authenticated, the token is saved and you won't be asked again. Credentials are preserved during backup restore."
   },
   "skills": {
+    "builtin": "Built-in",
+    "user": "User",
+    "builtinHint": "Built-in skill · Version {{version}}. Can only be toggled and is excluded from backup and restore.",
     "title": "Skill Management",
     "addNew": "+ New Skill",
     "desc": "Registered skills automatically provide instructions to the LLM when relevant questions are asked.",
