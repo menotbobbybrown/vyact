@@ -13,8 +13,10 @@ import {onMcpServersChanged} from '../../utils/mcpEvents';
 import {CHAT_FILE_ACCEPT} from '../../utils/fileValidation';
 import ReasoningToggle from '../common/ReasoningToggle/ReasoningToggle';
 import {
-    defaultReasoningValue,
     isReasoningActive,
+    getReasoningValue,
+    supportsReasoningValue,
+    defaultReasoningValue,
     setReasoningValue,
     type ReasoningCapability,
     useReasoning,
@@ -84,26 +86,32 @@ const InputMenu: React.FC<InputMenuProps> = ({
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        let cancelled = false;
-        if (!selectedModel || !isLocalModel) {
-            setReasoningCapability({control: 'none', efforts: [], supports_none: false});
-            setReasoningValue('off');
-            return;
-        }
-        const runtime = selectedModel.startsWith('mlx/') ? 'mlx' : 'gguf';
-        api.getVyactModelProfile(selectedModel, runtime).then(profile => {
-            if (cancelled) return;
-            const capability = profile.capabilities?.reasoning ?? {control: 'none', efforts: [], supports_none: false};
-            setReasoningCapability(capability);
-            setReasoningValue(defaultReasoningValue(capability));
-        }).catch(() => {
-            if (!cancelled) {
-                setReasoningCapability({control: 'none', efforts: [], supports_none: false});
-                setReasoningValue('off');
+        let active = true;
+        let revision = 0;
+        const refresh = async () => {
+            const request = ++revision;
+            try {
+                const providers = await api.getProviders();
+                let capability = providers.reasoning_capability ?? {control: 'none' as const, efforts: [], supports_none: false};
+                if (providers.current_type === 'vyact' && selectedModel && isLocalModel) {
+                    const runtime = selectedModel.startsWith('mlx/') ? 'mlx' : 'gguf';
+                    const profile = await api.getVyactModelProfile(selectedModel, runtime);
+                    capability = profile.capabilities?.reasoning ?? capability;
+                }
+                if (!active || request !== revision) return;
+                setReasoningCapability(capability);
+                if (!supportsReasoningValue(capability, getReasoningValue())) setReasoningValue(defaultReasoningValue(capability));
+            } catch {
+                if (active && request === revision) {
+                    setReasoningCapability({control: 'none', efforts: [], supports_none: false});
+                    setReasoningValue('off');
+                }
             }
-        });
-        return () => { cancelled = true; };
-    }, [selectedModel, isLocalModel]);
+        };
+        void refresh();
+        window.addEventListener('vyact:provider-changed', refresh);
+        return () => { active = false; window.removeEventListener('vyact:provider-changed', refresh); };
+    }, [selectedModel, isLocalModel, open]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {

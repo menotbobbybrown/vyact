@@ -124,7 +124,15 @@ interface ProviderSettings {
     max_output_tokens?: number;
 }
 
+export interface ConnectionReasoningSettings {
+    enabled?: boolean;
+    parameter: string;
+    control: 'toggle' | 'effort';
+    stages: Array<{label: string; value: string}>;
+}
+
 export interface CustomProviderSettings {
+    reasoning?: ConnectionReasoningSettings | null;
     id: string;
     name: string;
     protocol: 'openai-compatible';
@@ -135,6 +143,7 @@ export interface CustomProviderSettings {
 }
 
 export interface CustomProviderPayload {
+    reasoning?: ConnectionReasoningSettings | null;
     name: string;
     protocol: 'openai-compatible';
     base_url: string;
@@ -287,6 +296,7 @@ export interface VyactModelProfile {
 }
 
 interface ProvidersResponse {
+    reasoning_capability?: import("../utils/reasoning").ReasoningCapability;
     providers: Record<string, ProviderSettings>;
     custom_providers: CustomProviderSettings[];
     current_type?: ProviderType;
@@ -1193,7 +1203,7 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         articles?: ArticleAttachment[],
         systemPromptOverride?: string,
         voiceMode?: boolean,
-        reasoning: boolean | 'none' | 'low' | 'medium' | 'high' | 'xhigh' = true,
+        reasoning: boolean | import('../utils/reasoning').ReasoningEffort = true,
         userTimestamp?: string
     ): Promise<ChatResponse> {
         const res = await fetch(`${API_BASE}/query`, {

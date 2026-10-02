@@ -4,6 +4,7 @@ import CustomSelect from '../../CustomSelect/CustomSelect';
 import {Tooltip} from '../Tooltip/Tooltip';
 import {
     defaultReasoningValue,
+    supportsReasoningValue,
     isReasoningActive,
     type ReasoningCapability,
     type ReasoningValue,
@@ -27,11 +28,7 @@ const ReasoningToggle: React.FC<ReasoningToggleProps> = ({disabled, capability})
     const enabled = isReasoningActive(value);
 
     React.useEffect(() => {
-        const valid = capability.control === 'toggle'
-            ? value === 'off' || value === 'on'
-            : capability.control === 'effort'
-                ? (value === 'none' && capability.supports_none) || capability.efforts.includes(value as Exclude<ReasoningValue, 'off' | 'on' | 'none'>)
-                : value === 'off';
+        const valid = supportsReasoningValue(capability, value);
         if (!valid) setValue(defaultReasoningValue(capability));
     }, [capability, setValue, value]);
 
@@ -83,7 +80,7 @@ const ReasoningToggle: React.FC<ReasoningToggleProps> = ({disabled, capability})
                     value={value}
                     options={[
                         ...(capability.supports_none ? [{value: 'none', label: t('reasoning.efforts.none')}] : []),
-                        ...capability.efforts.map(effort => ({value: effort, label: t(`reasoning.efforts.${effort}`)})),
+                        ...(capability.options ?? capability.efforts.map(effort => ({value: effort, label: t(`reasoning.efforts.${effort}`)}))),
                     ]}
                     onChange={nextValue => setValue(nextValue as ReasoningValue)}
                 />

@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from agent import ensure_index, get_index_stats, load_prompts_cache
 from config import INSTALL_DIR, LOGS_DIR, SETUP_DONE, VENV_DIR, get_log_file
@@ -56,6 +56,8 @@ from services.model_profile_defaults import hardware_model_profile, profile_mode
 from services.vyact_model_metadata_cache import get_cached_model_metadata, save_cached_model_metadata
 from services.mlx_runtime import get_downloaded_mlx_model_path, get_mlx_runtime_capabilities, is_apple_silicon, list_multimodal_supported_mlx_models
 from services.external_api_server import EXTERNAL_API_PORT, public_model_id
+from services.cloud_reasoning import connection_reasoning_profile
+from services.llm.config import get_provider_config
 from services.reasoning_capabilities import get_gguf_reasoning_capabilities, get_mlx_reasoning_capabilities
 from services.vyact_runtime import get_downloaded_model_path, get_model_modalities, start_configured_runtime
 
@@ -262,11 +264,37 @@ class CustomProviderHeaderRequest(BaseModel):
     value: str = ""
 
 
+class ReasoningStageRequest(BaseModel):
+    label: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+
+
+class ConnectionReasoningRequest(BaseModel):
+    enabled: bool = True
+    parameter: str = Field(pattern=r"^(?:[A-Za-z_][A-Za-z0-9_]*)?$")
+    control: str = Field(pattern=r"^(toggle|effort)$")
+    stages: list[ReasoningStageRequest] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_reasoning_settings(self):
+        if not self.enabled or not self.parameter:
+            return self
+        reserved = {"model", "messages", "stream", "stream_options", "tools", "tool_choice", "temperature", "max_tokens", "max_completion_tokens"}
+        if self.parameter in reserved:
+            raise ValueError("Use a reasoning parameter, not a reserved request field")
+        if self.control == "effort" and not self.stages:
+            raise ValueError("At least one reasoning stage is required")
+        if any(not stage.label.strip() or not stage.value.strip() for stage in self.stages):
+            raise ValueError("Each reasoning stage needs a label and value")
+        return self
+
+
 class CustomProviderRequest(BaseModel):
     name: str
     base_url: str
     api_key: str = ""
     model: str
+    reasoning: ConnectionReasoningRequest | None = None
     protocol: str = "openai-compatible"
     headers: list[CustomProviderHeaderRequest] = Field(default_factory=list)
 
@@ -1506,7 +1534,9 @@ async def get_providers():
         "model": vyact_config.get("model_path"),
         "has_key": bool(vyact_config.get("model_path")),
     }
+    selected_config = await get_provider_config()
     return {
+        "reasoning_capability": connection_reasoning_profile(selected_config),
         "current_type": current_type,
         "current_model": config.get("model"),
         "providers": providers,
@@ -1518,6 +1548,7 @@ async def get_providers():
                 "base_url": item.get("base_url"),
                 "model": item.get("model"),
                 "has_key": bool(item.get("api_key")),
+                "reasoning": item.get("reasoning"),
                 "headers": [
                     {"name": header.get("name"), "has_value": bool(header.get("value"))}
                     for header in item.get("headers", [])
@@ -1545,6 +1576,7 @@ async def create_custom_provider(req: CustomProviderRequest):
         "api_key": req.api_key.strip(),
         "model": model,
         "headers": _normalize_custom_headers(req.headers),
+        "reasoning": req.reasoning.model_dump() if req.reasoning else None,
     }
     config.setdefault("custom_providers", []).append(connection)
     await save_config_async(config)
@@ -1568,6 +1600,7 @@ async def update_custom_provider(connection_id: str, req: CustomProviderRequest)
         "base_url": _normalize_custom_provider_base_url(req.base_url),
         "model": model,
         "headers": _normalize_custom_headers(req.headers, connection.get("headers")),
+        "reasoning": req.reasoning.model_dump() if req.reasoning else None,
     })
     if req.api_key.strip():
         connection["api_key"] = req.api_key.strip()

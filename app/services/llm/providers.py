@@ -9,6 +9,8 @@ OpenAI 호환 경로는 첫 SSE에서 tool_call과 일반 답변을 함께 처�
 tool 진행 이벤트는 on_event 콜백(coroutine)으로 알린다:
   {"phase":"start","name":...,"args":...}  /  {"phase":"end","name":...}
 """
+from services.cloud_reasoning import apply_cloud_reasoning
+
 import base64
 import json
 
@@ -399,6 +401,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                 )
             elif provider_config.get("selection_type") == "openai":
                 body["max_completion_tokens"] = provider_config.get("max_output_tokens", 2048)
+            apply_cloud_reasoning(body, provider_config, model, reasoning)
             if usage is not None:
                 body["stream_options"] = {"include_usage": True}
             log_llm_call(call_reason, "openai", model, streaming=True, reasoning=reasoning,
@@ -578,6 +581,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                 }
     elif provider_config.get("selection_type") == "openai":
         body["max_completion_tokens"] = provider_config.get("max_output_tokens", 2048)
+    apply_cloud_reasoning(body, provider_config, model, reasoning)
     if usage is not None:
         # stream=True에서도 마지막 청크에 usage를 실어 보내도록 요청 (choices는 빈 배열로 옴)
         body["stream_options"] = {"include_usage": True}
@@ -697,6 +701,7 @@ async def gemini_stream(client, model, api_key, system_message, user_prompt,
                 "generationConfig": gen_cfg,
                 "tools": gm_tools,
             }
+            apply_cloud_reasoning(body, provider_config, model, reasoning)
             log_llm_call(call_reason, "gemini", model, streaming=False, reasoning=reasoning,
                          is_tool_judgment=True, round_no=_round)
             record_tool_context("gemini", body)
@@ -788,6 +793,7 @@ async def gemini_stream(client, model, api_key, system_message, user_prompt,
         "contents": contents,
         "generationConfig": gen_cfg,
     }
+    apply_cloud_reasoning(body, provider_config, model, reasoning)
     log_llm_call(call_reason, "gemini", model, streaming=True, reasoning=reasoning)
     record_tool_context("gemini", body)
     async with client.stream("POST", stream_url, json=body) as resp:
@@ -877,6 +883,7 @@ async def claude_stream(client, model, api_key, system_message, user_prompt,
                 cl_tools = to_claude_tools(unified)
             body = {"model": model, "max_tokens": max_tokens, "temperature": temperature,
                     "system": system_text, "messages": messages, "tools": cl_tools}
+            apply_cloud_reasoning(body, provider_config, model, reasoning)
             log_llm_call(call_reason, "claude", model, streaming=False, reasoning=reasoning,
                          is_tool_judgment=True, round_no=_round)
             record_tool_context("claude", body)
@@ -965,6 +972,7 @@ async def claude_stream(client, model, api_key, system_message, user_prompt,
     # ── 최종 답변 스트리밍 ──
     body = {"model": model, "max_tokens": max_tokens, "temperature": temperature,
             "system": system_text, "stream": True, "messages": messages}
+    apply_cloud_reasoning(body, provider_config, model, reasoning)
     log_llm_call(call_reason, "claude", model, streaming=True, reasoning=reasoning)
     record_tool_context("claude", body)
     async with client.stream("POST", base_url, headers=headers, json=body) as resp:

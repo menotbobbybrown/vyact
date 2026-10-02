@@ -95,6 +95,7 @@ async def get_provider_config() -> dict:
                         "type": "openai",
                         "selection_type": selected_type,
                         "connection_name": connection.get("name", selected_type),
+                        "reasoning": connection.get("reasoning"),
                         "model": connection.get("model", DEFAULT_MODEL),
                         "api_key": connection.get("api_key"),
                         "base_url": connection.get("base_url"),

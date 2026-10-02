@@ -1,0 +1,39 @@
+.provider-connection-manager { height: auto; max-height: min(88vh, 820px); }
+.provider-connection-list { display: grid; gap: 10px; padding: 16px 24px; overflow-y: auto; min-height: 0; }
+.provider-connection-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface2); }
+.provider-connection-details { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.provider-connection-details strong { color: var(--text); }
+.provider-connection-details span { color: var(--muted); font-size: var(--modal-sub); overflow-wrap: anywhere; }
+.provider-connection-row button, .provider-connection-manager .provider-editor-save { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.provider-connection-row .provider-editor-cancel { padding: 8px 12px; cursor: pointer; }
+
+.custom-provider-editor .provider-editor-body { display: flex; flex-direction: column; overflow-y: auto; }
+.custom-provider-editor .provider-editor-body > section { flex-shrink: 0; }
+.connection-reasoning-modes { display: flex; gap: 20px; color: var(--text); }
+.connection-reasoning-modes label { display: flex; align-items: center; gap: 6px; }
+.connection-reasoning-stage { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 8px; }
+.connection-reasoning-stage input { min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+.connection-reasoning-stage button { border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); cursor: pointer; }
+
+/* Keep wheel/trackpad scrolling on the modal body, including over headers. */
+.custom-provider-editor .provider-editor-body .provider-header-list { overflow: visible; overscroll-behavior: auto; }
+.connection-reasoning-heading { display: flex; align-items: center; justify-content: space-between; color: var(--text); }
+.connection-reasoning-fields { display: grid; gap: 12px; min-width: 0; padding: 0; margin: 0; border: 0; }
+.connection-reasoning-fields:disabled { opacity: .45; }
+.connection-reasoning-parameter { display: flex; align-items: center; gap: 12px; }
+.connection-reasoning-parameter > span { flex-shrink: 0; }
+.connection-reasoning-parameter > input { max-width: 280px; min-height: 34px; }
+.connection-reasoning-modes { align-items: center; flex-wrap: wrap; gap: 12px; font-size: var(--modal-sub); }
+.connection-reasoning-modes input { accent-color: var(--accent); }
+.connection-reasoning-add { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; cursor: pointer; }
+.connection-reasoning-add:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
+.connection-reasoning-stage input { padding: 8px 10px; }
+@media (max-width: 480px) { .connection-reasoning-parameter { flex-wrap: wrap; } .connection-reasoning-parameter > input { max-width: none; } }
+
+.connection-protocol-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.connection-protocol-heading > span { color: var(--muted); font-size: var(--modal-sub); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.connection-protocol-heading a { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-size: var(--modal-sub); font-weight: 600; text-decoration: none; }
+.connection-protocol-heading a:hover { text-decoration: underline; }
+
+.connection-reasoning-add-hidden { visibility: hidden; pointer-events: none; }

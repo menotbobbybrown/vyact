@@ -1,11 +1,12 @@
 import {useCallback, useEffect, useState} from 'react';
 
-export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh';
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | `custom-stage:${number}`;
 export type ReasoningValue = 'off' | 'on' | ReasoningEffort;
 export interface ReasoningCapability {
     control: 'none' | 'toggle' | 'effort';
     efforts: Exclude<ReasoningEffort, 'none'>[];
     supports_none: boolean;
+    options?: Array<{label: string; value: ReasoningEffort}>;
 }
 
 export const REASONING_STORAGE_KEY = 'vyactReasoningEnabled';
@@ -16,7 +17,7 @@ const DEFAULT_REASONING_VALUE: ReasoningValue = 'off';
 export function getReasoningValue(): ReasoningValue {
     try {
         const value = localStorage.getItem(REASONING_VALUE_STORAGE_KEY);
-        if (value === 'off' || value === 'on' || value === 'none' || value === 'low' || value === 'medium' || value === 'high' || value === 'xhigh') return value;
+        if (value === 'off' || value === 'on' || value === 'none' || value === 'minimal' || value === 'low' || value === 'medium' || value === 'high' || value === 'xhigh' || value === 'max' || /^custom-stage:\d+$/.test(value ?? '')) return value as ReasoningValue;
         return localStorage.getItem(REASONING_STORAGE_KEY) === 'true' ? 'on' : DEFAULT_REASONING_VALUE;
     } catch {
         return DEFAULT_REASONING_VALUE;
@@ -46,6 +47,13 @@ export function setReasoningValue(value: ReasoningValue): void {
         // Keep the in-memory UI working when storage is unavailable.
     }
     window.dispatchEvent(new CustomEvent(REASONING_CHANGED_EVENT, {detail: {value}}));
+}
+
+export function supportsReasoningValue(capability: ReasoningCapability, value: ReasoningValue): boolean {
+    if (capability.control === 'toggle') return value === 'off' || value === 'on';
+    if (capability.control === 'effort') return (value === 'none' && capability.supports_none)
+        || capability.efforts.includes(value as Exclude<ReasoningEffort, 'none'>);
+    return value === 'off';
 }
 
 export function defaultReasoningValue(capability: ReasoningCapability): ReasoningValue {

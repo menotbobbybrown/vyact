@@ -466,6 +466,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             const data = await api.getProviders();
             setCurrentProvider(data.current_type || 'vyact');
             setCustomProviders(data.custom_providers || []);
+            window.dispatchEvent(new Event('vyact:provider-changed'));
         } catch {
             // The provider selector remains usable with its default value.
         }
@@ -982,9 +983,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 /></React.Suspense>
             )}
             {customProviderEditor && <React.Suspense fallback={null}><CustomProviderModal
+                connections={customProviders}
                 connection={customProviderEditor === 'new' ? undefined : customProviderEditor}
                 onClose={() => setCustomProviderEditor(null)}
-                onDelete={customProviderEditor === 'new' ? undefined : async selectionType => {
+                onDelete={async selectionType => {
                     await handleProviderDelete(selectionType);
                     setCustomProviderEditor(null);
                 }}

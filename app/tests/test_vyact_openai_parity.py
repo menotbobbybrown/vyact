@@ -234,6 +234,23 @@ class VyactOpenAiParityTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(usage["prompt_tokens_per_second"], 3_000 / 7.63)
         self.assertAlmostEqual(usage["completion_tokens_per_second"], 520 / 12.73)
 
+    async def test_cloud_reasoning_reaches_stream_with_and_without_tools(self):
+        cases = [
+            ('custom:groq', 'openai/gpt-oss-120b', 'https://api.groq.com/openai/v1', 'high', {'reasoning_effort': 'high'}),
+            ('custom:qwen', 'qwen3.8-flash', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', 'none', {'enable_thinking': False}),
+        ]
+        for selection, model, url, reasoning, expected in cases:
+            for tools in ([], [{'type': 'function', 'function': {'name': 'test_tool', 'parameters': {'type': 'object', 'properties': {}}}}]):
+                with self.subTest(selection=selection, tools=bool(tools)):
+                    client = _Client()
+                    config = {'type': 'openai', 'selection_type': selection, 'model': model, 'base_url': url, 'reasoning': {'enabled': True, 'parameter': next(iter(expected)), 'control': 'toggle' if 'enable_thinking' in expected else 'effort', 'stages': [{'label': 'High', 'value': 'high'}]}}
+                    reasoning = False if 'enable_thinking' in expected else 'custom-stage:0'
+                    with patch('services.llm.providers.get_provider_config', AsyncMock(return_value=config)), patch('services.llm.providers._get_unified_tools', AsyncMock(return_value=(tools, []))):
+                        pieces = [piece async for piece in openai_stream(client, model, None, 'system', 'question', [], [], [], 30, reasoning=reasoning)]
+                    self.assertEqual(pieces, ['ok'])
+                    for key, value in expected.items():
+                        self.assertEqual(client.body[key], value)
+
     async def test_answer_only_request_does_not_discover_or_expose_tools(self):
         client = _Client()
         with patch("services.llm.providers.get_provider_config", AsyncMock(return_value={

@@ -1,16 +1,19 @@
 import React, {useState} from 'react';
-import {Eye, EyeOff, ExternalLink, Link2, Plus, Trash2} from 'lucide-react';
+import {Eye, EyeOff, ExternalLink, Link2, Pencil, Plus, Trash2} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import type {CustomProviderPayload, CustomProviderSettings} from '../../services/api';
 import {api} from '../../services/api';
 import {getCustomProtocolOptions, OPENAI_COMPATIBLE_DOCS_URL} from '../../constants/customProviders';
 import CustomSelect from '../CustomSelect/CustomSelect';
+import ToggleSwitch from '../common/ToggleSwitch/ToggleSwitch';
 import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import '../ProviderSettingsModal/ProviderSettingsModal.css';
+import './CustomProviderModal.css';
 
 interface CustomProviderModalProps {
     connection?: CustomProviderSettings;
+    connections?: CustomProviderSettings[];
     onClose: () => void;
     onSave: (selectionType: `custom:${string}`) => Promise<void> | void;
     onDelete?: (selectionType: `custom:${string}`) => Promise<void> | void;
@@ -24,7 +27,7 @@ interface HeaderRow {
     isValueVisible: boolean;
 }
 
-const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, onClose, onSave, onDelete}) => {
+const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, onClose, onSave, onDelete}) => {
     const {t} = useTranslation('main');
     const [name, setName] = useState(connection?.name ?? '');
     const [protocol, setProtocol] = useState<'openai-compatible'>(connection?.protocol ?? 'openai-compatible');
@@ -39,6 +42,8 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
         hasExistingValue: header.has_value,
         isValueVisible: false,
     })));
+    const [reasoningEnabled, setReasoningEnabled] = useState(Boolean(connection?.reasoning && connection.reasoning.enabled !== false));
+    const [reasoning, setReasoning] = useState(connection?.reasoning ?? {parameter: '', control: 'toggle' as 'toggle' | 'effort', stages: [] as Array<{label: string; value: string}>});
     const [saving, setSaving] = useState(false);
 
     const addHeader = () => setHeaders(current => [...current, {
@@ -70,6 +75,10 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
             toast.warning(t('customProvider.headerValidation'));
             return;
         }
+        if (reasoningEnabled && reasoning.parameter.trim() && (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(reasoning.parameter) || (reasoning.control === 'effort' && (!reasoning.stages.length || reasoning.stages.some(stage => !stage.label.trim() || !stage.value.trim()))))) {
+            toast.warning(t('customProvider.reasoningValidation'));
+            return;
+        }
         setSaving(true);
         try {
             const payload: CustomProviderPayload = {
@@ -78,6 +87,7 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
                 base_url: baseUrl.trim(),
                 api_key: apiKey.trim(),
                 model: model.trim(),
+                reasoning: {...reasoning, enabled: reasoningEnabled, parameter: reasoning.parameter.trim()},
                 headers: headers.map(header => ({name: header.name.trim(), value: header.value.trim()})),
             };
             const id = connection
@@ -94,7 +104,7 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
     };
 
     return <ModalOverlay className="provider-editor-overlay" onClose={onClose} closeOnBackdrop={false}>
-        <section className="provider-editor" role="dialog" aria-modal="true" aria-labelledby="provider-editor-title" onClick={event => event.stopPropagation()}>
+        <section className="provider-editor custom-provider-editor" role="dialog" aria-modal="true" aria-labelledby="provider-editor-title" onClick={event => event.stopPropagation()}>
             <header className="provider-editor-header">
                 <div className="provider-editor-title-icon"><Link2 size={20}/></div>
                 <div><h2 id="provider-editor-title">{connection ? t('customProvider.editTitle') : t('customProvider.addTitle')}</h2></div>
@@ -105,11 +115,7 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
                 <section className="provider-editor-section">
                     <div className="provider-editor-grid">
                         <label className="provider-editor-field"><span>{t('customProvider.name')}</span><input value={name} onChange={event => setName(event.target.value)} placeholder={t('customProvider.namePlaceholder')}/></label>
-                        <label className="provider-editor-field"><span>{t('customProvider.protocol')}</span><CustomSelect options={getCustomProtocolOptions(t)} value={protocol} onChange={value => setProtocol(value as 'openai-compatible')} ariaLabel={t('customProvider.protocol')}/></label>
-                    </div>
-                    <div className="provider-protocol-help">
-                        <p>{t('customProvider.hint')}</p>
-                        <a href={OPENAI_COMPATIBLE_DOCS_URL} target="_blank" rel="noreferrer">{t('customProvider.protocolDocs')}<ExternalLink size={13}/></a>
+                        <div className="provider-editor-field"><div className="connection-protocol-heading"><span>{t('customProvider.protocol')}</span><a href={OPENAI_COMPATIBLE_DOCS_URL} target="_blank" rel="noreferrer">{t('customProvider.protocolDocs')}<ExternalLink size={13}/></a></div><CustomSelect options={getCustomProtocolOptions(t)} value={protocol} onChange={value => setProtocol(value as 'openai-compatible')} ariaLabel={t('customProvider.protocol')}/></div>
                     </div>
                     <label className="provider-editor-field"><span>{t('customProvider.baseUrl')}</span><input value={baseUrl} onChange={event => setBaseUrl(event.target.value)} placeholder="http://localhost:8000/v1"/></label>
                     <div className="provider-editor-grid">
@@ -118,6 +124,21 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
                     </div>
                 </section>
 
+                <section className="provider-editor-section connection-reasoning-section">
+                    <div className="connection-reasoning-heading"><strong>{t('customProvider.reasoning')}</strong><ToggleSwitch checked={reasoningEnabled} label={t('customProvider.reasoning')} onChange={setReasoningEnabled}/></div>
+                    <fieldset disabled={!reasoningEnabled} className="connection-reasoning-fields">
+                    <label className="provider-editor-field connection-reasoning-parameter"><span>{t('customProvider.parameter')}</span><input value={reasoning.parameter} onChange={event => setReasoning({...reasoning, parameter: event.target.value})}/></label>
+                    <div className="connection-reasoning-modes">{(['toggle', 'effort'] as const).map(control => <label key={control}><input type="radio" name="connection-reasoning-control" checked={reasoning.control === control} onChange={() => setReasoning({...reasoning, control})}/>{t(`customProvider.${control}`)}</label>)}{<button type="button" className={`connection-reasoning-add${reasoning.control !== 'effort' ? ' connection-reasoning-add-hidden' : ''}`} aria-hidden={reasoning.control !== 'effort'} disabled={!reasoningEnabled || reasoning.control !== 'effort'} onClick={() => setReasoning({...reasoning, stages: [...reasoning.stages, {label: '', value: ''}]})}><Plus size={15}/>{t('customProvider.addStage')}</button>}</div>
+                    {reasoning.control === 'effort' && <>
+                        {reasoning.stages.map((stage, index) => <div className="connection-reasoning-stage" key={index}>
+                            <input aria-label={t('customProvider.stageLabel')} placeholder={t('customProvider.stageLabel')} value={stage.label} onChange={event => setReasoning({...reasoning, stages: reasoning.stages.map((item, position) => position === index ? {...item, label: event.target.value} : item)})}/>
+                            <input aria-label={t('customProvider.stageValue')} placeholder={t('customProvider.stageValue')} value={stage.value} onChange={event => setReasoning({...reasoning, stages: reasoning.stages.map((item, position) => position === index ? {...item, value: event.target.value} : item)})}/>
+                            <button type="button" aria-label={t('customProvider.removeStage')} onClick={() => setReasoning({...reasoning, stages: reasoning.stages.filter((_, position) => position !== index)})}><Trash2 size={15}/></button>
+                        </div>)}
+
+                    </>}
+                    </fieldset>
+                </section>
                 <section className="provider-editor-section provider-headers-section">
                     <div className="provider-editor-section-heading provider-headers-heading"><div><strong>{t('customProvider.headers')}</strong><span>{t('customProvider.headersDesc')}</span></div><button type="button" onClick={addHeader}><Plus size={15}/>{t('customProvider.addHeader')}</button></div>
                     {headers.length === 0 ? <button type="button" className="provider-headers-empty" onClick={addHeader}><Plus size={18}/><span>{t('customProvider.noHeaders')}</span></button> : <div className="provider-header-list">
@@ -140,6 +161,37 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, on
                 {connection && onDelete && <button className="provider-editor-delete" onClick={() => onDelete(`custom:${connection.id}`)} disabled={saving}>{t('modelSelector.delete')}</button>}
                 <button className="provider-editor-cancel" onClick={onClose} disabled={saving}>{t('customProvider.cancel')}</button>
                 <button className="provider-editor-save" onClick={handleSave} disabled={saving}>{saving ? t('customProvider.saving') : t('customProvider.save')}</button>
+            </footer>
+        </section>
+    </ModalOverlay>;
+};
+
+const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, connections = [], onClose, onSave, onDelete}) => {
+    const {t} = useTranslation('main');
+    const [editor, setEditor] = useState<CustomProviderSettings | 'new' | null>(connection ?? (connections.length ? null : 'new'));
+    if (editor) return <CustomProviderEditor
+        key={editor === 'new' ? 'new' : editor.id}
+        connection={editor === 'new' ? undefined : editor}
+        onClose={() => connections.length ? setEditor(null) : onClose()}
+        onSave={async selectionType => { await onSave(selectionType); onClose(); }}
+        onDelete={onDelete}
+    />;
+    return <ModalOverlay className="provider-editor-overlay" onClose={onClose} closeOnBackdrop={false}>
+        <section className="provider-editor provider-connection-manager" role="dialog" aria-modal="true" aria-labelledby="provider-connections-title">
+            <header className="provider-editor-header">
+                <div className="provider-editor-title-icon"><Link2 size={20}/></div>
+                <div><h2 id="provider-connections-title">{t('customProvider.manageTitle')}</h2></div>
+                <button className="provider-editor-close" onClick={onClose} aria-label={t('customProvider.close')}>×</button>
+            </header>
+            <div className="provider-connection-list">
+                {connections.map(item => <div className="provider-connection-row" key={item.id}>
+                    <div className="provider-connection-details"><strong>{item.name}</strong><span>{item.model}</span><span>{item.base_url}</span></div>
+                    <button className="provider-editor-cancel" onClick={() => setEditor(item)} aria-label={`${t('customProvider.edit')} ${item.name}`}><Pencil size={15}/>{t('customProvider.edit')}</button>
+                </div>)}
+            </div>
+            <footer className="provider-editor-footer">
+                <button className="provider-editor-cancel" onClick={onClose}>{t('customProvider.close')}</button>
+                <button className="provider-editor-save" onClick={() => setEditor('new')}><Plus size={15}/>{t('customProvider.add')}</button>
             </footer>
         </section>
     </ModalOverlay>;
