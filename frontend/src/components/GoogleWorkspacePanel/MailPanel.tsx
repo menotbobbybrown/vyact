@@ -328,7 +328,7 @@ const getPlainTextFromHtml = (html: string) => {
     return document.body.textContent?.trim() || '';
 };
 
-const createEmailDocument = (body: string, scrollable = false) => `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src http: https: data: blob: cid:; style-src 'unsafe-inline';"><base target="_blank"><meta name="viewport" content="width=device-width, initial-scale=1"><style>:root { color-scheme: light !important; } html, body { min-height: ${scrollable ? '100%' : '0'}; max-width: 100%; margin: 0; overflow-x: hidden; overflow-y: ${scrollable ? 'auto' : 'hidden'}; background: #fff; } body { box-sizing: border-box; padding: 24px; overflow-wrap: anywhere; word-break: break-word; font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; font-size: 14px; line-height: 1.5; } body * { box-sizing: border-box; max-width: 100%; } pre { white-space: pre-wrap; overflow-wrap: anywhere; } table { max-width: 100% !important; } td, th { overflow-wrap: normal; word-break: normal; } img { max-width: 100% !important; height: auto !important; }</style></head><body>${body}</body></html>`;
+const createEmailDocument = (body: string, scrollable = false) => `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src http: https: data: blob: cid:; style-src 'unsafe-inline';"><base target="_blank"><meta name="viewport" content="width=device-width, initial-scale=1"><style>:root { color-scheme: light !important; } html, body { min-height: ${scrollable ? '100%' : '0'}; max-width: 100%; margin: 0; overflow-x: auto !important; overflow-y: ${scrollable ? 'auto' : 'hidden'}; background: #fff; } body { overflow: visible !important; box-sizing: border-box; padding: 24px; overflow-wrap: anywhere; word-break: break-word; font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; font-size: 14px; line-height: 1.5; } body * { box-sizing: border-box; max-width: 100%; } pre { white-space: pre-wrap; overflow-wrap: anywhere; } table { max-width: 100% !important; } td, th { overflow-wrap: normal; word-break: normal; } img { max-width: 100% !important; height: auto !important; }</style></head><body>${body}</body></html>`;
 
 type QuotedReplyLabels = {show: string; hide: string};
 
@@ -426,7 +426,8 @@ const EmailBody = memo(function EmailBody({mail, fillAvailableSpace = false}: {
         // Auto-sized documents have no viewport minimum height, so the body
         // can shrink naturally without collapsing the iframe and moving the
         // parent scroll position during measurement.
-        iframe.style.height = `${Math.max(document.body.scrollHeight, document.body.offsetHeight)}px`;
+        const horizontalScrollbarHeight = Math.max(0, iframe.clientHeight - document.documentElement.clientHeight);
+        iframe.style.height = `${Math.max(document.body.scrollHeight, document.body.offsetHeight) + horizontalScrollbarHeight}px`;
     }, [fillAvailableSpace]);
 
     useEffect(() => {
@@ -455,7 +456,7 @@ const EmailBody = memo(function EmailBody({mail, fillAvailableSpace = false}: {
         aria-label={t('googleWorkspace.emailContent')}
         className={`gwp-email-html${fillAvailableSpace ? ' gwp-email-html--fill' : ''}`}
         sandbox="allow-popups allow-same-origin"
-        scrolling={fillAvailableSpace ? 'auto' : 'no'}
+        scrolling="auto"
         srcDoc={createEmailDocument(removeDarkModeStyles(mail.htmlBody || `<pre>${escapeHtml(mail.body)}</pre>`), fillAvailableSpace)}
         onLoad={event => {
             const iframe = event.currentTarget;
