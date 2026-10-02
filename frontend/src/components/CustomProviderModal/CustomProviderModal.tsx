@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Eye, EyeOff, ExternalLink, Link2, Pencil, Plus, Trash2} from 'lucide-react';
+import {Eye, EyeOff, ExternalLink, GripVertical, Link2, Pencil, Plus, Trash2} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import type {CustomProviderPayload, CustomProviderSettings} from '../../services/api';
 import {api} from '../../services/api';
@@ -44,6 +44,20 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
     })));
     const [reasoningEnabled, setReasoningEnabled] = useState(Boolean(connection?.reasoning && connection.reasoning.enabled !== false));
     const [reasoning, setReasoning] = useState(connection?.reasoning ?? {parameter: '', control: 'toggle' as 'toggle' | 'effort', stages: [] as Array<{label: string; value: string}>});
+    const [draggedStageIndex, setDraggedStageIndex] = useState<number | null>(null);
+    const [dragOverStageIndex, setDragOverStageIndex] = useState<number | null>(null);
+    const reorderStage = (from: number, to: number) => {
+        if (!reasoningEnabled || saving || from === to) return;
+        setReasoning(current => {
+            if (from < 0 || to < 0 || from >= current.stages.length || to >= current.stages.length) return current;
+            const stages = [...current.stages];
+            const [stage] = stages.splice(from, 1);
+            stages.splice(to, 0, stage);
+            return {...current, stages};
+        });
+        setDraggedStageIndex(null);
+        setDragOverStageIndex(null);
+    };
     const [saving, setSaving] = useState(false);
 
     const addHeader = () => setHeaders(current => [...current, {
@@ -75,7 +89,7 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
             toast.warning(t('customProvider.headerValidation'));
             return;
         }
-        if (reasoningEnabled && reasoning.parameter.trim() && (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(reasoning.parameter) || (reasoning.control === 'effort' && (!reasoning.stages.length || reasoning.stages.some(stage => !stage.label.trim() || !stage.value.trim()))))) {
+        if (reasoningEnabled && (!reasoning.parameter.trim() || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(reasoning.parameter.trim()) || (reasoning.control === 'effort' && (!reasoning.stages.length || reasoning.stages.some(stage => !stage.label.trim() || !stage.value.trim()))))) {
             toast.warning(t('customProvider.reasoningValidation'));
             return;
         }
@@ -130,7 +144,20 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
                     <label className="provider-editor-field connection-reasoning-parameter"><span>{t('customProvider.parameter')}</span><input value={reasoning.parameter} onChange={event => setReasoning({...reasoning, parameter: event.target.value})}/></label>
                     <div className="connection-reasoning-modes">{(['toggle', 'effort'] as const).map(control => <label key={control}><input type="radio" name="connection-reasoning-control" checked={reasoning.control === control} onChange={() => setReasoning({...reasoning, control})}/>{t(`customProvider.${control}`)}</label>)}{<button type="button" className={`connection-reasoning-add${reasoning.control !== 'effort' ? ' connection-reasoning-add-hidden' : ''}`} aria-hidden={reasoning.control !== 'effort'} disabled={!reasoningEnabled || reasoning.control !== 'effort'} onClick={() => setReasoning({...reasoning, stages: [...reasoning.stages, {label: '', value: ''}]})}><Plus size={15}/>{t('customProvider.addStage')}</button>}</div>
                     {reasoning.control === 'effort' && <>
-                        {reasoning.stages.map((stage, index) => <div className="connection-reasoning-stage" key={index}>
+                        {reasoning.stages.map((stage, index) => <div className={`connection-reasoning-stage${draggedStageIndex === index ? ' dragging' : ''}${dragOverStageIndex === index ? ' drag-over' : ''}`} key={index}
+                            onDragOver={event => { if (draggedStageIndex === null || !reasoningEnabled || saving) return; event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDragOverStageIndex(index === draggedStageIndex ? null : index); }}
+                            onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragOverStageIndex(null); }}
+                            onDrop={event => { event.preventDefault(); if (draggedStageIndex !== null) reorderStage(draggedStageIndex, index); }}>
+                            <button type="button" className="connection-reasoning-drag" draggable={reasoningEnabled && !saving} disabled={!reasoningEnabled || saving} aria-label={t('customProvider.reorderStage')}
+                                onDragStart={event => {
+                                    event.dataTransfer.effectAllowed = 'move';
+                                    event.dataTransfer.setData('text/plain', String(index));
+                                    const row = event.currentTarget.parentElement;
+                                    if (row) { const bounds = row.getBoundingClientRect(); event.dataTransfer.setDragImage(row, event.clientX - bounds.left, event.clientY - bounds.top); }
+                                    setDraggedStageIndex(index);
+                                }}
+                                onDragEnd={() => { setDraggedStageIndex(null); setDragOverStageIndex(null); }}
+                                onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); reorderStage(index, index + (event.key === 'ArrowUp' ? -1 : 1)); } }}><GripVertical size={15}/></button>
                             <input aria-label={t('customProvider.stageLabel')} placeholder={t('customProvider.stageLabel')} value={stage.label} onChange={event => setReasoning({...reasoning, stages: reasoning.stages.map((item, position) => position === index ? {...item, label: event.target.value} : item)})}/>
                             <input aria-label={t('customProvider.stageValue')} placeholder={t('customProvider.stageValue')} value={stage.value} onChange={event => setReasoning({...reasoning, stages: reasoning.stages.map((item, position) => position === index ? {...item, value: event.target.value} : item)})}/>
                             <button type="button" aria-label={t('customProvider.removeStage')} onClick={() => setReasoning({...reasoning, stages: reasoning.stages.filter((_, position) => position !== index)})}><Trash2 size={15}/></button>

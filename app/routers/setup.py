@@ -277,8 +277,10 @@ class ConnectionReasoningRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_reasoning_settings(self):
-        if not self.enabled or not self.parameter:
+        if not self.enabled:
             return self
+        if not self.parameter.strip():
+            raise ValueError("A reasoning parameter is required when enabled")
         reserved = {"model", "messages", "stream", "stream_options", "tools", "tool_choice", "temperature", "max_tokens", "max_completion_tokens"}
         if self.parameter in reserved:
             raise ValueError("Use a reasoning parameter, not a reserved request field")
