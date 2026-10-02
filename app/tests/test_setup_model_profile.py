@@ -411,3 +411,66 @@ def test_model_token_caps_default_to_auto_and_preserve_explicit_zero_history(req
     explicit = request_type(model_path="owner/model.gguf", max_output_tokens=1536, history_token_budget=0)
     assert explicit.max_output_tokens == 1536
     assert explicit.history_token_budget == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider", ["openai", "gemini", "claude", "custom:groq"])
+async def test_cloud_selection_stops_local_runtimes_before_saving(monkeypatch, provider):
+    config = {
+        "type": "vyact",
+        "model": "local-model",
+        "custom_providers": [{"id": "groq", "model": "remote-model"}],
+        "openai_config": {"api_key": "test", "model": "remote-model"},
+        "gemini_config": {"api_key": "test", "model": "remote-model"},
+        "claude_config": {"api_key": "test", "model": "remote-model"},
+    }
+    events = []
+    monkeypatch.setattr(setup, "load_config_async", AsyncMock(return_value=config))
+    monkeypatch.setattr(setup, "stop_all_vyact_runtimes", Mock(side_effect=lambda: events.append("stop")))
+    monkeypatch.setattr(setup, "save_config_async", AsyncMock(side_effect=lambda _: events.append("save")))
+
+    await setup.select_provider(setup.ProviderSelectRequest(provider=provider))
+
+    assert events == ["stop", "save"]
+    assert config["type"] == provider
+
+
+@pytest.mark.asyncio
+async def test_invalid_cloud_selection_keeps_local_runtime(monkeypatch):
+    monkeypatch.setattr(setup, "load_config_async", AsyncMock(return_value={"type": "vyact"}))
+    stop_runtime = Mock()
+    monkeypatch.setattr(setup, "stop_all_vyact_runtimes", stop_runtime)
+
+    with pytest.raises(HTTPException):
+        await setup.select_provider(setup.ProviderSelectRequest(provider="openai"))
+
+    stop_runtime.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_duplicate_connection_preserves_secrets_and_original(monkeypatch):
+    source = {"id": "original", "name": "Groq", "api_key": "secret", "model": "old-model", "headers": [{"name": "X-Key", "value": "header-secret"}]}
+    config = {"custom_providers": [source]}
+    monkeypatch.setattr(setup, "load_config_async", AsyncMock(return_value=config))
+    monkeypatch.setattr(setup, "save_config_async", AsyncMock())
+    result = await setup.create_custom_provider(setup.CustomProviderRequest(
+        copy_from_id="original", name="Groq (Copy)", base_url="https://api.groq.com/openai/v1",
+        model="new-model", headers=[setup.CustomProviderHeaderRequest(name="X-Key", value="")],
+    ))
+    copied = config["custom_providers"][1]
+    assert result["id"] != source["id"]
+    assert copied["api_key"] == "secret"
+    assert copied["headers"] == source["headers"]
+    assert copied["model"] == "new-model"
+    assert source["model"] == "old-model"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_missing_source_does_not_save(monkeypatch):
+    monkeypatch.setattr(setup, "load_config_async", AsyncMock(return_value={}))
+    save = AsyncMock()
+    monkeypatch.setattr(setup, "save_config_async", save)
+    with pytest.raises(HTTPException) as error:
+        await setup.create_custom_provider(setup.CustomProviderRequest(copy_from_id="missing", name="Copy", base_url="https://example.com/v1", model="model"))
+    assert error.value.status_code == 404
+    save.assert_not_awaited()

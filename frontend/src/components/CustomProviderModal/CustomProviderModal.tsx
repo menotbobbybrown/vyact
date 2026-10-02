@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Eye, EyeOff, ExternalLink, GripVertical, Link2, Pencil, Plus, Trash2} from 'lucide-react';
+import {CopyPlus, Cpu, Eye, EyeOff, ExternalLink, GripVertical, Link2, Pencil, Plus, Trash2} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import type {CustomProviderPayload, CustomProviderSettings} from '../../services/api';
 import {api} from '../../services/api';
@@ -13,6 +13,8 @@ import './CustomProviderModal.css';
 import '../common/ModalOverlay/ModalActions.css';
 
 interface CustomProviderModalProps {
+    selectedProvider?: string;
+    duplicateSource?: CustomProviderSettings;
     connection?: CustomProviderSettings;
     connections?: CustomProviderSettings[];
     onClose: () => void;
@@ -28,23 +30,24 @@ interface HeaderRow {
     isValueVisible: boolean;
 }
 
-const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, onClose, onSave, onDelete}) => {
+const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, duplicateSource, selectedProvider, onClose, onSave, onDelete}) => {
+    const initialConnection = connection ?? duplicateSource;
     const {t} = useTranslation('main');
-    const [name, setName] = useState(connection?.name ?? '');
-    const [protocol, setProtocol] = useState<'openai-compatible'>(connection?.protocol ?? 'openai-compatible');
-    const [baseUrl, setBaseUrl] = useState(connection?.base_url ?? '');
+    const [name, setName] = useState(initialConnection?.name ?? '');
+    const [protocol, setProtocol] = useState<'openai-compatible'>(initialConnection?.protocol ?? 'openai-compatible');
+    const [baseUrl, setBaseUrl] = useState(initialConnection?.base_url ?? '');
     const [apiKey, setApiKey] = useState('');
     const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
-    const [model, setModel] = useState(connection?.model ?? '');
-    const [headers, setHeaders] = useState<HeaderRow[]>(() => (connection?.headers ?? []).map((header, index) => ({
+    const [model, setModel] = useState(initialConnection?.model ?? '');
+    const [headers, setHeaders] = useState<HeaderRow[]>(() => (initialConnection?.headers ?? []).map((header, index) => ({
         id: `existing-${index}`,
         name: header.name,
         value: '',
         hasExistingValue: header.has_value,
         isValueVisible: false,
     })));
-    const [reasoningEnabled, setReasoningEnabled] = useState(Boolean(connection?.reasoning && connection.reasoning.enabled !== false));
-    const [reasoning, setReasoning] = useState(connection?.reasoning ?? {parameter: '', control: 'toggle' as 'toggle' | 'effort', stages: [] as Array<{label: string; value: string}>});
+    const [reasoningEnabled, setReasoningEnabled] = useState(Boolean(initialConnection?.reasoning && initialConnection.reasoning.enabled !== false));
+    const [reasoning, setReasoning] = useState(initialConnection?.reasoning ?? {parameter: '', control: 'toggle' as 'toggle' | 'effort', stages: [] as Array<{label: string; value: string}>});
     const [draggedStageIndex, setDraggedStageIndex] = useState<number | null>(null);
     const [dragOverStageIndex, setDragOverStageIndex] = useState<number | null>(null);
     const reorderStage = (from: number, to: number) => {
@@ -97,6 +100,7 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
         setSaving(true);
         try {
             const payload: CustomProviderPayload = {
+                copy_from_id: duplicateSource?.id,
                 name: name.trim(),
                 protocol,
                 base_url: baseUrl.trim(),
@@ -134,7 +138,7 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
                     </div>
                     <label className="provider-editor-field"><span>{t('customProvider.baseUrl')}</span><input value={baseUrl} onChange={event => setBaseUrl(event.target.value)} placeholder="http://localhost:8000/v1"/></label>
                     <div className="provider-editor-grid">
-                        <label className="provider-editor-field"><span>{t('customProvider.apiKey')}<small>{t('customProvider.optional')}</small></span><div className="provider-api-key-field"><input type={isApiKeyVisible ? 'text' : 'password'} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder={connection?.has_key ? t('customProvider.apiKeyExisting') : t('customProvider.apiKeyOptional')}/><button type="button" onClick={() => setIsApiKeyVisible(current => !current)} aria-label={t(isApiKeyVisible ? 'customProvider.hideApiKey' : 'customProvider.showApiKey')}>{isApiKeyVisible ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
+                        <label className="provider-editor-field"><span>{t('customProvider.apiKey')}<small>{t('customProvider.optional')}</small></span><div className="provider-api-key-field"><input type={isApiKeyVisible ? 'text' : 'password'} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder={initialConnection?.has_key ? t('customProvider.apiKeyExisting') : t('customProvider.apiKeyOptional')}/><button type="button" onClick={() => setIsApiKeyVisible(current => !current)} aria-label={t(isApiKeyVisible ? 'customProvider.hideApiKey' : 'customProvider.showApiKey')}>{isApiKeyVisible ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
                         <label className="provider-editor-field"><span>{t('customProvider.modelId')}</span><input value={model} onChange={event => setModel(event.target.value)} placeholder={t('customProvider.modelPlaceholder')}/></label>
                     </div>
                 </section>
@@ -186,7 +190,7 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
             </div>
 
             <footer className="modal-action-footer">
-                {connection && onDelete && <button className="provider-editor-delete" onClick={() => onDelete(`custom:${connection.id}`)} disabled={saving}>{t('modelSelector.delete')}</button>}
+                {connection && onDelete && <button className="modal-action-cancel custom-provider-delete" onClick={() => onDelete(`custom:${connection.id}`)} disabled={saving || selectedProvider === `custom:${connection.id}`}><Trash2 size={15} aria-hidden="true" />{t('modelSelector.delete')}</button>}
                 <button className="modal-action-cancel" onClick={onClose} disabled={saving}>{t('customProvider.cancel')}</button>
                 <button className="modal-action-submit" onClick={handleSave} disabled={saving}>{saving ? t('customProvider.saving') : t('customProvider.save')}</button>
             </footer>
@@ -194,12 +198,15 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
     </ModalOverlay>;
 };
 
-const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, connections = [], onClose, onSave, onDelete}) => {
+const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, connections = [], selectedProvider, onClose, onSave, onDelete}) => {
     const {t} = useTranslation('main');
+    const [duplicateSource, setDuplicateSource] = useState<CustomProviderSettings>();
     const [editor, setEditor] = useState<CustomProviderSettings | 'new' | null>(connection ?? (connections.length ? null : 'new'));
     if (editor) return <CustomProviderEditor
-        key={editor === 'new' ? 'new' : editor.id}
+        key={editor === 'new' ? duplicateSource?.id ?? 'new' : editor.id}
         connection={editor === 'new' ? undefined : editor}
+        duplicateSource={editor === 'new' ? duplicateSource : undefined}
+        selectedProvider={selectedProvider}
         onClose={() => connections.length ? setEditor(null) : onClose()}
         onSave={async selectionType => { await onSave(selectionType); onClose(); }}
         onDelete={onDelete}
@@ -213,13 +220,16 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, co
             </header>
             <div className="provider-connection-list">
                 {connections.map(item => <div className="provider-connection-row" key={item.id}>
-                    <div className="provider-connection-details"><strong>{item.name}</strong><span>{item.model}</span><span>{item.base_url}</span></div>
-                    <button className="modal-action-cancel" onClick={() => setEditor(item)} aria-label={`${t('customProvider.edit')} ${item.name}`}><Pencil size={15}/>{t('customProvider.edit')}</button>
+                    <div className="provider-connection-details"><div className="provider-connection-summary"><strong>{item.name}</strong><span className="provider-connection-model"><Cpu size={12} aria-hidden="true" />{item.model}</span></div><span className="provider-connection-url">{item.base_url}</span></div>
+                    <div className="provider-connection-actions">
+                    <button type="button" className="provider-connection-edit" aria-label={`${t('customProvider.duplicate')} ${item.name}`} onClick={() => { setDuplicateSource({...item, name: `${item.name} (${t('customProvider.copySuffix')})`}); setEditor('new'); }}><CopyPlus size={16} aria-hidden="true" /></button>
+                    <button type="button" className="provider-connection-edit" onClick={() => setEditor(item)} aria-label={`${t('customProvider.edit')} ${item.name}`}><Pencil size={16}/></button>
+                    </div>
                 </div>)}
             </div>
             <footer className="modal-action-footer">
                 <button className="modal-action-cancel" onClick={onClose}>{t('customProvider.close')}</button>
-                <button className="modal-action-submit" onClick={() => setEditor('new')}><Plus size={15}/>{t('customProvider.add')}</button>
+                <button className="modal-action-submit" onClick={() => { setDuplicateSource(undefined); setEditor('new'); }}><Plus size={15}/>{t('customProvider.add')}</button>
             </footer>
         </section>
     </ModalOverlay>;

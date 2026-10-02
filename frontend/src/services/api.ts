@@ -143,6 +143,7 @@ export interface CustomProviderSettings {
 }
 
 export interface CustomProviderPayload {
+    copy_from_id?: string;
     reasoning?: ConnectionReasoningSettings | null;
     name: string;
     protocol: 'openai-compatible';

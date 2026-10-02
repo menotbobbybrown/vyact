@@ -59,7 +59,7 @@ from services.external_api_server import EXTERNAL_API_PORT, public_model_id
 from services.cloud_reasoning import connection_reasoning_profile
 from services.llm.config import get_provider_config
 from services.reasoning_capabilities import get_gguf_reasoning_capabilities, get_mlx_reasoning_capabilities
-from services.vyact_runtime import get_downloaded_model_path, get_model_modalities, start_configured_runtime
+from services.vyact_runtime import get_downloaded_model_path, get_model_modalities, start_configured_runtime, stop_all_vyact_runtimes
 
 logger = get_logger(__name__)
 
@@ -292,6 +292,7 @@ class ConnectionReasoningRequest(BaseModel):
 
 
 class CustomProviderRequest(BaseModel):
+    copy_from_id: str | None = None
     name: str
     base_url: str
     api_key: str = ""
@@ -1570,14 +1571,17 @@ async def create_custom_provider(req: CustomProviderRequest):
     if req.protocol != "openai-compatible":
         raise HTTPException(400, "지원하지 않는 API 형식입니다.")
     config = await load_config_async()
+    source = next((item for item in config.get("custom_providers", []) if item.get("id") == req.copy_from_id), None) if req.copy_from_id else None
+    if req.copy_from_id and source is None:
+        raise HTTPException(404, "Source connection not found")
     connection = {
         "id": uuid.uuid4().hex,
         "name": name,
         "protocol": "openai-compatible",
         "base_url": _normalize_custom_provider_base_url(req.base_url),
-        "api_key": req.api_key.strip(),
+        "api_key": req.api_key.strip() or (source or {}).get("api_key", ""),
         "model": model,
-        "headers": _normalize_custom_headers(req.headers),
+        "headers": _normalize_custom_headers(req.headers, (source or {}).get("headers")),
         "reasoning": req.reasoning.model_dump() if req.reasoning else None,
     }
     config.setdefault("custom_providers", []).append(connection)
@@ -1716,6 +1720,7 @@ async def select_provider(req: ProviderSelectRequest):
                 config["model"] = req.model
             else:
                 config["model"] = config[key]["model"]
+        await asyncio.to_thread(stop_all_vyact_runtimes)
     await save_config_async(config)
     return {"ok": True, "config": config}
 

@@ -984,6 +984,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
             {customProviderEditor && <React.Suspense fallback={null}><CustomProviderModal
                 connections={customProviders}
+                selectedProvider={currentProvider}
                 connection={customProviderEditor === 'new' ? undefined : customProviderEditor}
                 onClose={() => setCustomProviderEditor(null)}
                 onDelete={async selectionType => {
