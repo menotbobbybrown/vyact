@@ -34,7 +34,8 @@ export interface MessageProps {
     codeChanges?: CodeChanges;
     truncated?: boolean;
     stats?: {
-        provider_remaining_tokens?: number | null;
+    provider_rate_limit_is_groq?: boolean;
+    provider_remaining_tokens?: number | null;
     provider_remaining_requests?: number | null;
     groq_remaining_tokens?: number | null;
     groq_remaining_requests?: number | null;

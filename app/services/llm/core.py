@@ -194,6 +194,7 @@ async def chat_stream_with_tools(
                 eval_duration = usage.get("eval_duration") if timings_complete else None
                 stats = {
                     "prompt_eval_count": usage.get("prompt_tokens"),
+                    "provider_rate_limit_is_groq": usage.get("provider_rate_limit_is_groq", False),
                     "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
                     "cached_tokens": usage.get("cached_tokens"),
                     "prompt_eval_duration": prompt_duration,
@@ -225,7 +226,8 @@ async def chat_stream_with_tools(
             yield {"type": "error", "code": "local_model_not_downloaded", "model": model}
         except httpx.HTTPStatusError as e:
             if "provider_remaining_tokens" in usage or "provider_remaining_requests" in usage:
-                yield {"type": "stats", "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
+                yield {"type": "stats", "provider_rate_limit_is_groq": usage.get("provider_rate_limit_is_groq", False),
+                    "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
                 }
             if is_insufficient_memory_error(e):
                 log_entry["error"] = "model_insufficient_memory"
@@ -381,6 +383,7 @@ async def query_llm(
                     if stats_out is not None:
                         stats_out.update({
                             "prompt_eval_count": usage.get("prompt_tokens"),
+                            "provider_rate_limit_is_groq": usage.get("provider_rate_limit_is_groq", False),
                             "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
                             "cached_tokens": usage.get("cached_tokens"),
                             "prompt_tokens_per_second": usage.get("prompt_tokens_per_second"),

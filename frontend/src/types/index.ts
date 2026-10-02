@@ -103,6 +103,7 @@ export interface InjectedContextItem {
 
 // 로컬 모델 응답의 토큰수/처리시간 통계 (단위: eval_count류는 토큰 개수, duration류는 나노초)
 export interface MessageStats {
+    provider_rate_limit_is_groq?: boolean;
     provider_remaining_tokens?: number | null;
     provider_remaining_requests?: number | null;
     groq_remaining_tokens?: number | null;

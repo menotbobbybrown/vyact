@@ -36,7 +36,7 @@ def test_groq_headers_capture_zero_and_ignore_invalid_values():
     capture_provider_rate_limits(usage, httpx.Response(200, request=request, headers={
         'x-ratelimit-remaining-tokens': '0', 'x-ratelimit-remaining-requests': '998',
     }))
-    assert usage == {'provider_remaining_tokens': 0, 'provider_remaining_requests': 998}
+    assert usage == {'provider_rate_limit_is_groq': True, 'provider_remaining_tokens': 0, 'provider_remaining_requests': 998}
     capture_provider_rate_limits(usage, httpx.Response(200, request=request, headers={'x-ratelimit-remaining-tokens': 'bad'}))
     assert usage['provider_remaining_tokens'] == 0
 

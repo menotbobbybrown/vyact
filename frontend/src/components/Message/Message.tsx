@@ -938,8 +938,8 @@ const Message: React.FC<MessageProps> = ({
                     [t('message.llmTotal'), formatNs(llmTotal)],
                 ]);
                 const remainingLimits = formatStats([
-                    [t('message.remainingTokens'), stats.provider_remaining_tokens],
-                    [t('message.remainingRequests'), stats.provider_remaining_requests],
+                    [t(stats.provider_rate_limit_is_groq ? 'message.groqRemainingTokens' : 'message.remainingTokens'), stats.provider_remaining_tokens],
+                    [t(stats.provider_rate_limit_is_groq ? 'message.groqRemainingRequests' : 'message.remainingRequests'), stats.provider_remaining_requests],
                 ]);
                 const line1 = [outputTokens, cacheSummary, generationTiming, remainingLimits].filter(Boolean).join(' · ');
                 if (!performanceLine && !line1) return null;

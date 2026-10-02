@@ -69,6 +69,9 @@ _TOOL_ROUND_LIMIT_FINAL_INSTRUCTION = (
 def capture_provider_rate_limits(usage, response):
     if usage is None:
         return
+    request = getattr(response, "request", None)
+    if request is not None and request.url.host == "api.groq.com":
+        usage["provider_rate_limit_is_groq"] = True
     for header, field in (
         ("x-ratelimit-remaining-tokens", "provider_remaining_tokens"),
         ("x-ratelimit-remaining-requests", "provider_remaining_requests"),
