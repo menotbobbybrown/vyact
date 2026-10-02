@@ -10,6 +10,7 @@ import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import '../ProviderSettingsModal/ProviderSettingsModal.css';
 import './CustomProviderModal.css';
+import '../common/ModalOverlay/ModalActions.css';
 
 interface CustomProviderModalProps {
     connection?: CustomProviderSettings;
@@ -184,10 +185,10 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, o
                 </section>
             </div>
 
-            <footer className="provider-editor-footer">
+            <footer className="modal-action-footer">
                 {connection && onDelete && <button className="provider-editor-delete" onClick={() => onDelete(`custom:${connection.id}`)} disabled={saving}>{t('modelSelector.delete')}</button>}
-                <button className="provider-editor-cancel" onClick={onClose} disabled={saving}>{t('customProvider.cancel')}</button>
-                <button className="provider-editor-save" onClick={handleSave} disabled={saving}>{saving ? t('customProvider.saving') : t('customProvider.save')}</button>
+                <button className="modal-action-cancel" onClick={onClose} disabled={saving}>{t('customProvider.cancel')}</button>
+                <button className="modal-action-submit" onClick={handleSave} disabled={saving}>{saving ? t('customProvider.saving') : t('customProvider.save')}</button>
             </footer>
         </section>
     </ModalOverlay>;
@@ -213,12 +214,12 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, co
             <div className="provider-connection-list">
                 {connections.map(item => <div className="provider-connection-row" key={item.id}>
                     <div className="provider-connection-details"><strong>{item.name}</strong><span>{item.model}</span><span>{item.base_url}</span></div>
-                    <button className="provider-editor-cancel" onClick={() => setEditor(item)} aria-label={`${t('customProvider.edit')} ${item.name}`}><Pencil size={15}/>{t('customProvider.edit')}</button>
+                    <button className="modal-action-cancel" onClick={() => setEditor(item)} aria-label={`${t('customProvider.edit')} ${item.name}`}><Pencil size={15}/>{t('customProvider.edit')}</button>
                 </div>)}
             </div>
-            <footer className="provider-editor-footer">
-                <button className="provider-editor-cancel" onClick={onClose}>{t('customProvider.close')}</button>
-                <button className="provider-editor-save" onClick={() => setEditor('new')}><Plus size={15}/>{t('customProvider.add')}</button>
+            <footer className="modal-action-footer">
+                <button className="modal-action-cancel" onClick={onClose}>{t('customProvider.close')}</button>
+                <button className="modal-action-submit" onClick={() => setEditor('new')}><Plus size={15}/>{t('customProvider.add')}</button>
             </footer>
         </section>
     </ModalOverlay>;
