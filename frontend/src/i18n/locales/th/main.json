@@ -1138,6 +1138,10 @@
     "codeGenerating": "⌨️ กำลังเขียนโค้ด…"
   },
   "message": {
+    "remainingTokens": "โทเคนที่เหลือ",
+    "remainingRequests": "คำขอที่เหลือ",
+    "groqRemainingTokens": "โทเคนที่เหลือต่อนาที",
+    "groqRemainingRequests": "คำขอที่เหลือวันนี้",
     "requestFailed": "ดำเนินการตามคำขอไม่สำเร็จ", "unknownError": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ", "retry": "ส่งอีกครั้ง", "changeModelSettings": "เปลี่ยนการตั้งค่าโมเดล",
     "codeChangesReview": "ตรวจสอบ",
     "codeReviewFileList": "ไฟล์ที่เปลี่ยนแปลง", "codeReviewSearchFiles": "ค้นหาเส้นทางไฟล์", "codeReviewPreviousFile": "ไฟล์ก่อนหน้า", "codeReviewNextFile": "ไฟล์ถัดไป", "codeReviewNoFiles": "ไม่พบไฟล์ที่ตรงกัน", "codeReviewCopy": "คัดลอก", "codeReviewCopied": "คัดลอกแล้ว", "codeReviewDownload": "ดาวน์โหลด", "codeReviewClosePanel": "ปิดแผง",

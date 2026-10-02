@@ -1138,6 +1138,10 @@
     "codeGenerating": "⌨️ 正在编写代码…"
   },
   "message": {
+    "remainingTokens": "剩余令牌",
+    "remainingRequests": "剩余请求",
+    "groqRemainingTokens": "每分钟剩余令牌",
+    "groqRemainingRequests": "今日剩余请求",
     "requestFailed": "无法完成请求", "unknownError": "发生未知错误。", "retry": "重新发送", "changeModelSettings": "更改模型设置",
     "codeChangesReview": "审查",
     "codeReviewFileList": "更改的文件", "codeReviewSearchFiles": "搜索文件路径", "codeReviewPreviousFile": "上一个文件", "codeReviewNextFile": "下一个文件", "codeReviewNoFiles": "没有匹配的文件", "codeReviewCopy": "复制", "codeReviewCopied": "已复制", "codeReviewDownload": "下载", "codeReviewClosePanel": "关闭面板",

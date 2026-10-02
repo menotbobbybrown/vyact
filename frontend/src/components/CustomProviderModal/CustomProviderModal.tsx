@@ -207,7 +207,7 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, co
         connection={editor === 'new' ? undefined : editor}
         duplicateSource={editor === 'new' ? duplicateSource : undefined}
         selectedProvider={selectedProvider}
-        onClose={() => connections.length ? setEditor(null) : onClose()}
+        onClose={() => !connection && connections.length ? setEditor(null) : onClose()}
         onSave={async selectionType => { await onSave(selectionType); onClose(); }}
         onDelete={onDelete}
     />;

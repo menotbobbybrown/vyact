@@ -66,6 +66,21 @@ _TOOL_ROUND_LIMIT_FINAL_INSTRUCTION = (
 )
 
 
+def capture_provider_rate_limits(usage, response):
+    if usage is None:
+        return
+    for header, field in (
+        ("x-ratelimit-remaining-tokens", "provider_remaining_tokens"),
+        ("x-ratelimit-remaining-requests", "provider_remaining_requests"),
+    ):
+        value = getattr(response, "headers", {}).get(header)
+        if value is not None:
+            try:
+                usage[field] = max(0, int(value))
+            except ValueError:
+                pass
+
+
 def _tool_call_max_rounds(provider_config: dict) -> int:
     """Use a bounded local loop while allowing longer cloud agent runs."""
     return (
@@ -410,6 +425,9 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
             _mark_llm_call_started(usage)
             record_tool_context("openai", body)
             async with client.stream("POST", base_url, headers=headers, json=body) as resp:
+                capture_provider_rate_limits(usage, resp)
+                if getattr(resp, "is_error", False):
+                    await resp.aread()
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
                     if not line or not line.startswith("data:"):
@@ -422,7 +440,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                     except json.JSONDecodeError:
                         continue
                     if usage is not None:
-                        u = chunk.get("usage")
+                        u = chunk.get("usage") or (chunk.get("x_groq") or {}).get("usage")
                         if u:
                             _accumulate_openai_usage(usage, u)
                         _accumulate_llm_timing(usage, chunk.get("timings"))
@@ -590,6 +608,9 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
     _mark_llm_call_started(usage)
     record_tool_context("openai", body)
     async with client.stream("POST", base_url, headers=headers, json=body) as resp:
+        capture_provider_rate_limits(usage, resp)
+        if getattr(resp, "is_error", False):
+            await resp.aread()
         resp.raise_for_status()
         async for line in resp.aiter_lines():
             if not line or not line.startswith("data:"):
@@ -602,7 +623,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
             except json.JSONDecodeError:
                 continue
             if usage is not None:
-                u = chunk.get("usage")
+                u = chunk.get("usage") or (chunk.get("x_groq") or {}).get("usage")
                 if u:
                     _accumulate_openai_usage(usage, u)
                 timings = chunk.get("timings")

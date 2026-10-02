@@ -1138,6 +1138,10 @@
     "codeGenerating": "⌨️ コードを作成中…"
   },
   "message": {
+    "remainingTokens": "残りトークン",
+    "remainingRequests": "残りリクエスト",
+    "groqRemainingTokens": "毎分の残りトークン",
+    "groqRemainingRequests": "本日の残りリクエスト",
     "requestFailed": "リクエストを完了できませんでした", "unknownError": "不明なエラーが発生しました。", "retry": "再送信", "changeModelSettings": "モデル設定を変更",
     "codeChangesReview": "レビュー",
     "codeReviewFileList": "変更ファイル一覧", "codeReviewSearchFiles": "ファイルパスを検索", "codeReviewPreviousFile": "前のファイル", "codeReviewNextFile": "次のファイル", "codeReviewNoFiles": "一致するファイルがありません", "codeReviewCopy": "コピー", "codeReviewCopied": "コピーしました", "codeReviewDownload": "ダウンロード", "codeReviewClosePanel": "パネルを閉じる",

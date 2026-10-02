@@ -185,7 +185,7 @@ async def chat_stream_with_tools(
                     except asyncio.CancelledError:
                         pass
 
-            if usage.get("prompt_tokens") is not None or usage.get("completion_tokens") is not None:
+            if usage.get("prompt_tokens") is not None or usage.get("completion_tokens") is not None or "provider_remaining_tokens" in usage or "provider_remaining_requests" in usage:
                 timings_complete = (
                     usage.get("_llm_call_count", 0) > 0
                     and usage.get("_timed_llm_call_count") == usage.get("_llm_call_count")
@@ -194,6 +194,7 @@ async def chat_stream_with_tools(
                 eval_duration = usage.get("eval_duration") if timings_complete else None
                 stats = {
                     "prompt_eval_count": usage.get("prompt_tokens"),
+                    "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
                     "cached_tokens": usage.get("cached_tokens"),
                     "prompt_eval_duration": prompt_duration,
                     "prompt_tokens_per_second": (
@@ -223,6 +224,9 @@ async def chat_stream_with_tools(
             log_entry["error"] = "local_model_not_downloaded"
             yield {"type": "error", "code": "local_model_not_downloaded", "model": model}
         except httpx.HTTPStatusError as e:
+            if "provider_remaining_tokens" in usage or "provider_remaining_requests" in usage:
+                yield {"type": "stats", "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
+                }
             if is_insufficient_memory_error(e):
                 log_entry["error"] = "model_insufficient_memory"
                 yield {"type": "error", "code": "model_insufficient_memory", "model": model}
@@ -377,6 +381,7 @@ async def query_llm(
                     if stats_out is not None:
                         stats_out.update({
                             "prompt_eval_count": usage.get("prompt_tokens"),
+                            "provider_remaining_tokens": usage.get("provider_remaining_tokens"), "provider_remaining_requests": usage.get("provider_remaining_requests"),
                             "cached_tokens": usage.get("cached_tokens"),
                             "prompt_tokens_per_second": usage.get("prompt_tokens_per_second"),
                             "completion_tokens_per_second": usage.get("completion_tokens_per_second"),

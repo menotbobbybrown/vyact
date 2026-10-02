@@ -87,15 +87,24 @@ def is_insufficient_memory_error(error: httpx.HTTPStatusError) -> bool:
 def http_err_msg(e: httpx.HTTPStatusError, provider: str, language: str = "en") -> str:
     code = e.response.status_code
     message = ""
+    error_code = ""
     try:
         data = e.response.json()
         error = data.get("error", {}) if isinstance(data, dict) else {}
         if isinstance(error, dict):
             message = str(error.get("message", ""))
+            error_code = str(error.get("code", error.get("type", "")))
         else:
             message = str(error)
     except Exception:
         pass
+    host = e.request.url.host or ""
+    is_alibaba = host.endswith(".aliyuncs.com") and ("dashscope" in host or ".maas." in host)
+    if host == "api.groq.com" or is_alibaba:
+        provider_name = "Alibaba Cloud" if is_alibaba else "Groq"
+        if code == 429 or (code == 403 and error_code == "AllocationQuota.FreeTierOnly"):
+            return llm_message("rate_limit", language, provider=provider_name)
+        return message or e.response.text.strip() or llm_message("api_error", language, provider=provider_name, status=code, detail="")
     key = {429: "rate_limit", 401: "invalid_key", 503: "unavailable"}.get(code, "api_error")
     return llm_message(key, language, provider=provider, status=code, detail=message)
 

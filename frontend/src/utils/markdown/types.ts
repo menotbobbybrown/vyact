@@ -34,7 +34,11 @@ export interface MessageProps {
     codeChanges?: CodeChanges;
     truncated?: boolean;
     stats?: {
-        load_duration?: number | null;
+        provider_remaining_tokens?: number | null;
+    provider_remaining_requests?: number | null;
+    groq_remaining_tokens?: number | null;
+    groq_remaining_requests?: number | null;
+    load_duration?: number | null;
         prompt_eval_count?: number | null;
         cached_tokens?: number | null;
         prompt_eval_duration?: number | null;

@@ -1138,6 +1138,10 @@
     "codeGenerating": "⌨️ Đang viết mã…"
   },
   "message": {
+    "remainingTokens": "Token còn lại",
+    "remainingRequests": "Yêu cầu còn lại",
+    "groqRemainingTokens": "Token còn lại mỗi phút",
+    "groqRemainingRequests": "Yêu cầu còn lại hôm nay",
     "requestFailed": "Không thể hoàn tất yêu cầu", "unknownError": "Đã xảy ra lỗi không xác định.", "retry": "Gửi lại", "changeModelSettings": "Thay đổi cài đặt mô hình",
     "codeChangesReview": "Xem lại",
     "codeReviewFileList": "Tệp đã thay đổi", "codeReviewSearchFiles": "Tìm đường dẫn tệp", "codeReviewPreviousFile": "Tệp trước", "codeReviewNextFile": "Tệp tiếp theo", "codeReviewNoFiles": "Không có tệp phù hợp", "codeReviewCopy": "Sao chép", "codeReviewCopied": "Đã sao chép", "codeReviewDownload": "Tải xuống", "codeReviewClosePanel": "Đóng bảng",

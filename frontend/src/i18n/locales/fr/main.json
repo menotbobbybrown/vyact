@@ -1138,6 +1138,10 @@
     "codeGenerating": "⌨️ Écriture du code…"
   },
   "message": {
+    "remainingTokens": "Tokens restants",
+    "remainingRequests": "Requêtes restantes",
+    "groqRemainingTokens": "Tokens restants par minute",
+    "groqRemainingRequests": "Requêtes restantes aujourd’hui",
     "requestFailed": "Impossible de terminer la requête", "unknownError": "Une erreur inconnue s’est produite.", "retry": "Réessayer", "changeModelSettings": "Modifier les paramètres du modèle",
     "codeChangesReview": "Réviser",
     "codeReviewFileList": "Fichiers modifiés", "codeReviewSearchFiles": "Rechercher un chemin", "codeReviewPreviousFile": "Fichier précédent", "codeReviewNextFile": "Fichier suivant", "codeReviewNoFiles": "Aucun fichier correspondant", "codeReviewCopy": "Copier", "codeReviewCopied": "Copié", "codeReviewDownload": "Télécharger", "codeReviewClosePanel": "Fermer le panneau",

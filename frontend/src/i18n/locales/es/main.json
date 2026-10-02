@@ -1137,6 +1137,10 @@
     "codeGenerating": "⌨️ Escribiendo código…"
   },
   "message": {
+    "remainingTokens": "Tokens restantes",
+    "remainingRequests": "Solicitudes restantes",
+    "groqRemainingTokens": "Tokens restantes por minuto",
+    "groqRemainingRequests": "Solicitudes restantes hoy",
     "requestFailed": "No se pudo completar la solicitud", "unknownError": "Se produjo un error desconocido.", "retry": "Reintentar", "changeModelSettings": "Cambiar ajustes del modelo",
     "codeChangesReview": "Revisar",
     "codeReviewFileList": "Archivos modificados", "codeReviewSearchFiles": "Buscar rutas de archivo", "codeReviewPreviousFile": "Archivo anterior", "codeReviewNextFile": "Archivo siguiente", "codeReviewNoFiles": "No hay archivos coincidentes", "codeReviewCopy": "Copiar", "codeReviewCopied": "Copiado", "codeReviewDownload": "Descargar", "codeReviewClosePanel": "Cerrar panel",
