@@ -62,3 +62,6 @@
 .provider-connection-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 .provider-connection-row .provider-connection-duplicate:hover { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }
+
+.custom-provider-editor .modal-action-footer > button { box-sizing: border-box; height: 36px; padding-top: 0; padding-bottom: 0; line-height: 1; }
+.custom-provider-editor .custom-provider-delete { padding-right: 14px; padding-left: 14px; }
