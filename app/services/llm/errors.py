@@ -103,7 +103,19 @@ def http_err_msg(e: httpx.HTTPStatusError, provider: str, language: str = "en") 
     if host == "api.groq.com" or is_alibaba:
         provider_name = "Alibaba Cloud" if is_alibaba else "Groq"
         if code == 429 or (code == 403 and error_code == "AllocationQuota.FreeTierOnly"):
-            return llm_message("rate_limit", language, provider=provider_name)
+            details = [llm_message("rate_limit", language, provider=provider_name)]
+            metadata = [f"HTTP {code}"]
+            if error_code:
+                metadata.append(error_code)
+            details.append(" · ".join(metadata))
+            raw_message = message or e.response.text.strip()
+            if raw_message:
+                details.append(raw_message)
+            for header in ("retry-after", "x-ratelimit-reset-tokens", "x-ratelimit-reset-requests"):
+                value = e.response.headers.get(header)
+                if value:
+                    details.append(f"{header}: {value}")
+            return "\n\n".join(details)
         return message or e.response.text.strip() or llm_message("api_error", language, provider=provider_name, status=code, detail="")
     key = {429: "rate_limit", 401: "invalid_key", 503: "unavailable"}.get(code, "api_error")
     return llm_message(key, language, provider=provider, status=code, detail=message)

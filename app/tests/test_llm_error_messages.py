@@ -27,7 +27,7 @@ def test_groq_limit_error_uses_localized_notice():
     request = httpx.Request('POST', 'https://api.groq.com/openai/v1/chat/completions')
     response = httpx.Response(429, request=request, json={'error': {'message': 'Raw rate limit details'}})
     error = httpx.HTTPStatusError('failed', request=request, response=response)
-    assert http_err_msg(error, 'OpenAI', 'ko') == MESSAGES['ko']['rate_limit'].format(provider='Groq')
+    assert http_err_msg(error, 'OpenAI', 'ko') == MESSAGES['ko']['rate_limit'].format(provider='Groq') + '\n\nHTTP 429\n\nRaw rate limit details'
 
 
 def test_groq_headers_capture_zero_and_ignore_invalid_values():
@@ -53,4 +53,25 @@ def test_alibaba_quota_errors_are_localized(status, code):
     request = httpx.Request('POST', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions')
     response = httpx.Response(status, request=request, json={'error': {'code': code, 'message': 'Quota exceeded'}})
     error = httpx.HTTPStatusError('failed', request=request, response=response)
-    assert http_err_msg(error, 'OpenAI', 'ko') == MESSAGES['ko']['rate_limit'].format(provider='Alibaba Cloud')
+    assert http_err_msg(error, 'OpenAI', 'ko') == MESSAGES['ko']['rate_limit'].format(provider='Alibaba Cloud') + f'\n\nHTTP {status} · {code}\n\nQuota exceeded'
+
+
+def test_groq_limit_includes_code_and_retry_headers():
+    request = httpx.Request('POST', 'https://api.groq.com/openai/v1/chat/completions')
+    response = httpx.Response(429, request=request,
+        json={'error': {'code': 'rate_limit_exceeded', 'message': 'Limit 8000, requested 9000'}},
+        headers={'retry-after': '12', 'x-ratelimit-reset-tokens': '12s', 'x-ratelimit-reset-requests': '1h'})
+    error = httpx.HTTPStatusError('failed', request=request, response=response)
+    result = http_err_msg(error, 'OpenAI', 'en')
+    assert 'HTTP 429 · rate_limit_exceeded' in result
+    assert 'Limit 8000, requested 9000' in result
+    assert 'retry-after: 12' in result
+    assert 'x-ratelimit-reset-tokens: 12s' in result
+    assert 'x-ratelimit-reset-requests: 1h' in result
+
+
+def test_groq_limit_preserves_non_json_body():
+    request = httpx.Request('POST', 'https://api.groq.com/openai/v1/chat/completions')
+    response = httpx.Response(429, request=request, text='Raw limit response')
+    error = httpx.HTTPStatusError('failed', request=request, response=response)
+    assert 'Raw limit response' in http_err_msg(error, 'OpenAI', 'en')
