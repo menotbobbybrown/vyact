@@ -222,7 +222,7 @@ const CustomProviderModal: React.FC<CustomProviderModalProps> = ({connection, co
                 {connections.map(item => <div className="provider-connection-row" key={item.id}>
                     <div className="provider-connection-details"><div className="provider-connection-summary"><strong>{item.name}</strong><span className="provider-connection-model"><Cpu size={12} aria-hidden="true" />{item.model}</span></div><span className="provider-connection-url">{item.base_url}</span></div>
                     <div className="provider-connection-actions">
-                    <button type="button" className="provider-connection-edit" aria-label={`${t('customProvider.duplicate')} ${item.name}`} onClick={() => { setDuplicateSource({...item, name: `${item.name} (${t('customProvider.copySuffix')})`}); setEditor('new'); }}><CopyPlus size={16} aria-hidden="true" /></button>
+                    <button type="button" className="provider-connection-edit provider-connection-duplicate" aria-label={`${t('customProvider.duplicate')} ${item.name}`} onClick={() => { setDuplicateSource({...item, name: `${item.name} (${t('customProvider.copySuffix')})`}); setEditor('new'); }}><CopyPlus size={16} aria-hidden="true" /></button>
                     <button type="button" className="provider-connection-edit" onClick={() => setEditor(item)} aria-label={`${t('customProvider.edit')} ${item.name}`}><Pencil size={16}/></button>
                     </div>
                 </div>)}
