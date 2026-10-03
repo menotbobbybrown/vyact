@@ -8,11 +8,12 @@ interface SettingLabelProps {
     help: ReactNode;
     description?: string;
     helpHoverOnly?: boolean;
+    helpPlacement?: 'above' | 'below';
 }
 
-export default function SettingLabel({label, help, description, helpHoverOnly = false}: SettingLabelProps) {
+export default function SettingLabel({label, help, description, helpHoverOnly = false, helpPlacement = 'above'}: SettingLabelProps) {
     return <span className="setting-label">
-        <Tooltip hoverOnly={helpHoverOnly} content={help} multiline size="medium">
+        <Tooltip placement={helpPlacement} hoverOnly={helpHoverOnly} content={help} multiline size="medium">
             <button type="button" className="setting-label-help" aria-label={typeof help === 'string' ? `${label}: ${help}` : label}>
                 <CircleQuestionMark size={15}/>
             </button>

@@ -65,3 +65,9 @@
 
 .custom-provider-editor .modal-action-footer > button { box-sizing: border-box; height: 36px; padding-top: 0; padding-bottom: 0; line-height: 1; }
 .custom-provider-editor .custom-provider-delete { padding-right: 14px; padding-left: 14px; }
+
+.custom-provider-editor .setting-label-help { display: grid; place-items: center; flex: 0 0 18px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: help; }
+.custom-provider-editor .setting-label-help:hover, .custom-provider-editor .setting-label-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; color: var(--accent); }
+.custom-provider-help { white-space: normal; text-align: start; }
+.custom-provider-help strong { display: block; margin-bottom: 10px; }
+.custom-provider-help p { margin: 0; white-space: pre-line; line-height: 1.65; }

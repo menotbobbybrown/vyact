@@ -12,11 +12,11 @@ from .language import get_language_label, normalize_language_code
 
 RESPONSE_LENGTH_INSTRUCTION = """\
 [Response length]
-Match the response length and structure to the request. Answer greetings, simple recommendations, and short factual questions directly in 1–3 sentences. Expand with reasoning and actionable steps only for complex analysis, document or code work, or when the user requests detail."""
+Answer simple requests in 1–3 sentences; expand for complex work or requested detail."""
 
 REASONING_BUDGET_INSTRUCTION = """\
 [Reasoning budget]
-추론은 필요한 만큼만 간결하게 수행하고, 최종 답변을 위한 출력 토큰을 반드시 남겨두세요."""
+추론은 간결히 하고 최종 답변용 토큰을 남겨두세요."""
 
 
 def build_system_message(
@@ -47,9 +47,7 @@ def build_system_message(
     normalized_language = normalize_language_code(user_language)
     lang_label = get_language_label(normalized_language)
     response_language_instruction = (
-        f"[Response language]\nThe user's UI language is {lang_label}. "
-        f"Respond in {lang_label} unless the user explicitly requests another language. "
-        f"Use {lang_label} for headings and section titles as well."
+        f"[Response language]\nUse {lang_label} for the answer and headings unless the user requests another language."
     )
 
     if isolated:

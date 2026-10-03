@@ -111,7 +111,7 @@ async def prepare_request(
             )
             return selected, was_truncated, system_message_value
         history_budget = configured_history
-        if context_size:
+        if context_size and not (str(provider_config.get("selection_type", "")).startswith("custom:") and configured_history is None):
             required_messages = [
                 {"role": "system", "content": system_message_value},
                 {"role": "user", "content": user_prompt},

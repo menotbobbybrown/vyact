@@ -14,7 +14,7 @@ class IsolatedSystemPromptTests(unittest.TestCase):
         )
 
         self.assertIn("[Response length]", result)
-        self.assertIn("greetings, simple recommendations, and short factual questions", result)
+        self.assertIn("Answer simple requests", result)
         self.assertIn("1–3 sentences", result)
 
     def test_reasoning_prompt_reserves_tokens_before_dynamic_context(self):
@@ -25,7 +25,7 @@ class IsolatedSystemPromptTests(unittest.TestCase):
             reasoning=True,
         )
 
-        instruction = "추론은 필요한 만큼만 간결하게 수행하고, 최종 답변을 위한 출력 토큰을 반드시 남겨두세요."
+        instruction = "추론은 간결히 하고 최종 답변용 토큰을 남겨두세요."
         self.assertIn(instruction, result)
         self.assertLess(result.index("[Response length]"), result.index(instruction))
         self.assertLess(result.index(instruction), result.index("Current date:"))
@@ -56,9 +56,7 @@ class IsolatedSystemPromptTests(unittest.TestCase):
         self.assertEqual(
             result,
             plugin_prompt
-            + "\n\n[Response language]\nThe user's UI language is Korean. "
-              "Respond in Korean unless the user explicitly requests another language. "
-              "Use Korean for headings and section titles as well.",
+            + "\n\n[Response language]\nUse Korean for the answer and headings unless the user requests another language.",
         )
         self.assertNotIn("BACKEND FORMAT", result)
         self.assertNotIn("BACKEND PROFILE", result)
@@ -95,7 +93,7 @@ class IsolatedPreparedRequestTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertTrue(system_message.startswith("PLUGIN_SYSTEM_PROMPT\n\n[Response language]"))
-        self.assertIn("Respond in Korean", system_message)
+        self.assertIn("Use Korean", system_message)
         self.assertEqual(user_prompt, "PLUGIN_USER_PROMPT")
         self.assertEqual(history, [])
 

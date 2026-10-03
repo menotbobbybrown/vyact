@@ -32,8 +32,10 @@ async def select_history_by_budget_for_provider(
         conversation_history: list, provider_config: dict, budget: int | None = None,
 ) -> tuple[list, bool]:
     """Select recent history using the local model tokenizer or o200k_base."""
-    budget = get_runtime_settings()["history_token_budget"] if budget is None else budget
     valid = _valid_history(conversation_history)
+    if budget is None and str(provider_config.get("selection_type", "")).startswith("custom:"):
+        return valid, False
+    budget = get_runtime_settings()["history_token_budget"] if budget is None else budget
     if not valid:
         return [], False
     if budget is None:

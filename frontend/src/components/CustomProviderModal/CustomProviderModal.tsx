@@ -6,6 +6,7 @@ import {api} from '../../services/api';
 import {getCustomProtocolOptions, OPENAI_COMPATIBLE_DOCS_URL} from '../../constants/customProviders';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import ToggleSwitch from '../common/ToggleSwitch/ToggleSwitch';
+import SettingLabel from '../common/SettingLabel/SettingLabel';
 import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import '../ProviderSettingsModal/ProviderSettingsModal.css';
@@ -38,6 +39,9 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, d
     const [baseUrl, setBaseUrl] = useState(initialConnection?.base_url ?? '');
     const [apiKey, setApiKey] = useState('');
     const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+    const [maxOutputTokens, setMaxOutputTokens] = useState(String(initialConnection?.max_output_tokens ?? ''));
+    const [outputTokenParameter, setOutputTokenParameter] = useState(initialConnection?.output_token_parameter ?? '');
+    const [historyTokenBudget, setHistoryTokenBudget] = useState(String(initialConnection?.history_token_budget ?? ''));
     const [model, setModel] = useState(initialConnection?.model ?? '');
     const [headers, setHeaders] = useState<HeaderRow[]>(() => (initialConnection?.headers ?? []).map((header, index) => ({
         id: `existing-${index}`,
@@ -97,6 +101,11 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, d
             toast.warning(t('customProvider.reasoningValidation'));
             return;
         }
+        const reservedParameters = new Set(['model', 'messages', 'stream', 'stream_options', 'tools', 'tool_choice', 'temperature']);
+        if ((maxOutputTokens !== '' && !outputTokenParameter.trim()) || (outputTokenParameter.trim() !== '' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(outputTokenParameter.trim())) || reservedParameters.has(outputTokenParameter.trim()) || (reasoningEnabled && outputTokenParameter.trim() !== '' && reasoning.parameter.trim() === outputTokenParameter.trim()) || (maxOutputTokens !== '' && (!Number.isSafeInteger(Number(maxOutputTokens)) || Number(maxOutputTokens) < 1)) || (historyTokenBudget !== '' && (!Number.isSafeInteger(Number(historyTokenBudget)) || Number(historyTokenBudget) < 0))) {
+            toast.warning(t('customProvider.tokenValidation'));
+            return;
+        }
         setSaving(true);
         try {
             const payload: CustomProviderPayload = {
@@ -106,6 +115,9 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, d
                 base_url: baseUrl.trim(),
                 api_key: apiKey.trim(),
                 model: model.trim(),
+                max_output_tokens: maxOutputTokens === '' ? null : Number(maxOutputTokens),
+                output_token_parameter: outputTokenParameter.trim(),
+                history_token_budget: historyTokenBudget === '' ? null : Number(historyTokenBudget),
                 reasoning: {...reasoning, enabled: reasoningEnabled, parameter: reasoning.parameter.trim()},
                 headers: headers.map(header => ({name: header.name.trim(), value: header.value.trim()})),
             };
@@ -141,6 +153,14 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, d
                         <label className="provider-editor-field"><span>{t('customProvider.apiKey')}<small>{t('customProvider.optional')}</small></span><div className="provider-api-key-field"><input type={isApiKeyVisible ? 'text' : 'password'} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder={initialConnection?.has_key ? t('customProvider.apiKeyExisting') : t('customProvider.apiKeyOptional')}/><button type="button" onClick={() => setIsApiKeyVisible(current => !current)} aria-label={t(isApiKeyVisible ? 'customProvider.hideApiKey' : 'customProvider.showApiKey')}>{isApiKeyVisible ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
                         <label className="provider-editor-field"><span>{t('customProvider.modelId')}</span><input value={model} onChange={event => setModel(event.target.value)} placeholder={t('customProvider.modelPlaceholder')}/></label>
                     </div>
+                </section>
+
+                <section className="provider-editor-section">
+                    <div className="provider-editor-grid">
+                        <label className="provider-editor-field"><span>{t('customProvider.parameter')}</span><input value={outputTokenParameter} onChange={event => setOutputTokenParameter(event.target.value)}/></label>
+                        <label className="provider-editor-field"><SettingLabel helpHoverOnly helpPlacement="below" label={t('modelSettings.maxOutput')} help={<div className="custom-provider-help"><strong>{t('modelSettings.maxOutput')}</strong><p>{t('customProvider.maxOutputHelp')}</p></div>}/><input type="number" min="1" step="1" value={maxOutputTokens} placeholder={t('customProvider.unset')} onChange={event => setMaxOutputTokens(event.target.value)}/></label>
+                    </div>
+                    <label className="provider-editor-field"><SettingLabel helpHoverOnly helpPlacement="below" label={t('modelSettings.historyTokenBudget')} help={<div className="custom-provider-help"><strong>{t('modelSettings.historyTokenBudget')}</strong><p>{t('customProvider.historyTokenBudgetHelp')}</p></div>}/><input type="number" min="0" step="1" value={historyTokenBudget} placeholder={t('customProvider.unset')} onChange={event => setHistoryTokenBudget(event.target.value)}/></label>
                 </section>
 
                 <section className="provider-editor-section connection-reasoning-section">

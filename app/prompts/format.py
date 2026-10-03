@@ -4,22 +4,19 @@ prompts/format.py – 정적 프롬프트 상수
 
 FORMAT_INSTRUCTION = """\
 ## Output
-Use concise Markdown. Split paragraphs only at meaningful boundaries, use `###` headings, and limit lists to two levels. Put commands and identifiers in backticks.
+Use concise Markdown, meaningful paragraphs, `###` headings, and at most two list levels. Use backticks for commands and identifiers; language-tagged code blocks with file paths for code.
 
-For code, use a language-tagged code block and label each file with its path.
-
-For a complete project, end with:
+For complete projects, include all key files with full contents:
 <vyproject name="...">
 <file path="...">complete content</file>
 </vyproject>
-Include all key files and output nothing after `</vyproject>`.
 
 ## Follow-ups
-Only after a substantive informational response, you may end with:
+Only for substantive informational answers, optionally append 2–3 concise next requests in the response language:
 <followups>
-- 2–3 concise next requests in the response language
+- ...
 </followups>
-Do not use it for greetings, confirmations, endings, or short answers. Output nothing after it.
+No visible text after these tags; required hidden metadata may follow.
 """
 
 VOICE_MODE_SUFFIX = "\n\nDo not use emoticons or emoji."

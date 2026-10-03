@@ -84,44 +84,26 @@ def build_summary_instruction(
     필수 형식과 사용자에게 숨겨지는 메타데이터라는 점만 명확하게 전달한다.
     """
     parts = [
-        "\n\n---\n"
-        "## Visible response\n"
-        "Never leave the visible response empty. If the request produces no visible result, confirm completion in 1–2 short sentences. "
-        "Do not add a separate confirmation to a normal answer.\n\n"
-        "## Internal summary tag (required; never mention it to the user)\n"
-        "After the visible response, end every response with an updated conversation summary in this format. "
-        "It restores context in the next request.\n"
-        "Prioritize user requirements, important decisions, current progress, and next steps. "
-        "Regardless of response length, omit incidental details and keep it to at most 3–4 sentences.\n"
-        "<conv_summary>...</conv_summary>\n"
+        "\n\n## Hidden metadata\n"
+        "After the visible answer, append <conv_summary>...</conv_summary> every turn. "
+        "Summarize the conversation in at most 3–4 sentences, preserving user requirements, "
+        "decisions, progress, and next steps. These tags are hidden; do not discuss them in the answer.\n"
     ]
     if request_conversation_title:
         parts.append(
-            "For the first response only, put a short sidebar title immediately before <conv_summary>. "
-            "Summarize the topic naturally in about 20 characters without copying the user's text or including UI markers such as PASTE:\n"
-            "<conv_title>Short conversation title</conv_title>\n"
+            "First response only: before <conv_summary>, add "
+            "<conv_title>Natural topic title, about 20 characters; no pasted text or UI markers</conv_title>.\n"
         )
     if prior_conv_summary:
-        parts.append(
-            f"Update the following prior summary with this turn instead of rewriting it from scratch:\n"
-            f"\"{prior_conv_summary}\"\n"
-        )
+        parts.append(f"Update this prior summary with the current turn:\n{prior_conv_summary}\n")
     if request_project_summary:
         parts.append(
-            "Files were attached in this turn. Add this tag immediately after <conv_summary>:\n"
-            "<project_summary>Summarize the attached directory structure and the role of key files. "
-            "Use 2–3 sentences for a few simple files. For a large or complex project, provide enough detail by major directory or module, "
-            "using separate paragraphs if helpful, so the project can be understood from this summary alone."
-            "</project_summary>\n"
+            "After <conv_summary>, add <project_summary>Attached directory structure and key file roles. "
+            "Use 2–3 sentences for simple files; cover major modules for large projects.</project_summary>.\n"
         )
     if project_memory is not None:
         from services.project_memory import build_project_memory_instruction
         parts.append(build_project_memory_instruction(project_memory))
-    parts.append(
-        "These tags are hidden internal metadata. Do not mention their content or creation in the visible response. "
-        + ("End with <conv_summary> followed by <project_summary>." if request_project_summary
-           else "End with <conv_summary>.")
-    )
     return "".join(parts)
 
 

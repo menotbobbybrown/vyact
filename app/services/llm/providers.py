@@ -42,6 +42,16 @@ from services.user_memory_tools import (
 )
 
 
+def _apply_custom_generation_settings(body: dict, provider_config: dict) -> None:
+    if not str(provider_config.get("selection_type", "")).startswith("custom:"):
+        return
+    body.pop("temperature", None)
+    output_limit = provider_config.get("max_output_tokens")
+    output_parameter = provider_config.get("output_token_parameter")
+    if output_limit is not None and output_parameter:
+        body[output_parameter] = output_limit
+
+
 _REPEATED_TOOL_CALL_RESULT = (
     "[반복 호출 중단] 같은 도구와 인자가 이미 실행되었습니다. "
     "기존 도구 결과를 사용해 최종 답변을 작성하고, 더 이상 도구를 호출하지 마세요."
@@ -419,6 +429,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                 )
             elif provider_config.get("selection_type") == "openai":
                 body["max_completion_tokens"] = provider_config.get("max_output_tokens", 2048)
+            _apply_custom_generation_settings(body, provider_config)
             apply_cloud_reasoning(body, provider_config, model, reasoning)
             if usage is not None:
                 body["stream_options"] = {"include_usage": True}
@@ -602,6 +613,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
                 }
     elif provider_config.get("selection_type") == "openai":
         body["max_completion_tokens"] = provider_config.get("max_output_tokens", 2048)
+    _apply_custom_generation_settings(body, provider_config)
     apply_cloud_reasoning(body, provider_config, model, reasoning)
     if usage is not None:
         # stream=True에서도 마지막 청크에 usage를 실어 보내도록 요청 (choices는 빈 배열로 옴)

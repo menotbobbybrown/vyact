@@ -132,6 +132,9 @@ export interface ConnectionReasoningSettings {
 }
 
 export interface CustomProviderSettings {
+    max_output_tokens?: number | null;
+    output_token_parameter?: string;
+    history_token_budget?: number | null;
     reasoning?: ConnectionReasoningSettings | null;
     id: string;
     name: string;
@@ -143,6 +146,9 @@ export interface CustomProviderSettings {
 }
 
 export interface CustomProviderPayload {
+    max_output_tokens?: number | null;
+    output_token_parameter?: string;
+    history_token_budget?: number | null;
     copy_from_id?: string;
     reasoning?: ConnectionReasoningSettings | null;
     name: string;

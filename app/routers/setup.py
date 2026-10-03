@@ -333,6 +333,21 @@ class ConnectionReasoningRequest(BaseModel):
 
 
 class CustomProviderRequest(BaseModel):
+    max_output_tokens: int | None = Field(default=None, ge=1, strict=True)
+    output_token_parameter: str = Field(default="", pattern=r"^(?:[A-Za-z_][A-Za-z0-9_]*)?$")
+    history_token_budget: int | None = Field(default=None, ge=0, strict=True)
+
+    @model_validator(mode="after")
+    def validate_output_parameter(self):
+        reserved = {"model", "messages", "stream", "stream_options", "tools", "tool_choice", "temperature"}
+        if self.max_output_tokens is not None and not self.output_token_parameter:
+            raise ValueError("An output token parameter is required when a limit is set")
+        if self.output_token_parameter in reserved:
+            raise ValueError("Use an output token parameter, not a reserved request field")
+        if self.reasoning and self.reasoning.enabled and self.reasoning.parameter == self.output_token_parameter:
+            raise ValueError("Output and reasoning parameters must differ")
+        return self
+
     copy_from_id: str | None = None
     name: str
     base_url: str
@@ -1605,6 +1620,9 @@ async def get_providers():
                 "model": item.get("model"),
                 "has_key": bool(item.get("api_key")),
                 "reasoning": item.get("reasoning"),
+                "max_output_tokens": item.get("max_output_tokens"),
+                "output_token_parameter": item.get("output_token_parameter", ""),
+                "history_token_budget": item.get("history_token_budget"),
                 "headers": [
                     {"name": header.get("name"), "has_value": bool(header.get("value"))}
                     for header in item.get("headers", [])
@@ -1636,6 +1654,9 @@ async def create_custom_provider(req: CustomProviderRequest):
         "model": model,
         "headers": _normalize_custom_headers(req.headers, (source or {}).get("headers")),
         "reasoning": req.reasoning.model_dump() if req.reasoning else None,
+        "max_output_tokens": req.max_output_tokens,
+        "output_token_parameter": req.output_token_parameter,
+        "history_token_budget": req.history_token_budget,
     }
     config.setdefault("custom_providers", []).append(connection)
     await save_config_async(config)
@@ -1660,6 +1681,9 @@ async def update_custom_provider(connection_id: str, req: CustomProviderRequest)
         "model": model,
         "headers": _normalize_custom_headers(req.headers, connection.get("headers")),
         "reasoning": req.reasoning.model_dump() if req.reasoning else None,
+        "max_output_tokens": req.max_output_tokens,
+        "output_token_parameter": req.output_token_parameter,
+        "history_token_budget": req.history_token_budget,
     })
     if req.api_key.strip():
         connection["api_key"] = req.api_key.strip()
