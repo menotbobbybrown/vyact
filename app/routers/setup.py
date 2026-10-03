@@ -54,12 +54,12 @@ from services.runtime_startup import (
 from services.model_runtime_profiles import delete_model_profile, get_model_profile, normalize_gpu_split_for_hardware, normalize_model_profile, normalize_loaded_model_profile, recommended_model_profile, save_model_profile
 from services.model_profile_defaults import hardware_model_profile, profile_model_info, profile_memory_assessment
 from services.vyact_model_metadata_cache import get_cached_model_metadata, save_cached_model_metadata
-from services.mlx_runtime import get_downloaded_mlx_model_path, get_mlx_runtime_capabilities, is_apple_silicon, list_multimodal_supported_mlx_models
+from services.mlx_runtime import list_downloaded_mlx_models, get_downloaded_mlx_model_path, get_mlx_runtime_capabilities, is_apple_silicon, list_multimodal_supported_mlx_models
 from services.external_api_server import EXTERNAL_API_PORT, public_model_id
 from services.cloud_reasoning import connection_reasoning_profile
 from services.llm.config import get_provider_config
 from services.reasoning_capabilities import get_gguf_reasoning_capabilities, get_mlx_reasoning_capabilities
-from services.vyact_runtime import get_downloaded_model_path, get_model_modalities, start_configured_runtime, stop_all_vyact_runtimes
+from services.vyact_runtime import list_selectable_models, get_downloaded_model_path, get_model_modalities, start_configured_runtime, stop_all_vyact_runtimes
 
 from services.decision_models import (
     DECISION_CONTEXT, DECISION_TIMEOUT, activate_decision_model, is_decision_model, search_decision_models,
@@ -748,9 +748,15 @@ async def install(req: ModelSelectRequest):
 @router.get("/models")
 async def get_models():
     cfg = await load_config_async()
+    mlx_available = is_apple_silicon()
+    installed_models = [*list_selectable_models(), *(list_downloaded_mlx_models() if mlx_available else [])]
+    decision_fields = {
+        "decision_installed": [model for model in installed_models if is_decision_model(model)],
+        "decision_current": cfg.get("decision_config", {}).get("model_path", ""),
+    }
     if cfg.get("type") == "vyact":
-        from services.mlx_runtime import get_active_dflash2_mlx_model, list_dflash2_supported_mlx_models, list_downloaded_mlx_models, list_mtp_supported_mlx_models
-        from services.vyact_runtime import get_active_dflash2_model, get_active_mtp_model, list_dflash2_supported_models, list_mtp_supported_models, list_multimodal_supported_models, list_selectable_models
+        from services.mlx_runtime import get_active_dflash2_mlx_model, list_dflash2_supported_mlx_models, list_mtp_supported_mlx_models
+        from services.vyact_runtime import get_active_dflash2_model, get_active_mtp_model, list_dflash2_supported_models, list_mtp_supported_models, list_multimodal_supported_models
         mlx_available = is_apple_silicon()
         current_model = cfg.get("vyact_config", {}).get("model_path", "")
         if not mlx_available and current_model.startswith("mlx/"):
@@ -769,8 +775,7 @@ async def get_models():
             "hardware": await asyncio.to_thread(get_local_hardware_info),
             "current": current_model,
             "installed": installed_models,
-            "decision_installed": [model for model in installed_models if is_decision_model(model)],
-            "decision_current": cfg.get("decision_config", {}).get("model_path", ""),
+            **decision_fields,
             "installed_details": await asyncio.to_thread(get_installed_model_details, installed_models),
             "mtp_supported": [
                 *list_mtp_supported_models(),
@@ -789,7 +794,8 @@ async def get_models():
     return {
         "models": [[cfg.get("model")]] if cfg.get("model") else [],
         "current": cfg.get("model", ""),
-        "installed": [],
+        "installed": decision_fields["decision_installed"],
+        **decision_fields,
         "model_type": cfg.get("model_type", "chat"),
     }
 

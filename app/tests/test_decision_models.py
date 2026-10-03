@@ -226,3 +226,20 @@ async def test_paste_markers_are_removed_before_choices_and_prompt(monkeypatch):
     monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
     monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_type(transport=httpx.MockTransport(handle), **kwargs))
     assert await decision.decide_chat('«PASTE:title»\n반품 기간 이내인가요?\nA) 예\nB) 아니요«/PASTE»', {'model_path': 'mlx/publisher/Tev1-4B'}) == '예'
+
+
+@pytest.mark.asyncio
+async def test_cloud_provider_preserves_installed_and_selected_decision_model(monkeypatch):
+    from routers import setup
+    model = 'mlx/togethercomputer/Tev1-0.8B-experimental'
+    monkeypatch.setattr(setup, 'load_config_async', AsyncMock(return_value={
+        'type': 'custom:groq', 'model': 'cloud-qwen', 'decision_config': {'model_path': model},
+    }))
+    monkeypatch.setattr(setup, 'is_apple_silicon', lambda: True)
+    monkeypatch.setattr(setup, 'list_selectable_models', lambda: [])
+    monkeypatch.setattr(setup, 'list_downloaded_mlx_models', lambda: [model, 'mlx/publisher/Qwen3.5-9B'])
+    result = await setup.get_models()
+    assert result['current'] == 'cloud-qwen'
+    assert result['decision_current'] == model
+    assert result['decision_installed'] == [model]
+    assert result['installed'] == [model]
