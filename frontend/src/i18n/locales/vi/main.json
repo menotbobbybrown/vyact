@@ -10,6 +10,7 @@
     "project": "Chúng ta sẽ tạo gì trong {{projectName}}?"
   },
   "chatInput": {
+    "decisionModelUnloading": "Đang tắt mô hình quyết định…",
     "placeholder": "Hỏi bất cứ gì… / lệnh · @ công cụ AI",
     "modelLoading": "Đang tải mô hình...",
     "modelLoadingWithName": "Đang tải {{model}}...",

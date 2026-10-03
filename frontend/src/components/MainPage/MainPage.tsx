@@ -837,6 +837,7 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
                                     isImageMode={models.isImageMode}
                                     selectedModel={models.selectedModel}
                                     loadingModel={models.loadingModel}
+                                    isDecisionModelUnloading={models.isDecisionModelUnloading}
                                     isLocalModel={models.installed.includes(models.selectedModel)}
                                     supportsImageInput={!models.installed.includes(models.selectedModel) || models.modelType === 'image_edit' || models.visionSupported.includes(models.selectedModel)}
                                     supportsAudioInput={!models.installed.includes(models.selectedModel) || models.audioSupported.includes(models.selectedModel)}

@@ -10,6 +10,7 @@
     "project": "{{projectName}}で何を作りましょうか？"
   },
   "chatInput": {
+    "decisionModelUnloading": "判断モデルを無効化中…",
     "placeholder": "何でも聞いてください… / コマンド · @ AIツール",
     "modelLoading": "モデル読み込み中...",
     "modelLoadingWithName": "{{model}} を読み込み中...",

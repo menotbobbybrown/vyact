@@ -27,6 +27,7 @@ export function useModels(
     const [modelType, setModelType] = useState<'chat' | 'image_gen' | 'image_edit'>('chat');
     const [isModelLoading, setIsModelLoading] = useState(false);
     const [loadingModel, setLoadingModel] = useState('');
+    const [isDecisionModelUnloading, setIsDecisionModelUnloading] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadingModel, setDownloadingModel] = useState('');
     const [downloadProgress, setDownloadProgress] = useState(0);
@@ -47,6 +48,7 @@ export function useModels(
 
     const setModelLoading = (loading: boolean, model: string = '') => {
         setIsModelLoading(loading);
+        setIsDecisionModelUnloading(false);
         setLoadingModel(loading ? model : '');
     };
 
@@ -121,6 +123,7 @@ export function useModels(
         if (isModelLoading || model === decisionModel) return;
         onBeforeModelChange?.();
         setModelLoading(true, model);
+        setIsDecisionModelUnloading(!model);
         try {
             const settings = await api.getDecisionModel();
             await api.selectDecisionModel({...settings, model_path: model});
@@ -135,7 +138,7 @@ export function useModels(
     return {
         decisionInstalled, decisionModel, handleDecisionModelChange,
         installed, mtpSupported, mtpActive, dflash2Supported, dflash2Active, visionSupported, audioSupported, selectedModel, isImageMode, modelType,
-        isModelLoading, loadingModel, isDownloading, downloadingModel, downloadProgress, downloadMessage, isModelLoadingIntoMemory,
+        isModelLoading, loadingModel, isDecisionModelUnloading, isDownloading, downloadingModel, downloadProgress, downloadMessage, isModelLoadingIntoMemory,
         setModelLoading,
         setIsDownloading, setDownloadingModel, setDownloadProgress, setDownloadMessage,
         refreshModels, handleModelChange,

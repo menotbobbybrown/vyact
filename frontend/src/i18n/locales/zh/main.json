@@ -10,6 +10,7 @@
     "project": "想在 {{projectName}} 中创建什么？"
   },
   "chatInput": {
+    "decisionModelUnloading": "正在停用判断模型…",
     "placeholder": "随便问… / 命令 · @ AI 工具",
     "modelLoading": "模型加载中...",
     "modelLoadingWithName": "正在加载 {{model}}...",

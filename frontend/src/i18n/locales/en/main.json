@@ -10,6 +10,7 @@
     "project": "What shall we create in {{projectName}}?"
   },
   "chatInput": {
+    "decisionModelUnloading": "Disabling decision model…",
     "placeholder": "Ask anything… / commands · @ AI tools",
     "modelLoading": "Loading model...",
     "modelLoadingWithName": "Loading {{model}}...",

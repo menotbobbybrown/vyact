@@ -10,6 +10,7 @@
     "project": "{{projectName}}에서 무엇을 만들어볼까요?"
   },
   "chatInput": {
+    "decisionModelUnloading": "판단 모델 해제 중…",
     "placeholder": "무엇이든 물어보세요… / 명령어 · @ AI 도구",
     "modelLoading": "모델 로딩 중...",
     "modelLoadingWithName": "{{model}} 로딩 중...",

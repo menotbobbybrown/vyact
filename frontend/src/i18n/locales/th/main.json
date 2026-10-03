@@ -10,6 +10,7 @@
     "project": "มาสร้างอะไรใน {{projectName}} กันดี?"
   },
   "chatInput": {
+    "decisionModelUnloading": "กำลังปิดโมเดลตัดสินใจ…",
     "placeholder": "ถามได้เลย… / คำสั่ง · @ เครื่องมือ AI",
     "modelLoading": "กำลังโหลดโมเดล...",
     "modelLoadingWithName": "กำลังโหลด {{model}}...",

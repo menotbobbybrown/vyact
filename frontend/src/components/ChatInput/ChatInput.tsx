@@ -63,6 +63,7 @@ interface ChatInputProps {
     modelType?: 'chat' | 'image_gen' | 'image_edit';
     isModelLoading?: boolean;
     loadingModel?: string;
+    isDecisionModelUnloading?: boolean;
     focusTrigger?: number;
     resetTrigger?: number;
     externalDragging?: boolean;
@@ -101,7 +102,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                                                  supportsImageInput = true,
                                                  supportsAudioInput = true,
                                                  modelType = 'chat',
-                                                 isModelLoading = false, loadingModel = '',
+                                                 isModelLoading = false, loadingModel = '', isDecisionModelUnloading = false,
                                                  focusTrigger = 0,
                                                  resetTrigger = 0,
                                                  externalDragging = false,
@@ -437,7 +438,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     };
 
     const placeholder = isModelLoading
-        ? t('chatInput.modelLoading')
+        ? t(isDecisionModelUnloading ? 'chatInput.decisionModelUnloading' : 'chatInput.modelLoading')
         : isImageMode
             ? modelType === 'image_edit'
                 ? t('chatInput.imageEditPlaceholder')
@@ -529,7 +530,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
                                 <div className="chat-model-loading" role="status" aria-live="polite">
                                     <span className="chat-model-loading-spinner" aria-hidden="true"/>
                                     <span className="chat-model-loading-label">
-                                        {loadingModel || selectedModel
+                                        {isDecisionModelUnloading
+                                            ? t('chatInput.decisionModelUnloading')
+                                            : loadingModel || selectedModel
                                             ? t('chatInput.modelLoadingWithName', {model: loadingModel || selectedModel})
                                             : t('chatInput.modelLoading')}
                                     </span>
