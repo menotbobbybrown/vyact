@@ -1440,5 +1440,18 @@
     "loading": "Chargement du document…",
     "error": "Impossible de prévisualiser ce document.",
     "extracted": "Texte extrait"
+  },
+  "decisionModels": {
+    "llm": "LLM",
+    "jev": "JEV",
+    "disabled": "Désactivé",
+    "active": "Jev activé",
+    "settings": "Paramètres du modèle Jev",
+    "search": "Rechercher des modèles Jev",
+    "help": "Modèles de décision locaux des familles Nimble et Tev1. Le LLM rédige les réponses libres.",
+    "settingsHelp": "Les décisions utilisent une température de 0 et au maximum 8 tokens. En cas d’incertitude ou d’échec, le LLM prend le relais. Les réponses directes prennent en charge les questions avec des choix explicites comme A) et B).",
+    "timeout": "Délai de réponse (secondes)",
+    "loadFailed": "Impossible de charger le modèle Jev.",
+    "runtimeUpgradeRequired": "Ce modèle Nimble nécessite une version de llama.cpp prenant en charge /v1/systemone. Utilisez Tev1 pour le moment."
   }
 }

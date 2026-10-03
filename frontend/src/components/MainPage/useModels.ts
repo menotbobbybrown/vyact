@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {useTranslation} from 'react-i18next';
+import {ApiError} from '../../utils/apiError';
 import { api } from '../../services/api';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 
@@ -12,6 +13,8 @@ export function useModels(
     onBeforeModelChange?: () => void,
 ) {
     const {t} = useTranslation('main');
+    const [decisionInstalled, setDecisionInstalled] = useState<string[]>([]);
+    const [decisionModel, setDecisionModel] = useState('');
     const [installed, setInstalled] = useState<string[]>([]);
     const [mtpSupported, setMtpSupported] = useState<string[]>([]);
     const [mtpActive, setMtpActive] = useState<string | null>(null);
@@ -51,13 +54,15 @@ export function useModels(
         try {
             const modelData = await api.getModels();
             setInstalled(modelData.installed || []);
+            setDecisionInstalled(modelData.decision_installed || []);
+            setDecisionModel(modelData.decision_current || '');
             setMtpSupported(modelData.mtp_supported || []);
             setMtpActive(modelData.mtp_active || null);
             setDflash2Supported(modelData.dflash2_supported || []);
             setDflash2Active(modelData.dflash2_active || null);
             setVisionSupported(modelData.vision_supported || []);
             setAudioSupported(modelData.audio_supported || []);
-            const initialModel = modelData.current || modelData.installed?.[0] || '';
+            const initialModel = modelData.current || modelData.installed?.find(model => !(modelData.decision_installed || []).includes(model)) || '';
             setSelectedModel(initialModel);
             onModelChange?.(initialModel);
             applyModelType(initialModel, modelData.model_type);
@@ -112,7 +117,23 @@ export function useModels(
         }
     };
 
+    const handleDecisionModelChange = async (model: string) => {
+        if (isModelLoading || model === decisionModel) return;
+        onBeforeModelChange?.();
+        setModelLoading(true, model);
+        try {
+            const settings = await api.getDecisionModel();
+            await api.selectDecisionModel({...settings, model_path: model});
+            await refreshModels();
+        } catch (error) {
+            toast.error(t('decisionModels.loadFailed'), error instanceof ApiError && error.detail === 'decision_runtime_upgrade_required' ? t('decisionModels.runtimeUpgradeRequired') : String(error));
+        } finally {
+            setModelLoading(false);
+        }
+    };
+
     return {
+        decisionInstalled, decisionModel, handleDecisionModelChange,
         installed, mtpSupported, mtpActive, dflash2Supported, dflash2Active, visionSupported, audioSupported, selectedModel, isImageMode, modelType,
         isModelLoading, loadingModel, isDownloading, downloadingModel, downloadProgress, downloadMessage, isModelLoadingIntoMemory,
         setModelLoading,

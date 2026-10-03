@@ -1440,5 +1440,18 @@
     "loading": "正在加载文档…",
     "error": "无法预览此文档。",
     "extracted": "提取的文本"
+  },
+  "decisionModels": {
+    "llm": "LLM",
+    "jev": "JEV",
+    "disabled": "不使用",
+    "active": "Jev 已启用",
+    "settings": "Jev 模型设置",
+    "search": "搜索 Jev 模型",
+    "help": "Nimble、Tev1 系列的本地决策模型。自由文本回答由 LLM 编写。",
+    "settingsHelp": "决策使用温度 0，最多输出 8 个令牌。不确定或失败时转交 LLM。目前直接回答支持明确列出 A)、B) 等选项的问题。",
+    "timeout": "响应超时（秒）",
+    "loadFailed": "无法加载 Jev 模型。",
+    "runtimeUpgradeRequired": "此 Nimble 模型需要支持 /v1/systemone 的 llama.cpp 版本。目前请使用 Tev1 模型。"
   }
 }

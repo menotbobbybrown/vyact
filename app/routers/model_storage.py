@@ -14,6 +14,7 @@ from config import SETUP_DONE
 from logger import get_logger
 from routers.deps import load_config_async, save_config_async
 from services import model_benchmark, model_storage
+from services.decision_models import activate_decision_model
 from services.runtime_startup import get_startup_runtime_state, warm_loaded_vyact_model
 from services.vyact_runtime import (
     initialize_downloaded_models_cache,
@@ -62,6 +63,7 @@ async def _move(plan: dict) -> None:
         restore = bool(config and config.get("vyact_config", {}).get("model_path") and await asyncio.to_thread(_runtime_available))
         if plan.get("file_count", 1):
             _progress(phase="stopping")
+            await activate_decision_model({})
             await asyncio.to_thread(stop_all_vyact_runtimes)
         else:
             restore = False

@@ -711,6 +711,9 @@ const MainPage: React.FC<MainPageProps> = ({onModelChange}) => {
                         }}
                     >
                         <Sidebar
+                            decisionInstalled={models.decisionInstalled}
+                            decisionModel={models.decisionModel}
+                            onDecisionModelChange={models.handleDecisionModelChange}
                             installed={models.installed}
                             mtpSupported={models.mtpSupported}
                             mtpActive={models.mtpActive}

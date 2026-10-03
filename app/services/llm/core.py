@@ -37,9 +37,19 @@ from services.tool_messages import get_tool_language
 from .messages import llm_message
 from services.local_model_errors import LocalModelNotDownloadedError
 from services.user_memory_tools import reset_memory_stages
+from services.decision_models import decide_chat
 
 _STREAMERS = {"openai": openai_stream, "gemini": gemini_stream, "claude": claude_stream}
 _PROVIDER_LABEL = {"openai": "OpenAI", "gemini": "Gemini", "claude": "Claude"}
+
+
+async def _route_chat_decision(question, docs, system_prompt, attachments, history, summary, reason, *, allow_direct=True):
+    if reason not in ('chat:general', 'chat:general_stream'):
+        return None
+    settings = (await load_config_async()).get('decision_config', {})
+    return await decide_chat(question, settings,
+                             allow_direct=allow_direct and not (docs or attachments or history or summary),
+                             system_prompt=system_prompt)
 
 
 async def chat_stream_with_tools(
@@ -81,6 +91,14 @@ async def chat_stream_with_tools(
     reset_memory_stages()
     attachments = attachments or []
     conversation_history = conversation_history or []
+    direct_answer = await _route_chat_decision(
+        question, context_docs, system_prompt, attachments, conversation_history,
+        conversation_summary, call_reason,
+        allow_direct=not (post_tool_docs or isolated_system_prompt or format_instruction_override),
+    )
+    if direct_answer is not None:
+        yield {'type': 'token', 'text': direct_answer}
+        return
     provider_config = await get_provider_config()
     provider_type = provider_config["type"]
     provider_label = provider_config.get("connection_name", provider_type)
@@ -348,6 +366,13 @@ async def query_llm(
         "origin_response": None, "response": None, "error": None,
     }
 
+    direct_answer = await _route_chat_decision(
+        question, context_docs, system_prompt, attachments, conversation_history,
+        conversation_summary, call_reason,
+        allow_direct=not (format_instruction_override or structured_output_schema),
+    )
+    if direct_answer is not None:
+        return direct_answer
     provider_config = await get_provider_config()
     runtime = get_runtime_settings()
     num_predict = runtime["llm_num_predict"] if num_predict is None else num_predict

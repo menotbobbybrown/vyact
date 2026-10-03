@@ -58,7 +58,7 @@ class PinnedRuntimeTests(unittest.TestCase):
                         self.assertEqual(list((root / 'versions').iterdir()), [])
                     else:
                         asyncio.run(runtime.install_pinned_components(['llama.cpp', 'llama-swap']))
-                        self.assertEqual(runtime.installed_runtime()['llama.cpp']['version'], 'b10809')
+                        self.assertEqual(runtime.installed_runtime()['llama.cpp']['version'], runtime.runtime_manifest()['llama.cpp']['version'])
                         self.assertEqual(runtime.managed_executable('llama-swap').name, 'llama-swap')
 
     def test_download_rejects_wrong_checksum(self):
@@ -152,7 +152,7 @@ class PinnedRuntimeTests(unittest.TestCase):
             previous_binary.parent.mkdir(parents=True)
             previous_binary.write_text("newer runtime")
             (root / "installed-versions.json").write_text(json.dumps({
-                "llama-swap": {"version": "v256", "executable": str(previous_binary.relative_to(root))},
+                "llama-swap": {"version": "v999", "executable": str(previous_binary.relative_to(root))},
             }))
             with patch.object(runtime, "RUNTIME_ROOT", root), \
                  patch.object(runtime, "platform_key", return_value="Darwin-arm64"), \
@@ -160,16 +160,18 @@ class PinnedRuntimeTests(unittest.TestCase):
                  patch.object(runtime, "_download", side_effect=download), \
                  patch.object(runtime, "run_install_command", new=AsyncMock(return_value=0)):
                 asyncio.run(runtime.install_pinned_components(["llama-swap"]))
-                self.assertEqual(runtime.installed_runtime()["llama-swap"]["version"], "v255")
+                self.assertEqual(runtime.installed_runtime()["llama-swap"]["version"], runtime.runtime_manifest()["llama-swap"]["version"])
                 self.assertEqual(runtime.managed_executable("llama-swap").read_text(), "older runtime")
                 self.assertEqual(previous_binary.read_text(), "newer runtime")
 
 class CachedRuntimeTests(unittest.TestCase):
     def test_retained_version_is_selected_only_after_successful_matching_probe(self):
-        for output, code, accepted in [(b'version: 10809', 0, True), (b'version: 108090', 0, False), (b'10809', 1, False)]:
+        version = runtime.runtime_manifest()['llama.cpp']['version']
+        number = version[1:]
+        for output, code, accepted in [(f'version: {number}'.encode(), 0, True), (f'version: {number}0'.encode(), 0, False), (number.encode(), 1, False)]:
             with self.subTest(output=output, code=code), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
-                executable = root / 'versions/llama.cpp-b10809-old/bin/llama-server'
+                executable = root / f'versions/llama.cpp-{version}-old/bin/llama-server'
                 executable.parent.mkdir(parents=True)
                 executable.write_text('fixture')
                 previous = {'llama.cpp': {'version': 'b10900', 'executable': 'new/llama-server'}}
@@ -183,7 +185,7 @@ class CachedRuntimeTests(unittest.TestCase):
                      patch.object(runtime, '_download', new=AsyncMock()) as download:
                     asyncio.run(runtime.reuse_pinned_components(['llama.cpp']))
                     record = json.loads((root / 'installed-versions.json').read_text())['llama.cpp']
-                    self.assertEqual(record['version'], 'b10809' if accepted else 'b10900')
+                    self.assertEqual(record['version'], version if accepted else 'b10900')
                     download.assert_not_called()
                     self.assertTrue(executable.exists())
 
@@ -207,5 +209,5 @@ class InstallationDiagnosticsTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 asyncio.run(runtime.install_pinned_components(["llama.cpp"]))
         output = "\n".join(captured.output)
-        for evidence in ("platform=", "target=b10809", "component=llama.cpp", "stage=cache_check", "Traceback", "permission denied"):
+        for evidence in ("platform=", "target=" + runtime.runtime_manifest()["llama.cpp"]["version"], "component=llama.cpp", "stage=cache_check", "Traceback", "permission denied"):
             self.assertIn(evidence, output)

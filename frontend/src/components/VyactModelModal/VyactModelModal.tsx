@@ -1,3 +1,5 @@
+import ModelRoleTabs, {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
+import DecisionModelSettingsModal from '../DecisionModelSettingsModal/DecisionModelSettingsModal';
 import ModelStorageLocation from '../common/ModelStorageLocation/ModelStorageLocation';
 import {MODEL_ESTIMATE_CONTEXT} from '../../constants/modelMemory';
 import ModelMemoryCapacity, {LayersHelp, MaxContextHelp, ModelArchitectureDetail} from '../common/ModelMemoryCapacity/ModelMemoryCapacity';
@@ -25,6 +27,7 @@ import './VyactModelModal.css';
 
 interface VyactModelModalProps {
     activeModelPath?: string;
+    initialRole?: ModelRole;
     onClose: () => void;
     onSelected: () => Promise<void>;
 }
@@ -82,13 +85,17 @@ const buildInstalledModelCards = (
     return [...models.values()];
 };
 
-export default function VyactModelModal({onClose, onSelected, activeModelPath}: VyactModelModalProps) {
+export default function VyactModelModal({onClose, onSelected, activeModelPath, initialRole = 'llm'}: VyactModelModalProps) {
     const {t} = useTranslation('main');
+    const [role, setRole] = useState<ModelRole>(initialRole);
+    const [decisionInstalled, setDecisionInstalled] = useState<string[]>([]);
+    const [decisionSettingsPath, setDecisionSettingsPath] = useState<string | null>(null);
     const [token, setToken] = useState('');
     const [tokenConfigured, setTokenConfigured] = useState(false);
     const [showToken, setShowToken] = useState(false);
     const [query, setQuery] = useState('');
     const [mlxOnly, setMlxOnly] = useState(() => navigator.platform.toUpperCase().includes('MAC'));
+    const [installedCards, setInstalledCards] = useState<VyactHubModel[]>([]);
     const [models, setModels] = useState<VyactHubModel[]>([]);
     const [installedModels, setInstalledModels] = useState<string[]>(() => api.getCachedVyactInstalledModels());
     const [visionSupportedModels, setVisionSupportedModels] = useState<string[]>([]);
@@ -135,9 +142,13 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
         setSelectedMetadata(null);
         setMessage('');
         try {
-            const searchResponse = await api.searchVyactModels(searchQuery, searchMlxOnly);
+            const searchResponse = await api.searchVyactModels(searchQuery, searchMlxOnly, role);
             if (requestId === searchRequestIdRef.current) {
-                setModels(searchResponse.models);
+                const downloaded = role === 'jev' ? installedCards.filter(model =>
+                    decisionInstalled.some(path => path === `mlx/${model.id}` || path.startsWith(`${model.id}/`))) : [];
+                const popular = role === 'jev' ? searchResponse.models.slice(0, 30) : searchResponse.models;
+                setModels([...downloaded, ...popular.filter(model => !downloaded.some(installed =>
+                    installed.id === model.id && installed.runtime === model.runtime))]);
                 setHardware(searchResponse.hardware);
                 setInstalledModels(searchResponse.installed);
                 setMtpSupportedModels(searchResponse.mtp_supported);
@@ -147,7 +158,7 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
         } finally {
             if (requestId === searchRequestIdRef.current) setIsSearching(false);
         }
-    }, [mlxOnly, token]);
+    }, [mlxOnly, token, role, installedCards, decisionInstalled]);
 
     useEffect(() => {
         void api.getModels()
@@ -159,6 +170,7 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                 const mtpSupported = response.mtp_supported || [];
                 const dflash2Supported = response.dflash2_supported || [];
                 setInstalledModels(installed);
+                setDecisionInstalled(response.decision_installed || []);
                 setMtpSupportedModels(mtpSupported);
                 const cards = buildInstalledModelCards(installed, mtpSupported, dflash2Supported);
                 const detailsCache: Record<string, CachedModelDetails> = {};
@@ -175,7 +187,11 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                     }
                 }
                 setModelDetailsCache(current => ({...current, ...detailsCache}));
-                setModels(cards);
+                setInstalledCards(cards);
+                setModels(cards.filter(model => {
+                    const decision = (response.decision_installed || []).some(path => path === `mlx/${model.id}` || path.startsWith(`${model.id}/`));
+                    return initialRole === 'jev' ? decision : !decision;
+                }));
                 setInstalledModelsStatus('ready');
             })
             .catch(error => {setInstalledModelsStatus('error'); setMessage(String(error));});
@@ -183,6 +199,11 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
             .then(status => setTokenConfigured(status.configured))
             .catch(error => console.error('Failed to load Hugging Face token status:', error));
     }, []);
+
+    useEffect(() => {
+        if (role === 'jev' && installedModelsStatus === 'ready') void searchModels('');
+        return () => {searchRequestIdRef.current += 1;};
+    }, [role, mlxOnly, installedModelsStatus, searchModels]);
 
     const saveToken = async () => {
         const trimmedToken = token.trim();
@@ -206,7 +227,11 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
 
     const downloadSelectedModel = async () => {
         if (!selectedFile) return;
-        if (selectedModelIsInstalled && selectedModelPath === activeModelPath) {
+        if (role === 'jev' && selectedModelIsInstalled) {
+            setDecisionSettingsPath(selectedModelPath);
+            return;
+        }
+        if (role === 'llm' && selectedModelIsInstalled && selectedModelPath === activeModelPath) {
             onClose();
             return;
         }
@@ -220,7 +245,7 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                 ),
             };
             if (modelToDownload.fileSize !== selectedFile.fileSize) setSelectedFile(modelToDownload);
-            if (modelToDownload.runtime === 'mlx') {
+            if (role === 'llm' && modelToDownload.runtime === 'mlx') {
                 const details = await api.inspectVyactMlxMetadata(
                     modelToDownload.repository, modelToDownload.revision, modelToDownload.fileSize, MODEL_ESTIMATE_CONTEXT,
                 );
@@ -263,12 +288,16 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                 modelToDownload.runtime,
                 token.trim(),
                 modelToDownload.fileSize,
-                modelToDownload.mtpModel,
-                modelToDownload.specprefillModel,
-                modelToDownload.dflash2Model,
-                modelToDownload.dflash2Bundled,
+                role === 'llm' ? modelToDownload.mtpModel : undefined,
+                role === 'llm' ? modelToDownload.specprefillModel : undefined,
+                role === 'llm' ? modelToDownload.dflash2Model : undefined,
+                role === 'llm' ? modelToDownload.dflash2Bundled : undefined,
             );
             setInstalledModels(api.getCachedVyactInstalledModels());
+            if (role === 'jev') {
+                setDecisionSettingsPath(selectedModelPath);
+                return;
+            }
             // Downloaded metadata and current hardware are inspected by the profile API.
             const optimizedContextSize = MODEL_ESTIMATE_CONTEXT;
             if (!selectedModelIsInstalled) {
@@ -429,7 +458,7 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
 
                         <label className="provider-editor-field">
                             <span className="vyact-search-label">
-                                <span><Search size={14}/>{t('modelSelector.searchLabel')}</span>
+                                <span><Search size={14}/>{t(role === 'jev' ? 'decisionModels.search' : 'modelSelector.searchLabel')}</span>
                                 {mlxAvailable && <button
                                     type="button"
                                     className={`vyact-mlx-switch${mlxOnly ? ' is-on' : ''}`}
@@ -488,6 +517,15 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                                 )}
                             </div>
                         )}
+                        <ModelRoleTabs role={role} disabled={busy} onChange={next => {
+                            searchRequestIdRef.current += 1;
+                            detailsRequestIdRef.current += 1;
+                            setRole(next); setHasSearched(false); setSelectedFile(null); setSelectedMetadata(null); setMessage('');
+                            setModels(installedCards.filter(model => {
+                                const decision = decisionInstalled.some(path => path === `mlx/${model.id}` || path.startsWith(`${model.id}/`));
+                                return next === 'jev' ? decision : !decision;
+                            }));
+                        }}/>
                         {(installedModelsStatus === 'loading' || isSearching) && (
                             <div className="vyact-model-empty" role="status" aria-label={t('modelSettings.loading')}><LoaderCircle className="vyact-model-spinner" size={22} aria-hidden="true"/></div>
                         )}
@@ -588,6 +626,7 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath}: 
                 </footer>
             </section>
         </ModalOverlay>
+        {decisionSettingsPath && <DecisionModelSettingsModal modelPath={decisionSettingsPath} onClose={() => {setDecisionSettingsPath(null); void onSelected(); onClose();}} onApplied={onSelected}/>}
         {downloadedSettings && <ModelSettingsModal modelPath={downloadedSettings.modelPath} runtime={downloadedSettings.runtime} repository={downloadedSettings.repository} recommendedContext={downloadedSettings.context} activateOnApply forceActivateOnApply mtpSupported={Boolean(selectedFile?.mtpSupported)} dflash2Supported={Boolean(selectedFile?.dflash2Model || selectedFile?.dflash2Bundled)} onClose={() => {setDownloadedSettings(null); void onSelected(); onClose();}} onApplied={async () => {await onSelected(); onClose();}}/>}
         {showRuntimeInstallHelp && <ConfirmModal
             title={t('modelDownload.runtimeInstallRequiredTitle')}

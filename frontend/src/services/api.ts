@@ -416,8 +416,8 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         return response.json();
     };
     return ({
-    async searchVyactModels(query: string, mlxOnly = false): Promise<VyactModelSearchResponse> {
-        const params = new URLSearchParams({q: query, mlx_only: String(mlxOnly)});
+    async searchVyactModels(query: string, mlxOnly = false, role: 'llm' | 'jev' = 'llm'): Promise<VyactModelSearchResponse> {
+        const params = new URLSearchParams({q: query, mlx_only: String(mlxOnly), role});
         const response = await fetch(`${API_BASE}/vyact/models/search?${params}`);
         const data = await response.json();
         cachedVyactInstalledModels = data.installed || [];
@@ -751,7 +751,22 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         return res.json();
     },
 
+    async getDecisionModel(): Promise<{model_path: string; context_size: number; timeout_seconds: number}> {
+        const response = await fetch(`${API_BASE}/models/decision`);
+        await assertOk(response);
+        return response.json();
+    },
+
+    async selectDecisionModel(settings: {model_path: string; context_size?: number; timeout_seconds?: number}): Promise<void> {
+        const response = await fetch(`${API_BASE}/models/decision`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(settings),
+        });
+        await assertOk(response);
+    },
+
     async getModels(): Promise<{
+        decision_installed?: string[];
+        decision_current?: string;
         installed_details?: Record<string, {fileSize: number; metadata: Pick<VyactGgufMetadata, 'architecture' | 'blockCount' | 'contextLength'>}>;
         hardware?: VyactHardwareInfo;
         models: string[][];

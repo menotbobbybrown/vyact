@@ -1450,5 +1450,18 @@
     "loading": "문서를 불러오는 중…",
     "error": "문서를 미리 볼 수 없습니다.",
     "extracted": "추출된 텍스트"
+  },
+  "decisionModels": {
+    "llm": "LLM",
+    "jev": "JEV",
+    "disabled": "사용 안 함",
+    "active": "Jev 사용 중",
+    "settings": "Jev 모델 설정",
+    "search": "Jev 모델 검색",
+    "help": "Nimble·Tev1 계열의 로컬 판단 모델입니다. 문장 작성은 LLM이 담당합니다.",
+    "settingsHelp": "판단은 온도 0, 최대 8토큰으로 실행합니다. 불확실하거나 처리에 실패하면 LLM으로 넘깁니다. 현재 직접 응답은 A)·B)처럼 선택지를 명시한 질문을 지원합니다.",
+    "timeout": "응답 대기 시간(초)",
+    "loadFailed": "Jev 모델을 불러오지 못했습니다.",
+    "runtimeUpgradeRequired": "이 Nimble 모델에는 /v1/systemone을 지원하는 llama.cpp 버전이 필요합니다. 현재는 Tev1 모델을 사용하세요."
   }
 }

@@ -172,6 +172,7 @@ const App: React.FC = () => {
                     {value: 'skip', label: t('general.runtimeUpdateLater')},
                     {value: 'update', label: t(`general.${runtimePromptPrefix}Now`), variant: 'primary'},
                 ]}
+                loadingPlacement="above-actions"
                 loading={runtimeUpdateAction !== null}
                 loadingValue={runtimeUpdateAction || undefined}
                 loadingLabel={t(runtimeUpdateAction === 'update'

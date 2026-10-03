@@ -160,3 +160,35 @@
     font-size: var(--modal-sub);
     color: var(--text-secondary);
 }
+
+.confirm-modal-loading-status {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    font-size: var(--modal-sub);
+    line-height: 1.5;
+}
+
+.confirm-modal-progress-indeterminate {
+    flex: none;
+}
+
+.confirm-modal-progress-indeterminate .confirm-modal-progress-value {
+    width: 35%;
+    animation: confirm-modal-progress-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes confirm-modal-progress-slide {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(290%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .confirm-modal-progress-indeterminate .confirm-modal-progress-value {
+        animation: none;
+        width: 100%;
+        opacity: 0.6;
+    }
+}

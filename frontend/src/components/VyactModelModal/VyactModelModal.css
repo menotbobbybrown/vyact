@@ -166,3 +166,9 @@
 .vyact-model-editor .vyact-model-file-row > .vyact-model-file-meta,
 .vyact-model-editor .vyact-model-file-row > .vyact-model-file-stats { grid-row: 1; }
 .vyact-model-editor .vyact-model-file-row > .vyact-model-file-name:only-child { grid-column: 1 / -1; }
+
+.decision-model-help {
+    color: var(--muted);
+    font-size: var(--modal-small);
+    margin: 12px 0;
+}

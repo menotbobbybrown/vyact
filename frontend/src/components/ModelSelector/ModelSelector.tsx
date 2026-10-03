@@ -7,9 +7,14 @@ import CustomSelect from '../CustomSelect/CustomSelect';
 import type {SelectOption} from '../CustomSelect/CustomSelect';
 import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
 import ActionMenu from '../common/ActionMenu/ActionMenu';
+import ModelRoleTabs, {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
 import './ModelSelector.css';
 
 interface ModelSelectorProps {
+    decisionInstalled: string[];
+    decisionModel: string;
+    onDecisionModelChange: (model: string) => Promise<void>;
+    onDecisionSettingsOpen: (model: string) => void;
     installed: string[];
     mtpSupported: string[];
     mtpActive: string | null;
@@ -23,7 +28,7 @@ interface ModelSelectorProps {
     onModelChange: (model: string, needsDownload: boolean, modelType?: ModelType) => void;
     onModelDelete: (model: string) => Promise<void>;
     onModelSettingsOpen: (model: string) => void;
-    onProviderSettingsOpen: () => void;
+    onProviderSettingsOpen: (role?: ModelRole) => void;
 }
 
 type ModelType = 'chat' | 'image_gen' | 'image_edit';
@@ -31,6 +36,7 @@ type ModelType = 'chat' | 'image_gen' | 'image_edit';
 const getModelDisplayName = (modelId: string) => modelId.split('/').filter(Boolean).pop() || modelId;
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({
+                                                         decisionInstalled, decisionModel, onDecisionModelChange, onDecisionSettingsOpen,
                                                          installed,
                                                          mtpSupported,
                                                          mtpActive,
@@ -47,6 +53,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                          onProviderSettingsOpen,
                                                      }) => {
     const {t} = useTranslation('main');
+    const [role, setRole] = useState<ModelRole>('llm');
+    const activeSelection = role === 'jev' ? decisionModel : selectedModel;
     const [modelToDelete, setModelToDelete] = useState<string | null>(null);
     const [modelMenuOpen, setModelMenuOpen] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -55,10 +63,12 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         onModelChange(model, needsDownload, modelType);
     };
 
-    const allModelIds = installed;
+    const allModelIds = role === 'jev' ? decisionInstalled : installed.filter(id => !decisionInstalled.includes(id));
     const options: SelectOption[] = allModelIds.map(id => {
         return {value: id, label: getModelDisplayName(id)};
     });
+
+    if (role === 'jev') options.unshift({value: '', label: t('decisionModels.disabled')});
 
     // 트리거: dot + 모델명
     const renderTrigger = (_label: string, open: boolean) => {
@@ -75,6 +85,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 <ModelCapabilityIcons image={supportsVision} audio={supportsAudio}/>
                 <OverflowTooltipText as="span" className="mname"
                     text={selectedModel ? getModelDisplayName(selectedModel) : t('modelSelector.selectModel')}/>
+                {decisionModel && <span className="decision-model-status" title={getModelDisplayName(decisionModel)}>{t('decisionModels.active')}</span>}
                 <span className={`custom-select-arrow${open ? ' open' : ''}`}>▼</span>
             </>
         );
@@ -82,6 +93,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
     // 옵션 아이템: dot/체크 + 모델명 + 추천뱃지 + 설치상태
     const renderOption = (opt: SelectOption, isSelected: boolean, closeDropdown: () => void) => {
+        if (!opt.value) return <div className="dd-model-disabled-label">{opt.label}</div>;
         const isInst = installed.includes(opt.value);
         const showMtp = currentProvider === 'vyact' && mtpSupported.includes(opt.value);
         const showDFlash2 = currentProvider === 'vyact' && dflash2Supported.includes(opt.value);
@@ -123,8 +135,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     triggerClassName="dd-model-more"
                     menuClassName="dd-model-actions-menu"
                 >
-                    <button type="button" className="dd-model-action" onClick={() => {setModelMenuOpen(null); closeDropdown(); onModelSettingsOpen(opt.value);}}><Settings size={15}/>{t('modelSettings.title')}</button>
-                    {!isSelected && <button type="button" className="dd-model-action danger" onClick={() => {setModelMenuOpen(null); setModelToDelete(opt.value);}}><Trash2 size={15}/>{t('modelSelector.delete')}</button>}
+                    <button type="button" className="dd-model-action" onClick={() => {setModelMenuOpen(null); closeDropdown(); if (role === 'jev') onDecisionSettingsOpen(opt.value); else onModelSettingsOpen(opt.value);}}><Settings size={15}/>{t(role === 'jev' ? 'decisionModels.settings' : 'modelSettings.title')}</button>
+                    {!isSelected && opt.value !== selectedModel && opt.value !== decisionModel && <button type="button" className="dd-model-action danger" onClick={() => {setModelMenuOpen(null); setModelToDelete(opt.value);}}><Trash2 size={15}/>{t('modelSelector.delete')}</button>}
                 </ActionMenu>}
             </>
         );
@@ -142,7 +154,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                             <span className="cloud-model-status" aria-hidden="true"/>
                             <span>{selectedModel || t('modelSelector.noModel')}</span>
                         </div>
-                        <button className="cloud-model-settings" type="button" disabled={disabled} onClick={onProviderSettingsOpen} aria-label={t('modelSelector.settingsManage')}><Pencil size={16}/></button>
+                        <button className="cloud-model-settings" type="button" disabled={disabled} onClick={() => onProviderSettingsOpen(role)} aria-label={t('modelSelector.settingsManage')}><Pencil size={16}/></button>
                     </div>
                 </div>
             </div>
@@ -152,8 +164,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     return (<>
         <CustomSelect
             options={options}
-            value={selectedModel}
-            onChange={id => handleLocalModelSelect(id)}
+            value={activeSelection}
+            header={<ModelRoleTabs role={role} onChange={next => {setRole(next); setModelMenuOpen(null);}}/>}
+            onChange={id => role === 'jev' ? void onDecisionModelChange(id) : handleLocalModelSelect(id)}
             searchable
             disabled={disabled}
             searchPlaceholder={t('modelSelector.modelSearch')}
@@ -163,7 +176,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     type="button"
                     className="custom-select-search-action"
                     aria-label={t('modelSelector.settingsManage')}
-                    onClick={onProviderSettingsOpen}
+                    onClick={() => onProviderSettingsOpen(role)}
                 >
                     <Settings size={15} aria-hidden="true"/>
                 </button>

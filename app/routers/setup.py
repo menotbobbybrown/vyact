@@ -61,6 +61,10 @@ from services.llm.config import get_provider_config
 from services.reasoning_capabilities import get_gguf_reasoning_capabilities, get_mlx_reasoning_capabilities
 from services.vyact_runtime import get_downloaded_model_path, get_model_modalities, start_configured_runtime, stop_all_vyact_runtimes
 
+from services.decision_models import (
+    DECISION_CONTEXT, DECISION_TIMEOUT, activate_decision_model, is_decision_model, search_decision_models,
+)
+
 logger = get_logger(__name__)
 
 async def _get_or_create_model_profile(
@@ -137,6 +141,43 @@ def _profile_runtime_settings(profile: dict) -> dict:
     }
 
 router = APIRouter()
+
+
+class DecisionModelRequest(BaseModel):
+    model_path: str = Field(default='', max_length=1024)
+    context_size: int = Field(default=DECISION_CONTEXT, ge=512, le=32768)
+    timeout_seconds: int = Field(default=DECISION_TIMEOUT, ge=5, le=120)
+
+
+@router.get('/models/decision')
+async def get_decision_model():
+    config = await load_config_async()
+    return {'context_size': DECISION_CONTEXT, 'timeout_seconds': DECISION_TIMEOUT,
+            'model_path': '', **config.get('decision_config', {})}
+
+
+@router.post('/models/decision')
+@protected('runtime')
+async def select_decision_model(req: DecisionModelRequest):
+    config = await load_config_async()
+    if req.model_path and not is_decision_model(req.model_path):
+        raise HTTPException(400, 'decision_model_unsupported')
+    previous = config.get('decision_config', {})
+    settings = req.model_dump()
+    try:
+        await activate_decision_model(settings)
+        config = await load_config_async()
+        config['decision_config'] = settings
+        await save_config_async(config)
+    except Exception as error:
+        try:
+            await activate_decision_model(previous)
+        except Exception:
+            logger.exception('[decision] previous model restoration failed')
+        logger.exception('[decision] activation failed')
+        error_code = 'decision_runtime_upgrade_required' if str(error) == 'decision_runtime_upgrade_required' else 'decision_model_load_failed'
+        raise HTTPException(400, error_code) from error
+    return settings
 
 
 class ModelSelectRequest(BaseModel):
@@ -728,6 +769,8 @@ async def get_models():
             "hardware": await asyncio.to_thread(get_local_hardware_info),
             "current": current_model,
             "installed": installed_models,
+            "decision_installed": [model for model in installed_models if is_decision_model(model)],
+            "decision_current": cfg.get("decision_config", {}).get("model_path", ""),
             "installed_details": await asyncio.to_thread(get_installed_model_details, installed_models),
             "mtp_supported": [
                 *list_mtp_supported_models(),
@@ -755,7 +798,7 @@ async def get_models():
 async def delete_vyact_model(req: VyactModelDeleteRequest):
     config = await load_config_async()
     current_model = str(config.get("vyact_config", {}).get("model_path") or "")
-    if req.model_path == current_model:
+    if req.model_path in {current_model, str(config.get("decision_config", {}).get("model_path") or "")}:
         raise HTTPException(409, "현재 사용 중인 모델은 삭제할 수 없습니다.")
     try:
         if req.model_path.startswith("mlx/"):
@@ -772,7 +815,7 @@ async def delete_vyact_model(req: VyactModelDeleteRequest):
 
 
 @router.get("/vyact/models/search")
-async def search_vyact_models(q: str = Query("", max_length=200), mlx_only: bool = Query(False)):
+async def search_vyact_models(q: str = Query("", max_length=200), mlx_only: bool = Query(False), role: str = Query("llm", pattern="^(llm|jev)$")):
     """Search all compatible repositories, or only MLX when explicitly requested."""
     try:
         from services.mlx_runtime import list_dflash2_supported_mlx_models, list_downloaded_mlx_models, list_mtp_supported_mlx_models
@@ -782,7 +825,9 @@ async def search_vyact_models(q: str = Query("", max_length=200), mlx_only: bool
         token = config.get("vyact_config", {}).get("huggingface_token")
 
         mlx_available = is_apple_silicon()
-        if mlx_only and mlx_available:
+        if role == "jev":
+            models = await search_decision_models(q, mlx_only and mlx_available, token)
+        elif mlx_only and mlx_available:
             models = await search_mlx_models(q, token)
         elif mlx_available:
             gguf_models, mlx_models = await asyncio.gather(
@@ -794,6 +839,8 @@ async def search_vyact_models(q: str = Query("", max_length=200), mlx_only: bool
             )[:MODEL_SEARCH_RESULT_LIMIT]
         else:
             models = await search_gguf_models(q, token)
+        if role == "llm":
+            models = [model for model in models if not is_decision_model(model["id"])]
         models = await enrich_model_file_sizes(models[:MODEL_SEARCH_RESULT_LIMIT], token)
         return {
             "models": models,

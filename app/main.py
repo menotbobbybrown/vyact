@@ -16,6 +16,7 @@ import warnings
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
+from services.decision_models import stop_decision_runtime
 from services.web_search_tools import register_web_search_tools
 from services.user_memory_tools import register_user_memory_tools
 from services.shutdown_guard import guard as shutdown_guard, ShutdownPending, interruptible_download_pids
@@ -422,6 +423,7 @@ async def lifespan(app: FastAPI):
     trace_startup("application.lifespan", "end")
     yield
     await shutdown_model_benchmark()
+    await asyncio.to_thread(stop_decision_runtime)
 
     external_api_server.should_exit = True
     await asyncio.gather(external_api_task, return_exceptions=True)

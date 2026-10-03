@@ -2,7 +2,7 @@
 
 `app/services/runtime_versions.json` is the release-owned source of truth for llama.cpp, llama-swap and oMLX. Installation never resolves `latest`, invokes a package-manager upgrade, or modifies the user's existing runtime installation. Downloads must match the recorded SHA-256. New installations use isolated version directories; a single atomic manifest change activates the completed installation. Existing directories remain available for rollback. A failed or cancelled installation leaves the active manifest unchanged.
 
-The initial pins are the latest stable upstream releases checked on 2026-09-14: llama.cpp v0.4.0 (the upstream release's `nightly-tag.txt` selects b10809), llama-swap v255, and oMLX v0.6.4. These are **selected installation versions**, not a claim that Vyact has validated them on every supported machine.
+The pins are the latest stable upstream releases checked on 2026-10-03: llama.cpp v0.5.0 (the upstream release's `nightly-tag.txt` selects b11146), llama-swap v261, and oMLX v0.7.0. These are **selected installation versions**, not a claim that Vyact has validated them on every supported machine.
 
 ## Version changes and user consent
 

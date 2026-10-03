@@ -1,71 +1,71 @@
 {
   "schema": 1,
   "llama.cpp": {
-    "version": "b10809",
-    "release": "v0.4.0",
-    "commit": "5266f24da75dc449bd56cbed7addb9c8e4a6a73e",
+    "version": "b11146",
+    "release": "v0.5.0",
+    "commit": "7fe450e19305b828c199d602c23a8337aaa1f03b",
     "assets": {
       "Darwin-arm64": {
-        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-macos-arm64.tar.gz",
-        "sha256": "7d692df9e1e386e62f1c12b843903218041e6cd74c9415aa39a7ed3176f9eaa2"
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11146/llama-b11146-bin-macos-arm64.tar.gz",
+        "sha256": "1ad3f9eff80edb9dbef4259ad564d1720612ef7eea48fa4afed0e54f5f3d5711"
       },
       "Darwin-x86_64": {
-        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-macos-x64.tar.gz",
-        "sha256": "13b34aa8a5d87341a21065a83f54a8167e1aaa6fe0d66065de01632a1ed64be6"
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11146/llama-b11146-bin-macos-x64.tar.gz",
+        "sha256": "305f0e3a17d2c01eb205cd0a62128357f1ec3b55329cb084d94e5ec0115d7a3b"
       },
       "Linux-x86_64": {
-        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-ubuntu-x64.tar.gz",
-        "sha256": "5e34434ddc6d03cd1584f403201aff0d4bd1a5793a72ff7e286532dfd1e4b941"
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11146/llama-b11146-bin-ubuntu-x64.tar.gz",
+        "sha256": "c150306eb16b5ab696f76a8bdf810c35fd98a24e82158742e6fa28f420ff8410"
       },
       "Linux-arm64": {
-        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-ubuntu-arm64.tar.gz",
-        "sha256": "f2b7333971e1b7b42e9268bfdbfa30f5f56e2897156084d2251385df94aec358"
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11146/llama-b11146-bin-ubuntu-arm64.tar.gz",
+        "sha256": "4aeda6fe68831547e49b7fa87607383ca5352b3d72ca5f70d52ed265f58c131f"
       },
       "Windows-x86_64": {
-        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-win-vulkan-x64.zip",
-        "sha256": "97e50b3ef0cdd2cb4d5afd446a9006b3496bee6c0d0ba7083d32f36075771870"
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11146/llama-b11146-bin-win-vulkan-x64.zip",
+        "sha256": "55a378aa095b466979d85075234f66d7655c7a7483222af0c006c0e55b4d7bd6"
       }
     }
   },
   "llama-swap": {
-    "version": "v255",
+    "version": "v261",
     "assets": {
       "Darwin-arm64": {
-        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_darwin_arm64.tar.gz",
-        "sha256": "d11b4c733da1c64ffd1b955f64b6af92a8c66a443aeeafeef2e84d3bf1fbf531"
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v261/llama-swap_261_darwin_arm64.tar.gz",
+        "sha256": "f254fa5fb98883b93862f1e5cf833ede76df522f9b8951410134d515c7ead1ba"
       },
       "Darwin-x86_64": {
-        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_darwin_amd64.tar.gz",
-        "sha256": "98383f95298919cd6a73fcb11dadc78d53754bfe5d3de519fdead112f336f707"
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v261/llama-swap_261_darwin_amd64.tar.gz",
+        "sha256": "af6f2c2c20a5f320134f8ef90b7dc38d658032accb54946ffdd7294db171fec1"
       },
       "Linux-x86_64": {
-        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_linux_amd64.tar.gz",
-        "sha256": "84aa0df0cf3e302a8591e39de347f64c0c7dce1c3a948df68723a82e1fb4f1d4"
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v261/llama-swap_261_linux_amd64.tar.gz",
+        "sha256": "013dc1424382d5347d7d2d9c6193d61da9aa5d6addff30637a2ababc51033b77"
       },
       "Linux-arm64": {
-        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_linux_arm64.tar.gz",
-        "sha256": "98686bc626e2d3df3b340b963fd4e4f4d3dd02dcd1bf31f0c777fb09e3053288"
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v261/llama-swap_261_linux_arm64.tar.gz",
+        "sha256": "479aefda1f951e8fd26ac03be291da9338361d43e914986470c9687cfbca945e"
       },
       "Windows-x86_64": {
-        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v255/llama-swap_255_windows_amd64.zip",
-        "sha256": "14b40b2e11479af9a83dec3ac2bf7f82864e62099f012b171591b871b9f88aae"
+        "url": "https://github.com/mostlygeek/llama-swap/releases/download/v261/llama-swap_261_windows_amd64.zip",
+        "sha256": "e7208ec31a9a019d582bfd1a15cd3425a4f265b5139456a62d15365b07caf1f5"
       }
     }
   },
   "omlx": {
-    "version": "v0.6.4",
+    "version": "v0.7.0",
     "assets": {
       "311": {
-        "url": "https://github.com/jundot/omlx/releases/download/v0.6.4/omlx-0.6.4-cp311-cp311-macosx_15_0_universal2.whl",
-        "sha256": "26213a3962010367356a5a1954e0912b1d04752f563fe29c249a5ab510c02d4c"
+        "url": "https://github.com/jundot/omlx/releases/download/v0.7.0/omlx-0.7.0-cp311-cp311-macosx_15_0_universal2.whl",
+        "sha256": "a25b0fbf86579512ced2a45b9aba420a51e6e8f3ee9ea3832ea1b9111d2cc4a7"
       },
       "312": {
-        "url": "https://github.com/jundot/omlx/releases/download/v0.6.4/omlx-0.6.4-cp312-cp312-macosx_15_0_universal2.whl",
-        "sha256": "f13d92900bf6c7e925e9a6d5525b4465c615c404ee796d328ffc5d4d379ddb0b"
+        "url": "https://github.com/jundot/omlx/releases/download/v0.7.0/omlx-0.7.0-cp312-cp312-macosx_15_0_universal2.whl",
+        "sha256": "42ff3d25a40468781110933a64dc7037dcbe8590ab93851db82a12a5df81617b"
       },
       "313": {
-        "url": "https://github.com/jundot/omlx/releases/download/v0.6.4/omlx-0.6.4-cp313-cp313-macosx_15_0_universal2.whl",
-        "sha256": "7af057b3e18f5afe718babcd4374d6e50169e82d7b35302143e3d8f257aaaa21"
+        "url": "https://github.com/jundot/omlx/releases/download/v0.7.0/omlx-0.7.0-cp313-cp313-macosx_15_0_universal2.whl",
+        "sha256": "9231b604b8d8bd2d6c7c598847e01bedb2cedafd5d620c46aab940ddde8452bf"
       }
     }
   },

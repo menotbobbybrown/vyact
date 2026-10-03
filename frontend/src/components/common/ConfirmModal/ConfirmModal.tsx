@@ -20,6 +20,7 @@ interface ConfirmModalProps {
     onClose: () => void;
     actionLayout?: 'vertical' | 'horizontal';
     loading?: boolean;
+    loadingPlacement?: 'button' | 'above-actions';
     loadingValue?: string;
     loadingLabel?: string;
     loadingProgress?: number;
@@ -31,7 +32,7 @@ interface ConfirmModalProps {
  */
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
     className = '', title, description, details, options, onSelect, onClose, actionLayout = 'vertical',
-    loading = false, loadingValue, loadingLabel, loadingProgress,
+    loading = false, loadingPlacement = 'button', loadingValue, loadingLabel, loadingProgress,
 }) => {
     return (
         <ModalOverlay className="confirm-modal-overlay" onClose={loading ? () => undefined : onClose}
@@ -42,6 +43,13 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 {!!details?.length && <ul className="confirm-modal-details">
                     {details.map(detail => <li key={detail}>{detail}</li>)}
                 </ul>}
+                {loading && loadingPlacement === 'above-actions' && <div className="confirm-modal-loading-status" role="status">
+                    <span>{loadingLabel || title}</span>
+                    {loadingProgress === undefined && <div className="confirm-modal-progress-track confirm-modal-progress-indeterminate"
+                                                          role="progressbar" aria-label={loadingLabel || title}>
+                        <div className="confirm-modal-progress-value"/>
+                    </div>}
+                </div>}
                 {loading && loadingProgress !== undefined && <div className="confirm-modal-progress">
                     <div className="confirm-modal-progress-track" role="progressbar"
                          aria-label={loadingLabel || title} aria-valuemin={0} aria-valuemax={100}
@@ -52,7 +60,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 </div>}
                 <div className={`confirm-modal-actions ${actionLayout}`}>
                     {options.map(opt => {
-                        const isLoadingOption = loading && opt.value === loadingValue;
+                        const isLoadingOption = loading && loadingPlacement === 'button' && opt.value === loadingValue;
                         return (
                         <button
                             key={opt.value}

@@ -1440,5 +1440,18 @@
     "loading": "文書を読み込み中…",
     "error": "文書をプレビューできません。",
     "extracted": "抽出されたテキスト"
+  },
+  "decisionModels": {
+    "llm": "LLM",
+    "jev": "JEV",
+    "disabled": "使用しない",
+    "active": "Jev有効",
+    "settings": "Jevモデル設定",
+    "search": "Jevモデル検索",
+    "help": "Nimble・Tev1系のローカル判断モデルです。文章の作成はLLMが担当します。",
+    "settingsHelp": "判断は温度0、最大8トークンで実行します。不確実な場合や失敗時はLLMに渡します。直接回答は現在、A)・B)など選択肢を明示した質問に対応します。",
+    "timeout": "応答待機時間（秒）",
+    "loadFailed": "Jevモデルを読み込めませんでした。",
+    "runtimeUpgradeRequired": "このNimbleモデルには/v1/systemone対応のllama.cppが必要です。現在はTev1モデルを使用してください。"
   }
 }

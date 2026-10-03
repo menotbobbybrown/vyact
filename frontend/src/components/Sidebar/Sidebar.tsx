@@ -5,6 +5,7 @@ import {useTranslation} from 'react-i18next';
 import {Pencil, Trash2, FileText, FileCode, NotebookText, Plus, ChevronDown, SquarePen, LoaderCircle, RefreshCw, Pin, PinOff, MessageCircle, Folder} from 'lucide-react';
 import {renderMarkdown} from '../../utils/markdownUtils';
 import ModelSelector from '../ModelSelector';
+import type {ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import {api} from '../../services/api';
 import type {CustomProviderSettings} from '../../services/api';
@@ -23,10 +24,14 @@ import AppUpdateNotice from './AppUpdateNotice';
 const ProviderSettingsModal = React.lazy(() => import('../ProviderSettingsModal/ProviderSettingsModal'));
 const CustomProviderModal = React.lazy(() => import('../CustomProviderModal/CustomProviderModal'));
 const VyactModelModal = React.lazy(() => import('../VyactModelModal/VyactModelModal'));
+const DecisionModelSettingsModal = React.lazy(() => import('../DecisionModelSettingsModal/DecisionModelSettingsModal'));
 const ModelSettingsModal = React.lazy(() => import('../ModelSettingsModal/ModelSettingsModal'));
 const SettingsModal = React.lazy(() => import('../SettingsModal/SettingsModal'));
 
 interface SidebarProps {
+    decisionInstalled: string[];
+    decisionModel: string;
+    onDecisionModelChange: (model: string) => Promise<void>;
     installed: string[];
     mtpSupported: string[];
     mtpActive: string | null;
@@ -249,7 +254,7 @@ blockquote{border-left:3px solid var(--accent);padding:8px 14px;margin:10px 0;co
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-                                             installed, mtpSupported, mtpActive, dflash2Supported, dflash2Active, visionSupported, audioSupported, selectedModel, openModelSettingsRequest = 0, isModelLoading = false, isChatBusy = false, onModelLoadingChange, onModelChange, onProviderChange,
+                                             decisionInstalled, decisionModel, onDecisionModelChange, installed, mtpSupported, mtpActive, dflash2Supported, dflash2Active, visionSupported, audioSupported, selectedModel, openModelSettingsRequest = 0, isModelLoading = false, isChatBusy = false, onModelLoadingChange, onModelChange, onProviderChange,
                                              onBeforeModelContextChange,
                                              conversations, favoriteConversations = [], activeConvId, activeConversationIds = [], onConversationSelect, onConversationDelete,
                                              historyTotal = 0, onLoadMoreHistory, onRefreshHistory,
@@ -436,6 +441,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     const [customProviderEditor, setCustomProviderEditor] = useState<CustomProviderSettings | 'new' | null>(null);
     const [providerToDelete, setProviderToDelete] = useState<CustomProviderSettings | null>(null);
     const [isVyactModalOpen, setIsVyactModalOpen] = useState(false);
+    const [downloadModelRole, setDownloadModelRole] = useState<ModelRole>('llm');
+    const [decisionSettingsPath, setDecisionSettingsPath] = useState<string | null>(null);
     const [modelSettingsPath, setModelSettingsPath] = useState<string | null>(null);
     const handledModelSettingsRequestRef = useRef(0);
     useEffect(() => {
@@ -617,6 +624,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className="sidebar-section sidebar-model-section">
                             <div className="sec-label">{t('sidebar.model')}</div>
                             <ModelSelector
+                                decisionInstalled={decisionInstalled}
+                                decisionModel={decisionModel}
+                                onDecisionModelChange={onDecisionModelChange}
+                                onDecisionSettingsOpen={setDecisionSettingsPath}
                                 installed={installed}
                                 mtpSupported={mtpSupported}
                                 mtpActive={mtpActive}
@@ -645,7 +656,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     }
                                 }}
                                 onModelSettingsOpen={setModelSettingsPath}
-                                onProviderSettingsOpen={() => {
+                                onProviderSettingsOpen={(role = 'llm') => {
+                                    setDownloadModelRole(role);
                                     if (currentProvider === 'vyact') {
                                         setIsVyactModalOpen(true);
                                         return;
@@ -999,7 +1011,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }}
             /></React.Suspense>}
         </aside>
-            {isVyactModalOpen && <React.Suspense fallback={null}><VyactModelModal activeModelPath={currentProvider === 'vyact' ? selectedModel : undefined} onClose={() => setIsVyactModalOpen(false)} onSelected={async () => { await loadCurrentProvider(); await onProviderChange(); }}/></React.Suspense>}
+            {isVyactModalOpen && <React.Suspense fallback={null}><VyactModelModal initialRole={downloadModelRole} activeModelPath={currentProvider === 'vyact' ? selectedModel : undefined} onClose={() => setIsVyactModalOpen(false)} onSelected={async () => { await loadCurrentProvider(); await onProviderChange(); }}/></React.Suspense>}
+            {decisionSettingsPath && <React.Suspense fallback={null}><DecisionModelSettingsModal modelPath={decisionSettingsPath} onClose={() => setDecisionSettingsPath(null)} onApplied={onProviderChange}/></React.Suspense>}
             {modelSettingsPath && <React.Suspense fallback={null}><ModelSettingsModal modelPath={modelSettingsPath} runtime={modelSettingsPath.startsWith('mlx/') ? 'mlx' : 'gguf'} repository={modelSettingsPath.startsWith('mlx/') ? modelSettingsPath.slice(4) : undefined} activateOnApply forceActivateOnApply={modelSettingsPath !== selectedModel} mtpSupported={mtpSupported.includes(modelSettingsPath)} dflash2Supported={dflash2Supported.includes(modelSettingsPath)} onClose={() => setModelSettingsPath(null)} onApplied={async () => {await loadCurrentProvider(); await onProviderChange();}}/></React.Suspense>}
             {isSettingsOpen && <React.Suspense fallback={null}>
                 <SettingsModal isOpen onClose={() => setIsSettingsOpen(false)} initialTab={openSettingsTab} initialMcpServerId={openSettingsMcpServerId}/>
