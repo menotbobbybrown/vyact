@@ -5,7 +5,7 @@
 .model-settings-model { display: flex; align-items: center; gap: 5px; max-width: 390px; margin-top: 4px; color: var(--muted); font-size: 13px; }
 .model-settings-model-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-settings-modal header .model-settings-model-help { display: grid; place-items: center; flex: 0 0 17px; width: 17px; height: 17px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: help; }
-.model-settings-modal header .model-settings-model-help:hover, .model-settings-modal header .model-settings-model-help:focus-visible { outline: none; background: var(--surface2); color: var(--text-secondary); }
+.model-settings-modal header .model-settings-model-help:hover, .model-settings-modal header .model-settings-model-help:focus-visible { outline: none; box-shadow: none; background: transparent; color: var(--accent); }
 .model-settings-modal button { padding: 9px 15px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); cursor: pointer; }
 .model-settings-modal .model-settings-cancel { border-color: color-mix(in srgb, var(--text-secondary) 35%, var(--border)); background: transparent; color: var(--text); font-weight: 500; transition: background .15s, color .15s, border-color .15s; }
 .model-settings-modal .model-settings-cancel:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); border-color: var(--accent); color: var(--accent); }

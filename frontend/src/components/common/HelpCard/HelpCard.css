@@ -1,0 +1,5 @@
+.help-card { display: flex; flex-direction: column; gap: 10px; width: 280px; max-width: 100%; white-space: normal; text-align: start; font-weight: 400; }
+.help-card-title { color: var(--text); font-size: 13px; font-weight: 700; }
+.help-card-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding-inline-start: 16px; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.help-card-list li::marker { color: var(--accent); }
+.help-card-note { padding: 7px 9px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text-secondary); font-size: 11px; line-height: 1.45; white-space: pre-line; }

@@ -7,6 +7,7 @@ import {getCustomProtocolOptions, OPENAI_COMPATIBLE_DOCS_URL} from '../../consta
 import CustomSelect from '../CustomSelect/CustomSelect';
 import ToggleSwitch from '../common/ToggleSwitch/ToggleSwitch';
 import SettingLabel from '../common/SettingLabel/SettingLabel';
+import HelpCard from '../common/HelpCard/HelpCard';
 import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import '../ProviderSettingsModal/ProviderSettingsModal.css';
@@ -156,11 +157,14 @@ const CustomProviderEditor: React.FC<CustomProviderModalProps> = ({connection, d
                 </section>
 
                 <section className="provider-editor-section">
-                    <div className="provider-editor-grid">
-                        <label className="provider-editor-field"><span>{t('customProvider.parameter')}</span><input value={outputTokenParameter} onChange={event => setOutputTokenParameter(event.target.value)}/></label>
-                        <label className="provider-editor-field"><SettingLabel helpHoverOnly helpPlacement="below" label={t('modelSettings.maxOutput')} help={<div className="custom-provider-help"><strong>{t('modelSettings.maxOutput')}</strong><p>{t('customProvider.maxOutputHelp')}</p></div>}/><input type="number" min="1" step="1" value={maxOutputTokens} placeholder={t('customProvider.unset')} onChange={event => setMaxOutputTokens(event.target.value)}/></label>
+                    <div className="provider-editor-field">
+                        <SettingLabel helpHoverOnly helpPlacement="below" label={t('modelSettings.maxOutput')} help={<HelpCard title={t('modelSettings.maxOutput')} items={t('customProvider.maxOutputHelp').split('\n\n')[0].split('\n').filter(Boolean)} note={t('customProvider.maxOutputHelp').split('\n\n').slice(1).join('\n')}/>}/>
+                        <div className="provider-editor-grid">
+                            <label className="provider-editor-field"><input aria-label={t('customProvider.parameter')} placeholder={t('customProvider.parameter')} value={outputTokenParameter} onChange={event => setOutputTokenParameter(event.target.value)}/></label>
+                            <label className="provider-editor-field"><input aria-label={t('modelSettings.maxOutput')} type="number" min="1" step="1" value={maxOutputTokens} placeholder={t('customProvider.tokenCount')} onChange={event => setMaxOutputTokens(event.target.value)}/></label>
+                        </div>
                     </div>
-                    <label className="provider-editor-field"><SettingLabel helpHoverOnly helpPlacement="below" label={t('modelSettings.historyTokenBudget')} help={<div className="custom-provider-help"><strong>{t('modelSettings.historyTokenBudget')}</strong><p>{t('customProvider.historyTokenBudgetHelp')}</p></div>}/><input type="number" min="0" step="1" value={historyTokenBudget} placeholder={t('customProvider.unset')} onChange={event => setHistoryTokenBudget(event.target.value)}/></label>
+                    <label className="provider-editor-field"><SettingLabel helpHoverOnly helpPlacement="below" label={t('modelSettings.historyTokenBudget')} help={<HelpCard title={t('modelSettings.historyTokenBudget')} items={t('customProvider.historyTokenBudgetHelp').split('\n\n')[0].split('\n').filter(Boolean)} note={t('customProvider.historyTokenBudgetHelp').split('\n\n').slice(1).join('\n')}/>}/><input type="number" min="0" step="1" value={historyTokenBudget} placeholder={t('customProvider.tokenCount')} onChange={event => setHistoryTokenBudget(event.target.value)}/></label>
                 </section>
 
                 <section className="provider-editor-section connection-reasoning-section">

@@ -1,2 +1,2 @@
 .help-icon-button { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; padding:0; flex-shrink:0; border:1px solid var(--border); border-radius:50%; background:transparent; color:var(--muted); font-size:11px; font-weight:700; line-height:1; cursor:help; }
-.help-icon-button:hover, .help-icon-button:focus-visible { color:var(--accent); border-color:var(--accent); outline:2px solid color-mix(in srgb,var(--accent) 20%,transparent); outline-offset:2px; }
+.help-icon-button:hover, .help-icon-button:focus-visible { color:var(--accent); border-color:var(--accent); outline:none; box-shadow:none; background:transparent; }

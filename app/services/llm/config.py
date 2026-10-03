@@ -102,7 +102,7 @@ async def get_provider_config() -> dict:
                         "model": connection.get("model", DEFAULT_MODEL),
                         "api_key": connection.get("api_key"),
                         "base_url": connection.get("base_url"),
-                        "context_size": connection.get("context_size", LLM_NUM_CTX),
+                        "context_size": connection.get("context_size", 0),
                         "headers": connection.get("headers", []),
                     }
             provider_config = config.get(f"{selected_type}_config", {})

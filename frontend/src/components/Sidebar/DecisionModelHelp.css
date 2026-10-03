@@ -1,5 +1,2 @@
 .sec-label.sidebar-decision-label { display: flex; align-items: center; justify-content: flex-start; gap: 6px; }
 .sidebar-decision-help { text-transform: none; letter-spacing: normal; }
-.sidebar-decision-help strong { display: block; margin-bottom: 8px; }
-.sidebar-decision-help p { margin: 0; line-height: 1.6; }
-.sidebar-decision-help p + p { margin-top: 8px; }

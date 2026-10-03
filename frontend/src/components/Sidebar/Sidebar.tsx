@@ -1,5 +1,6 @@
 import '../common/HelpIcon.css';
 import {Tooltip} from '../common/Tooltip/Tooltip';
+import HelpCard from '../common/HelpCard/HelpCard';
 import './DecisionModelHelp.css';
 import React, {useEffect, useState, useRef} from 'react';
 import type {TFunction} from 'i18next';
@@ -677,7 +678,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                         <div className="sidebar-section sidebar-model-section">
                             <div className="sec-label sidebar-decision-label">
-                                <Tooltip placement="below" content={<div className="sidebar-decision-help"><strong>{t('decisionModels.jev')}</strong><p>{t('decisionModels.tooltipIntro')}</p><p>{t('decisionModels.tooltipBehavior')}</p></div>} multiline>
+                                <Tooltip placement="below" content={<div className="sidebar-decision-help"><HelpCard title={t('decisionModels.jev')} items={[t('decisionModels.tooltipIntro'), t('decisionModels.tooltipBehavior')]} note={t('decisionModels.tooltipWarning')}/></div>} multiline>
                                     <button type="button" className="help-icon-button" aria-label={t('decisionModels.jev')}>?</button>
                                 </Tooltip>
                                 <span>{t('decisionModels.jev')}</span>
