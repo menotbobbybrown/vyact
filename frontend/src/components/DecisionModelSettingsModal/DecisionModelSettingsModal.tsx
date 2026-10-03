@@ -25,19 +25,16 @@ export default function DecisionModelSettingsModal({modelPath, onClose, onApplie
             if (!settings) return;
             setSaving(true); setError('');
             void api.selectDecisionModel(settings).then(onApplied).then(onClose)
-                .catch(error => setError(t(error instanceof ApiError && error.detail === 'decision_runtime_upgrade_required' ? 'decisionModels.runtimeUpgradeRequired' : 'decisionModels.loadFailed'))).finally(() => setSaving(false));
+                .catch(error => setError(t(error instanceof ApiError && error.detail === 'decision_model_insufficient_memory' ? 'message.modelInsufficientMemoryTitle' : error instanceof ApiError && error.detail === 'decision_runtime_upgrade_required' ? 'decisionModels.runtimeUpgradeRequired' : 'decisionModels.loadFailed'))).finally(() => setSaving(false));
         }}>
             <header><h2>{t('decisionModels.settings')}</h2><button type="button" onClick={onClose} disabled={saving} aria-label={t('modelSettings.cancel')}><X size={20}/></button></header>
             <div className="model-settings-body">
                 <p>{modelPath.split('/').pop()}</p>
-                <p>{t('decisionModels.settingsHelp')}</p>
                 {settings && <>
                     <label className="model-settings-option"><span>{t('modelSettings.context')}</span>
                         <input className="model-settings-input" type="number" min="512" max="32768" required disabled={saving} value={settings.context_size}
                             onChange={event => setSettings({...settings, context_size: Number(event.target.value)})}/></label>
-                    <label className="model-settings-option"><span>{t('decisionModels.timeout')}</span>
-                        <input className="model-settings-input" type="number" min="5" max="120" required disabled={saving} value={settings.timeout_seconds}
-                            onChange={event => setSettings({...settings, timeout_seconds: Number(event.target.value)})}/></label>
+
                 </>}
                 {error && <p className="model-settings-error" role="alert">{error}</p>}
             </div>

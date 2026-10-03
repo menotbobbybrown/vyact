@@ -1442,6 +1442,8 @@
     "extracted": "提取的文本"
   },
   "decisionModels": {
+    "downloadLlmTitle": "Vyact LLM",
+    "downloadJevTitle": "Vyact JEV",
     "llm": "LLM",
     "jev": "JEV",
     "disabled": "不使用",

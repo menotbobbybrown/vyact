@@ -1442,6 +1442,8 @@
     "extracted": "Texte extrait"
   },
   "decisionModels": {
+    "downloadLlmTitle": "Vyact LLM",
+    "downloadJevTitle": "Vyact JEV",
     "llm": "LLM",
     "jev": "JEV",
     "disabled": "Désactivé",

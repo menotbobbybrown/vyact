@@ -549,6 +549,53 @@ const Sidebar: React.FC<SidebarProps> = ({
     const visualCollapsed = collapsed && !showOverlay;
     const sidebarHistoryReady = initialHistoryLoaded && projectsLoaded;
 
+    const renderModelSelector = (role: 'llm' | 'jev') => (
+        <ModelSelector role={role}
+            decisionInstalled={decisionInstalled}
+            decisionModel={decisionModel}
+            onDecisionModelChange={onDecisionModelChange}
+            onDecisionSettingsOpen={setDecisionSettingsPath}
+            installed={installed}
+            mtpSupported={mtpSupported}
+            mtpActive={mtpActive}
+            dflash2Supported={dflash2Supported}
+            dflash2Active={dflash2Active}
+            visionSupported={visionSupported}
+            audioSupported={audioSupported}
+            selectedModel={selectedModel}
+            currentProvider={currentProvider}
+            disabled={modelContextSelectionDisabled}
+            onModelChange={async (m, d, modelType) => {
+                if (currentProvider === 'vyact') {
+                    if (d) return;
+                    await onModelChange(m, false, modelType);
+                    return;
+                }
+                await onModelChange(m, d, modelType);
+            }}
+            onModelDelete={async model => {
+                try {
+                    await api.deleteVyactModel(model);
+                    await onProviderChange();
+                } catch (error) {
+                    toast.error(t('modelSelector.deleteModelFailed'), String(error));
+                    throw error;
+                }
+            }}
+            onModelSettingsOpen={setModelSettingsPath}
+            onProviderSettingsOpen={(role = 'llm') => {
+                setDownloadModelRole(role);
+                if (role === 'jev' || currentProvider === 'vyact') {
+                    setIsVyactModalOpen(true);
+                    return;
+                }
+                const connection = customProviders.find(item => `custom:${item.id}` === currentProvider);
+                if (connection) setCustomProviderEditor(connection);
+                else setIsProviderSettingsOpen(true);
+            }}
+        />
+    );
+
     return (
         <>
         {/* hover overlay 배경 */}
@@ -623,50 +670,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {/* 모델 */}
                         <div className="sidebar-section sidebar-model-section">
                             <div className="sec-label">{t('sidebar.model')}</div>
-                            <ModelSelector
-                                decisionInstalled={decisionInstalled}
-                                decisionModel={decisionModel}
-                                onDecisionModelChange={onDecisionModelChange}
-                                onDecisionSettingsOpen={setDecisionSettingsPath}
-                                installed={installed}
-                                mtpSupported={mtpSupported}
-                                mtpActive={mtpActive}
-                                dflash2Supported={dflash2Supported}
-                                dflash2Active={dflash2Active}
-                                visionSupported={visionSupported}
-                                audioSupported={audioSupported}
-                                selectedModel={selectedModel}
-                                currentProvider={currentProvider}
-                                disabled={modelContextSelectionDisabled}
-                                onModelChange={async (m, d, modelType) => {
-                                    if (currentProvider === 'vyact') {
-                                        if (d) return;
-                                        await onModelChange(m, false, modelType);
-                                        return;
-                                    }
-                                    await onModelChange(m, d, modelType);
-                                }}
-                                onModelDelete={async model => {
-                                    try {
-                                        await api.deleteVyactModel(model);
-                                        await onProviderChange();
-                                    } catch (error) {
-                                        toast.error(t('modelSelector.deleteModelFailed'), String(error));
-                                        throw error;
-                                    }
-                                }}
-                                onModelSettingsOpen={setModelSettingsPath}
-                                onProviderSettingsOpen={(role = 'llm') => {
-                                    setDownloadModelRole(role);
-                                    if (currentProvider === 'vyact') {
-                                        setIsVyactModalOpen(true);
-                                        return;
-                                    }
-                                    const connection = customProviders.find(item => `custom:${item.id}` === currentProvider);
-                                    if (connection) setCustomProviderEditor(connection);
-                                    else setIsProviderSettingsOpen(true);
-                                }}
-                            />
+                            {renderModelSelector('llm')}
+                        </div>
+                        <div className="sidebar-section sidebar-model-section">
+                            <div className="sec-label">{t('decisionModels.jev')}</div>
+                            {renderModelSelector('jev')}
                         </div>
 
                     </div>

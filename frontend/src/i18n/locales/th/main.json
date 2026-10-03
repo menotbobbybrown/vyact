@@ -1442,6 +1442,8 @@
     "extracted": "ข้อความที่ดึงออกมา"
   },
   "decisionModels": {
+    "downloadLlmTitle": "Vyact LLM",
+    "downloadJevTitle": "Vyact JEV",
     "llm": "LLM",
     "jev": "JEV",
     "disabled": "ไม่ใช้งาน",

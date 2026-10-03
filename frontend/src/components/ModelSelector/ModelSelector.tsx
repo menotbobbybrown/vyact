@@ -7,10 +7,11 @@ import CustomSelect from '../CustomSelect/CustomSelect';
 import type {SelectOption} from '../CustomSelect/CustomSelect';
 import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
 import ActionMenu from '../common/ActionMenu/ActionMenu';
-import ModelRoleTabs, {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
+import {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
 import './ModelSelector.css';
 
 interface ModelSelectorProps {
+    role?: ModelRole;
     decisionInstalled: string[];
     decisionModel: string;
     onDecisionModelChange: (model: string) => Promise<void>;
@@ -36,7 +37,7 @@ type ModelType = 'chat' | 'image_gen' | 'image_edit';
 const getModelDisplayName = (modelId: string) => modelId.split('/').filter(Boolean).pop() || modelId;
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({
-                                                         decisionInstalled, decisionModel, onDecisionModelChange, onDecisionSettingsOpen,
+                                                         role = 'llm', decisionInstalled, decisionModel, onDecisionModelChange, onDecisionSettingsOpen,
                                                          installed,
                                                          mtpSupported,
                                                          mtpActive,
@@ -53,7 +54,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                          onProviderSettingsOpen,
                                                      }) => {
     const {t} = useTranslation('main');
-    const [role, setRole] = useState<ModelRole>('llm');
     const activeSelection = role === 'jev' ? decisionModel : selectedModel;
     const [modelToDelete, setModelToDelete] = useState<string | null>(null);
     const [modelMenuOpen, setModelMenuOpen] = useState<string | null>(null);
@@ -72,11 +72,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
     // 트리거: dot + 모델명
     const renderTrigger = (_label: string, open: boolean) => {
-        const isInstalled = installed.includes(selectedModel);
-        const showMtp = currentProvider === 'vyact' && mtpActive === selectedModel;
-        const showDFlash2 = currentProvider === 'vyact' && dflash2Active === selectedModel;
-        const supportsVision = currentProvider === 'vyact' && visionSupported.includes(selectedModel);
-        const supportsAudio = currentProvider === 'vyact' && audioSupported.includes(selectedModel);
+        const isInstalled = installed.includes(activeSelection);
+        const showMtp = role === 'llm' && currentProvider === 'vyact' && mtpActive === selectedModel;
+        const showDFlash2 = role === 'llm' && currentProvider === 'vyact' && dflash2Active === selectedModel;
+        const supportsVision = role === 'llm' && currentProvider === 'vyact' && visionSupported.includes(selectedModel);
+        const supportsAudio = role === 'llm' && currentProvider === 'vyact' && audioSupported.includes(selectedModel);
         return (
             <>
                 <div className={`mdot ${isInstalled ? 'installed' : 'not-installed'}`}/>
@@ -84,8 +84,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 {showDFlash2 && <span className="mtp-model-badge">DFlash2</span>}
                 <ModelCapabilityIcons image={supportsVision} audio={supportsAudio}/>
                 <OverflowTooltipText as="span" className="mname"
-                    text={selectedModel ? getModelDisplayName(selectedModel) : t('modelSelector.selectModel')}/>
-                {decisionModel && <span className="decision-model-status" title={getModelDisplayName(decisionModel)}>{t('decisionModels.active')}</span>}
+                    text={activeSelection ? getModelDisplayName(activeSelection) : t(role === 'jev' ? 'decisionModels.disabled' : 'modelSelector.selectModel')}/>
                 <span className={`custom-select-arrow${open ? ' open' : ''}`}>▼</span>
             </>
         );
@@ -95,10 +94,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     const renderOption = (opt: SelectOption, isSelected: boolean, closeDropdown: () => void) => {
         if (!opt.value) return <div className="dd-model-disabled-label">{opt.label}</div>;
         const isInst = installed.includes(opt.value);
-        const showMtp = currentProvider === 'vyact' && mtpSupported.includes(opt.value);
-        const showDFlash2 = currentProvider === 'vyact' && dflash2Supported.includes(opt.value);
-        const supportsVision = currentProvider === 'vyact' && visionSupported.includes(opt.value);
-        const supportsAudio = currentProvider === 'vyact' && audioSupported.includes(opt.value);
+        const showMtp = role === 'llm' && currentProvider === 'vyact' && mtpSupported.includes(opt.value);
+        const showDFlash2 = role === 'llm' && currentProvider === 'vyact' && dflash2Supported.includes(opt.value);
+        const supportsVision = role === 'llm' && currentProvider === 'vyact' && visionSupported.includes(opt.value);
+        const supportsAudio = role === 'llm' && currentProvider === 'vyact' && audioSupported.includes(opt.value);
 
         return (
             <>
@@ -145,7 +144,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     // 하단 커스텀 모델 입력
     const footer = undefined;
 
-    if (currentProvider !== 'vyact') {
+    if (role === 'llm' && currentProvider !== 'vyact') {
         return (
             <div className="model-select-wrap">
                 <div className="cloud-config">
@@ -165,13 +164,12 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
         <CustomSelect
             options={options}
             value={activeSelection}
-            header={<ModelRoleTabs role={role} onChange={next => {setRole(next); setModelMenuOpen(null);}}/>}
             onChange={id => role === 'jev' ? void onDecisionModelChange(id) : handleLocalModelSelect(id)}
             searchable
             disabled={disabled}
             searchPlaceholder={t('modelSelector.modelSearch')}
             onOpen={() => setModelMenuOpen(null)}
-            searchAction={currentProvider === 'vyact' ? (
+            searchAction={role === 'jev' || currentProvider === 'vyact' ? (
                 <button
                     type="button"
                     className="custom-select-search-action"

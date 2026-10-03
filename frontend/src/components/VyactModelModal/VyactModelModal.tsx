@@ -1,4 +1,4 @@
-import ModelRoleTabs, {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
+import {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
 import DecisionModelSettingsModal from '../DecisionModelSettingsModal/DecisionModelSettingsModal';
 import ModelStorageLocation from '../common/ModelStorageLocation/ModelStorageLocation';
 import {MODEL_ESTIMATE_CONTEXT} from '../../constants/modelMemory';
@@ -87,7 +87,7 @@ const buildInstalledModelCards = (
 
 export default function VyactModelModal({onClose, onSelected, activeModelPath, initialRole = 'llm'}: VyactModelModalProps) {
     const {t} = useTranslation('main');
-    const [role, setRole] = useState<ModelRole>(initialRole);
+    const role = initialRole;
     const [decisionInstalled, setDecisionInstalled] = useState<string[]>([]);
     const [decisionSettingsPath, setDecisionSettingsPath] = useState<string | null>(null);
     const [token, setToken] = useState('');
@@ -416,7 +416,7 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath, i
                 <header className="provider-editor-header">
                     <div className="provider-editor-title-icon"><Sparkles size={20}/></div>
                     <div>
-                        <h2 id="vyact-model-editor-title">Vyact</h2>
+                        <h2 id="vyact-model-editor-title">{t(role === 'jev' ? 'decisionModels.downloadJevTitle' : 'decisionModels.downloadLlmTitle')}</h2>
                     </div>
                     <button type="button" className="provider-editor-close" onClick={onClose} aria-label={t('customProvider.close')} disabled={busy}>×</button>
                 </header>
@@ -517,15 +517,6 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath, i
                                 )}
                             </div>
                         )}
-                        <ModelRoleTabs role={role} disabled={busy} onChange={next => {
-                            searchRequestIdRef.current += 1;
-                            detailsRequestIdRef.current += 1;
-                            setRole(next); setHasSearched(false); setSelectedFile(null); setSelectedMetadata(null); setMessage('');
-                            setModels(installedCards.filter(model => {
-                                const decision = decisionInstalled.some(path => path === `mlx/${model.id}` || path.startsWith(`${model.id}/`));
-                                return next === 'jev' ? decision : !decision;
-                            }));
-                        }}/>
                         {(installedModelsStatus === 'loading' || isSearching) && (
                             <div className="vyact-model-empty" role="status" aria-label={t('modelSettings.loading')}><LoaderCircle className="vyact-model-spinner" size={22} aria-hidden="true"/></div>
                         )}

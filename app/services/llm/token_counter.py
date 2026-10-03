@@ -203,11 +203,11 @@ def _load_mlx_tokenizer(model_path: str):
 
 
 def _count_mlx_tokens(
-        model_path: str, messages: list[dict], tools: list[dict] | None,
+        model_path: str, messages: list[dict], tools: list[dict] | None, template_options: dict | None = None,
 ) -> int:
     tokenizer = _load_mlx_tokenizer(model_path)
     sanitized_messages, media_token_reserve = _messages_without_media_payloads(messages)
-    template_kwargs = {"tokenize": True, "add_generation_prompt": True}
+    template_kwargs = {"tokenize": True, "add_generation_prompt": True, **(template_options or {})}
     if tools:
         template_kwargs["tools"] = tools
     tokens = tokenizer.apply_chat_template(sanitized_messages, **template_kwargs)

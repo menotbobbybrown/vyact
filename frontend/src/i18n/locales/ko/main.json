@@ -1452,6 +1452,8 @@
     "extracted": "추출된 텍스트"
   },
   "decisionModels": {
+    "downloadLlmTitle": "Vyact LLM",
+    "downloadJevTitle": "Vyact JEV",
     "llm": "LLM",
     "jev": "JEV",
     "disabled": "사용 안 함",

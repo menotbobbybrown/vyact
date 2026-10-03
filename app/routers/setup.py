@@ -175,7 +175,7 @@ async def select_decision_model(req: DecisionModelRequest):
         except Exception:
             logger.exception('[decision] previous model restoration failed')
         logger.exception('[decision] activation failed')
-        error_code = 'decision_runtime_upgrade_required' if str(error) == 'decision_runtime_upgrade_required' else 'decision_model_load_failed'
+        error_code = str(error) if str(error) in {'decision_runtime_upgrade_required', 'decision_model_insufficient_memory'} else 'decision_model_load_failed'
         raise HTTPException(400, error_code) from error
     return settings
 

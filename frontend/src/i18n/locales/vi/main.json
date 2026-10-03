@@ -1442,6 +1442,8 @@
     "extracted": "Văn bản được trích xuất"
   },
   "decisionModels": {
+    "downloadLlmTitle": "Vyact LLM",
+    "downloadJevTitle": "Vyact JEV",
     "llm": "LLM",
     "jev": "JEV",
     "disabled": "Tắt",

@@ -9,6 +9,12 @@ import pytest
 from services import decision_models as decision
 
 
+@pytest.fixture(autouse=True)
+def exact_tokenizer_fixture(monkeypatch):
+    monkeypatch.setattr(decision, '_count_mlx_tokens', lambda *args: 64)
+
+
+
 @pytest.mark.parametrize('path', [
     'mlx/SirSahOl/Tev1-0.8B-experimental-chat-mlx-4bit',
     'ggml-org/Bespoke-Nimble-9B-v3-GGUF/model.gguf',
@@ -56,7 +62,7 @@ async def test_only_exact_supplied_answer_is_returned(monkeypatch, result, expec
     monkeypatch.setattr(decision, '_runtime_lock', asyncio.Lock())
     monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
     monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_type(transport=httpx.MockTransport(handle), **kwargs))
-    answer = await decision.decide_chat('Choose\nA) yes\nB) no', {'model_path': 'publisher/Tev1-4B/q.gguf'})
+    answer = await decision.decide_chat('Choose\nA) yes\nB) no', {'model_path': 'mlx/publisher/Tev1-4B'})
     assert answer == expected
     assert requests[0]['temperature'] == 0
     assert requests[0]['max_tokens'] == decision.DECISION_MAX_TOKENS
@@ -77,7 +83,7 @@ async def test_runtime_failure_falls_back(monkeypatch):
     def fail(settings):
         raise RuntimeError('out of memory')
     monkeypatch.setattr(decision, '_start_decision_runtime', fail)
-    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'publisher/Tev1-4B/q.gguf'}) is None
+    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'mlx/publisher/Tev1-4B'}) is None
 
 
 @pytest.mark.asyncio
@@ -107,7 +113,7 @@ async def test_contextual_request_cannot_return_a_choice(monkeypatch):
     monkeypatch.setattr(decision, '_runtime_protocol', 'chat')
     monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
     monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_type(transport=httpx.MockTransport(handle), **kwargs))
-    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'publisher/Tev1-4B/q.gguf'}, allow_direct=False) is None
+    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'mlx/publisher/Tev1-4B'}, allow_direct=False) is None
 
 
 @pytest.mark.asyncio
@@ -151,3 +157,55 @@ async def test_nimble_uses_specific_hub_search_name(monkeypatch):
     models = await decision.search_decision_models('Nimble', False, None)
     assert [model['id'] for model in models] == ['ggml-org/Bespoke-Nimble-9B-v3-GGUF']
     assert 'Bespoke-Nimble' in queries
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('tokens,should_generate', [(4088, True), (4089, False)])
+async def test_context_budget_reserves_output_and_never_truncates(monkeypatch, tokens, should_generate):
+    generated = []
+    question = 'A) yes\nB) no'
+    def count(path, messages, tools, options):
+        assert json.loads(messages[1]['content'])['state']['request'] == question
+        assert options == {'enable_thinking': False}
+        return tokens
+    monkeypatch.setattr(decision, '_count_mlx_tokens', count)
+    monkeypatch.setattr(decision, '_runtime_lock', asyncio.Lock())
+    monkeypatch.setattr(decision, '_runtime_protocol', 'chat')
+    monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
+    client_type = httpx.AsyncClient
+    def handle(request):
+        generated.append(request)
+        return httpx.Response(200, json={'choices': [{'message': {'content': 'A'}}]})
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_type(transport=httpx.MockTransport(handle), **kwargs))
+    answer = await decision.decide_chat(question, {'model_path': 'mlx/publisher/Tev1-4B', 'context_size': 4096})
+    assert bool(generated) == should_generate
+    assert answer == ('yes' if should_generate else None)
+
+
+@pytest.mark.asyncio
+async def test_gguf_over_budget_only_calls_template_and_tokenizer(monkeypatch):
+    paths = []
+    client_type = httpx.AsyncClient
+    def handle(request):
+        paths.append(request.url.path)
+        if request.url.path == '/apply-template':
+            return httpx.Response(200, json={'prompt': 'complete rendered decision'})
+        assert request.url.path == '/tokenize'
+        return httpx.Response(200, json={'tokens': list(range(4090))})
+    monkeypatch.setattr(decision, '_runtime_lock', asyncio.Lock())
+    monkeypatch.setattr(decision, '_runtime_protocol', 'chat')
+    monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_type(transport=httpx.MockTransport(handle), **kwargs))
+    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'publisher/Tev1-4B/q.gguf'}) is None
+    assert paths == ['/apply-template', '/tokenize']
+
+
+@pytest.mark.asyncio
+async def test_tokenizer_failure_skips_generation(monkeypatch):
+    def fail(*args):
+        raise ValueError('tokenizer unavailable')
+    monkeypatch.setattr(decision, '_count_mlx_tokens', fail)
+    monkeypatch.setattr(decision, '_runtime_lock', asyncio.Lock())
+    monkeypatch.setattr(decision, '_runtime_protocol', 'chat')
+    monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
+    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'mlx/publisher/Tev1-4B'}) is None
