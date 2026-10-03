@@ -125,7 +125,7 @@ async def test_both_chat_entry_points_can_skip_llm(monkeypatch):
     monkeypatch.setattr(core, 'decide_chat', decide)
     monkeypatch.setattr(core, 'get_provider_config', provider)
     events = [event async for event in core.chat_stream_with_tools('A) yes\nB) no', [], call_reason='chat:general_stream')]
-    assert events == [{'type': 'token', 'text': 'yes'}]
+    assert events == [{'type': 'model', 'model': 'selected'}, {'type': 'token', 'text': 'yes'}]
     assert await core.query_llm('A) yes\nB) no', [], call_reason='chat:general') == 'yes'
     provider.assert_not_called()
 
@@ -165,7 +165,7 @@ async def test_context_budget_reserves_output_and_never_truncates(monkeypatch, t
     generated = []
     question = 'A) yes\nB) no'
     def count(path, messages, tools, options):
-        assert json.loads(messages[1]['content'])['state']['request'] == question
+        assert json.loads(messages[1]['content'])['options'][0]['description'] == 'yes'
         assert options == {'enable_thinking': False}
         return tokens
     monkeypatch.setattr(decision, '_count_mlx_tokens', count)
@@ -209,3 +209,20 @@ async def test_tokenizer_failure_skips_generation(monkeypatch):
     monkeypatch.setattr(decision, '_runtime_protocol', 'chat')
     monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
     assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'mlx/publisher/Tev1-4B'}) is None
+
+
+@pytest.mark.asyncio
+async def test_paste_markers_are_removed_before_choices_and_prompt(monkeypatch):
+    client_type = httpx.AsyncClient
+    def handle(request):
+        body = json.loads(request.content)
+        state = json.loads(body['messages'][1]['content'])
+        assert state['question'] == '반품 기간 이내인가요?'
+        assert '«' not in body['messages'][1]['content']
+        assert state['options'][1]['description'] == '아니요'
+        return httpx.Response(200, json={'choices': [{'message': {'content': 'A'}}]})
+    monkeypatch.setattr(decision, '_runtime_lock', asyncio.Lock())
+    monkeypatch.setattr(decision, '_runtime_protocol', 'chat')
+    monkeypatch.setattr(decision, '_start_decision_runtime', lambda settings: ('http://local/v1', 'decision'))
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_type(transport=httpx.MockTransport(handle), **kwargs))
+    assert await decision.decide_chat('«PASTE:title»\n반품 기간 이내인가요?\nA) 예\nB) 아니요«/PASTE»', {'model_path': 'mlx/publisher/Tev1-4B'}) == '예'

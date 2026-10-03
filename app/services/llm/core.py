@@ -47,9 +47,10 @@ async def _route_chat_decision(question, docs, system_prompt, attachments, histo
     if reason not in ('chat:general', 'chat:general_stream'):
         return None
     settings = (await load_config_async()).get('decision_config', {})
-    return await decide_chat(question, settings,
+    answer = await decide_chat(question, settings,
                              allow_direct=allow_direct and not (docs or attachments or history or summary),
                              system_prompt=system_prompt)
+    return (answer, settings.get("model_path", "").split("/")[-1]) if answer is not None else None
 
 
 async def chat_stream_with_tools(
@@ -97,7 +98,8 @@ async def chat_stream_with_tools(
         allow_direct=not (post_tool_docs or isolated_system_prompt or format_instruction_override),
     )
     if direct_answer is not None:
-        yield {'type': 'token', 'text': direct_answer}
+        yield {'type': 'model', 'model': direct_answer[1]}
+        yield {'type': 'token', 'text': direct_answer[0]}
         return
     provider_config = await get_provider_config()
     provider_type = provider_config["type"]
@@ -372,7 +374,7 @@ async def query_llm(
         allow_direct=not (format_instruction_override or structured_output_schema),
     )
     if direct_answer is not None:
-        return direct_answer
+        return direct_answer[0]
     provider_config = await get_provider_config()
     runtime = get_runtime_settings()
     num_predict = runtime["llm_num_predict"] if num_predict is None else num_predict

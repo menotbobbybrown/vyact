@@ -1,3 +1,4 @@
+import '../common/HelpIcon.css';
 import {orderMcpServersForDisplay} from '../../utils/mcpOrder';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import React, {useEffect, useRef, useState, useCallback} from 'react';
@@ -161,7 +162,7 @@ const McpMenu: React.FC<McpMenuProps> = ({disabled = false}) => {
                 <div className="mcp-menu-popover">
                     <div className="mcp-menu-header">
                         <Tooltip content={t('mcpMenu.scopeHelp')} multiline>
-                            <button type="button" className="mcp-menu-help" aria-label={t('mcpMenu.scopeHelp')}>?</button>
+                            <button type="button" className="help-icon-button" aria-label={t('mcpMenu.scopeHelp')}>?</button>
                         </Tooltip>
                         <span>{t('mcpMenu.title')}</span>
                     </div>

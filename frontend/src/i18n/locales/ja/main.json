@@ -1442,18 +1442,20 @@
     "extracted": "抽出されたテキスト"
   },
   "decisionModels": {
+    "tooltipIntro": "質問の条件と選択肢を評価するローカルモデルです。応答モデルとは別に選択でき、クラウドモデルとも併用できます。",
+    "tooltipBehavior": "現在は選択肢のある質問に短く回答します。説明が必要な質問は応答モデルに渡します。判断が誤る場合があります。",
     "downloadLlmTitle": "Vyact LLM",
-    "downloadJevTitle": "Vyact JEV",
+    "downloadJevTitle": "Vyact 判断モデル",
     "llm": "LLM",
-    "jev": "JEV",
+    "jev": "判断モデル",
     "disabled": "使用しない",
     "active": "Jev有効",
-    "settings": "Jevモデル設定",
-    "search": "Jevモデル検索",
+    "settings": "判断モデル設定",
+    "search": "判断モデルを検索",
     "help": "Nimble・Tev1系のローカル判断モデルです。文章の作成はLLMが担当します。",
     "settingsHelp": "判断は温度0、最大8トークンで実行します。不確実な場合や失敗時はLLMに渡します。直接回答は現在、A)・B)など選択肢を明示した質問に対応します。",
     "timeout": "応答待機時間（秒）",
-    "loadFailed": "Jevモデルを読み込めませんでした。",
+    "loadFailed": "判断モデルを読み込めませんでした。",
     "runtimeUpgradeRequired": "このNimbleモデルには/v1/systemone対応のllama.cppが必要です。現在はTev1モデルを使用してください。"
   }
 }

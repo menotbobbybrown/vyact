@@ -3,7 +3,7 @@ import {createPortal} from 'react-dom';
 import './Tooltip.css';
 
 type TooltipSize = 'small' | 'medium';
-type TooltipProps = {content: ReactNode; multiline?: boolean; size?: TooltipSize; hoverOnly?: boolean; children: ReactElement};
+type TooltipProps = {content: ReactNode; multiline?: boolean; size?: TooltipSize; hoverOnly?: boolean; placement?: 'above' | 'below'; children: ReactElement};
 const tooltipContentRegistry = new Map<string, ReactNode>();
 const copiedTooltipEvent = 'vyact:show-copied-tooltip';
 
@@ -13,7 +13,7 @@ export function showCopiedTooltip(target: HTMLElement, content: string) {
     });
 }
 
-export function Tooltip({content, multiline, size = 'small', hoverOnly = false, children}: TooltipProps) {
+export function Tooltip({content, multiline, size = 'small', hoverOnly = false, placement = 'above', children}: TooltipProps) {
     const tooltipId = useId();
     useEffect(() => {
         tooltipContentRegistry.set(tooltipId, content);
@@ -25,6 +25,7 @@ export function Tooltip({content, multiline, size = 'small', hoverOnly = false, 
         'data-instant-tooltip-id': tooltipId,
         ...(multiline ? {'data-instant-tooltip-multiline': ''} : {}),
         'data-instant-tooltip-size': size,
+        'data-instant-tooltip-placement': placement,
         'data-instant-tooltip-hover-only': hoverOnly ? '' : undefined,
         title: undefined,
     } as never);
@@ -67,10 +68,10 @@ export function TooltipProvider({children}: {children: ReactNode}) {
             const nextTooltip: NonNullable<TooltipState> = {
                 content,
                 x,
-                y: rect.top,
+                y: target.dataset.instantTooltipPlacement === 'below' ? rect.bottom : rect.top,
                 targetTop: rect.top,
                 targetBottom: rect.bottom,
-                placement: 'above',
+                placement: target.dataset.instantTooltipPlacement === 'below' ? 'below' : 'above',
                 multiline,
                 size,
             };

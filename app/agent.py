@@ -453,6 +453,7 @@ async def rag_query_stream(
     if collection_instruction:
         system_prompt = f"{system_prompt}\n\n[지식 컬렉션 지침]\n{collection_instruction}" if system_prompt else collection_instruction
 
+    response_model = await get_model_display_name()
     async for ev in chat_stream_with_tools(
             question, docs, system_prompt, [*attachments, *_knowledge_inline_image_attachments(docs)], conversation_history,
             reasoning=reasoning,
@@ -482,6 +483,9 @@ async def rag_query_stream(
                 tool_sources.extend(ev["sources"])
             # tool 진행 이벤트는 그대로 통과 (UI 진행표시용)
             yield ev
+        elif ev.get("type") == "model":
+            response_model = ev["model"]
+            yield ev
         elif ev.get("type") == "stats":
             stats = {k: v for k, v in ev.items() if k != "type"}
         elif ev.get("type") == "finish":
@@ -507,7 +511,7 @@ async def rag_query_stream(
         "answer": answer,
         "response_type": "simple",
         "sources": all_sources,
-        "model": await get_model_display_name(),
+        "model": response_model,
         "stats": stats,
         "truncated": finish_reason == "length",
     }}

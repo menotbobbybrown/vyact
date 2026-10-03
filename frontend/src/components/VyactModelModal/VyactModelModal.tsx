@@ -147,7 +147,11 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath, i
                 const downloaded = role === 'jev' ? installedCards.filter(model =>
                     decisionInstalled.some(path => path === `mlx/${model.id}` || path.startsWith(`${model.id}/`))) : [];
                 const popular = role === 'jev' ? searchResponse.models.slice(0, 30) : searchResponse.models;
-                setModels([...downloaded, ...popular.filter(model => !downloaded.some(installed =>
+                const installedWithHubDetails = downloaded.map(installed => {
+                    const hub = searchResponse.models.find(model => model.id === installed.id && model.runtime === installed.runtime);
+                    return hub ? {...installed, downloads: hub.downloads, revision: hub.revision} : installed;
+                });
+                setModels([...installedWithHubDetails, ...popular.filter(model => !downloaded.some(installed =>
                     installed.id === model.id && installed.runtime === model.runtime))]);
                 setHardware(searchResponse.hardware);
                 setInstalledModels(searchResponse.installed);
@@ -527,10 +531,12 @@ export default function VyactModelModal({onClose, onSelected, activeModelPath, i
                             const selectableFiles = getSelectableModelFiles(model.files);
                             const publisher = getModelPublisher(model.id);
                             const showsPublisher = hasSearched && Boolean(publisher);
-                            const showsCompactDownloads = hasSearched && selectableFiles.length === 1;
+                            const hasInstalledFile = selectableFiles.some(filename => installedModels.includes(
+                                model.runtime === 'mlx' ? `mlx/${model.id}` : `${model.id}/${filename}`));
+                            const showsCompactDownloads = hasSearched && !hasInstalledFile && selectableFiles.length === 1;
                             return <article className={`vyact-model-card${selectableFiles.length === 1 ? ' is-compact' : ''}${hasSearched ? '' : ' is-installed-list'}`} key={model.id}>
                                 {selectableFiles.length > 1 && <div className="vyact-model-card-heading">
-                                    <OverflowTooltipText text={model.id}/>{hasSearched && <span>{formatCompactDownloads(model.downloads)}</span>}
+                                    <OverflowTooltipText text={model.id}/>{hasSearched && !hasInstalledFile && <span>{formatCompactDownloads(model.downloads)}</span>}
                                 </div>}
                                 <div className="vyact-model-files">
                                     {selectableFiles.map(filename => {

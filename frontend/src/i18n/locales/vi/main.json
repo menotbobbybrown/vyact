@@ -1442,18 +1442,20 @@
     "extracted": "Văn bản được trích xuất"
   },
   "decisionModels": {
+    "tooltipIntro": "Mô hình cục bộ đánh giá điều kiện và các lựa chọn của câu hỏi. Có thể chọn riêng với mô hình trả lời, kể cả mô hình đám mây.",
+    "tooltipBehavior": "Hiện trả lời ngắn cho câu hỏi có lựa chọn rõ ràng. Câu hỏi cần giải thích được chuyển cho mô hình trả lời. Kết quả có thể sai.",
     "downloadLlmTitle": "Vyact LLM",
-    "downloadJevTitle": "Vyact JEV",
+    "downloadJevTitle": "Vyact Mô hình quyết định",
     "llm": "LLM",
-    "jev": "JEV",
+    "jev": "Mô hình quyết định",
     "disabled": "Tắt",
     "active": "Đã bật Jev",
-    "settings": "Cài đặt mô hình Jev",
-    "search": "Tìm mô hình Jev",
+    "settings": "Cài đặt mô hình quyết định",
+    "search": "Tìm mô hình quyết định",
     "help": "Mô hình quyết định cục bộ thuộc dòng Nimble và Tev1. LLM viết câu trả lời tự do.",
     "settingsHelp": "Quyết định dùng nhiệt độ 0 và tối đa 8 token. Khi không chắc chắn hoặc thất bại, chuyển sang LLM. Hiện chỉ trả lời trực tiếp câu hỏi có lựa chọn rõ ràng như A) và B).",
     "timeout": "Thời gian chờ phản hồi (giây)",
-    "loadFailed": "Không thể tải mô hình Jev.",
+    "loadFailed": "Không thể tải mô hình quyết định.",
     "runtimeUpgradeRequired": "Mô hình Nimble này cần phiên bản llama.cpp hỗ trợ /v1/systemone. Hiện hãy dùng mô hình Tev1."
   }
 }

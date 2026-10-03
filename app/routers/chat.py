@@ -1227,6 +1227,8 @@ async def query_stream(req: QueryRequest):
                             params={"model": ev.get("model")} if ev.get("model") else {},
                         ))
                         return
+                    elif ev["type"] == "model":
+                        yield _sse("meta", {"model": ev["model"], "sources": []})
                     elif ev["type"] == "final":
                         final_result = ev["result"]
 
@@ -1357,6 +1359,9 @@ async def query_stream(req: QueryRequest):
                         yield _sse("token", {"text": visible_text})
                 elif ev.get("type") == "tool":
                     yield _sse("tool", ev)
+                elif ev.get("type") == "model":
+                    model = ev["model"]
+                    yield _sse("meta", {"model": model, "sources": context_docs})
                 elif ev.get("type") == "stats":
                     stats = {k: v for k, v in ev.items() if k != "type"}
                 elif ev.get("type") == "finish":

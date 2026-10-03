@@ -1442,18 +1442,20 @@
     "extracted": "Texte extrait"
   },
   "decisionModels": {
+    "tooltipIntro": "Modèle local qui évalue les conditions et les choix d’une question. Il se sélectionne indépendamment du modèle de réponse, y compris un modèle cloud.",
+    "tooltipBehavior": "Répond actuellement brièvement aux questions avec des choix explicites. Les demandes nécessitant une explication passent au modèle de réponse. Les décisions peuvent être incorrectes.",
     "downloadLlmTitle": "Vyact LLM",
-    "downloadJevTitle": "Vyact JEV",
+    "downloadJevTitle": "Vyact Modèle de décision",
     "llm": "LLM",
-    "jev": "JEV",
+    "jev": "Modèle de décision",
     "disabled": "Désactivé",
     "active": "Jev activé",
-    "settings": "Paramètres du modèle Jev",
-    "search": "Rechercher des modèles Jev",
+    "settings": "Paramètres du modèle de décision",
+    "search": "Rechercher des modèles de décision",
     "help": "Modèles de décision locaux des familles Nimble et Tev1. Le LLM rédige les réponses libres.",
     "settingsHelp": "Les décisions utilisent une température de 0 et au maximum 8 tokens. En cas d’incertitude ou d’échec, le LLM prend le relais. Les réponses directes prennent en charge les questions avec des choix explicites comme A) et B).",
     "timeout": "Délai de réponse (secondes)",
-    "loadFailed": "Impossible de charger le modèle Jev.",
+    "loadFailed": "Impossible de charger le modèle de décision.",
     "runtimeUpgradeRequired": "Ce modèle Nimble nécessite une version de llama.cpp prenant en charge /v1/systemone. Utilisez Tev1 pour le moment."
   }
 }

@@ -134,7 +134,7 @@
     padding: 6px 14px 8px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 10px;
     flex-shrink: 0;
 }
 .sidebar-header-actions { display: flex; flex: 1; min-width: 0; align-items: center; gap: 6px; }
