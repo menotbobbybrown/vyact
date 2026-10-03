@@ -234,6 +234,11 @@ def setup_logging() -> None:
     fh = DailyFileHandler("app")
     fh.setFormatter(fmt)
     root.addHandler(fh)
+    decision_handler = DailyFileHandler("decision")
+    decision_handler.setFormatter(fmt)
+    decision_handler.addFilter(_SensitiveLogDataFilter())
+    decision_handler.addFilter(_UnicodeNormalizationFilter())
+    logging.getLogger("services.decision_models").addHandler(decision_handler)
 
     # A launcher may have installed the target FileHandler before this module is
     # initialized. Apply security filters to existing handlers as well as handlers

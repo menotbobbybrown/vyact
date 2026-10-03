@@ -15,6 +15,8 @@ HEARTBEAT_INTERVAL = 15
 def log_names(kind: str, model: str) -> list[str]:
     if kind == 'app':
         return ['app']
+    if kind == 'decision':
+        return ['decision']
     if kind == 'llm':
         return ['llm']
     if kind == 'model':

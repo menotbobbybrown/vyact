@@ -1782,7 +1782,7 @@ async def select_provider(req: ProviderSelectRequest):
 # LLM 로깅 설정
 # ─────────────────────────────
 @router.get("/logs/stream")
-async def get_logs(kind: str = Query("app", pattern="^(app|model|llm)$"), model: str = ""):
+async def get_logs(kind: str = Query("app", pattern="^(app|model|decision|llm)$"), model: str = ""):
     return StreamingResponse(stream_logs(kind, model), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 

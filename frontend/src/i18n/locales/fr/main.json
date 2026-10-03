@@ -1,5 +1,5 @@
 {
-  "logViewer": {"model": "Journaux du modèle", "latest": "Aller aux derniers journaux", "title": "Voir les journaux", "llm": "Journaux des requêtes et réponses", "app": "Journaux Vyact", "empty": "Aucun journal pour le moment.", "error": "Impossible de charger les journaux ou d’enregistrer les paramètres."},
+  "logViewer": {"decision": "Journaux du modèle de décision","model": "Journaux du modèle", "latest": "Aller aux derniers journaux", "title": "Voir les journaux", "llm": "Journaux des requêtes et réponses", "app": "Journaux Vyact", "empty": "Aucun journal pour le moment.", "error": "Impossible de charger les journaux ou d’enregistrer les paramètres."},
   "emptyResponse": "Aucun contenu de réponse n’a été généré. Réessayez.",
   "greeting": {
     "morning": "Bonjour",

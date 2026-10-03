@@ -124,9 +124,19 @@ async def test_both_chat_entry_points_can_skip_llm(monkeypatch):
     provider = AsyncMock(side_effect=AssertionError('LLM should not be called'))
     monkeypatch.setattr(core, 'decide_chat', decide)
     monkeypatch.setattr(core, 'get_provider_config', provider)
-    events = [event async for event in core.chat_stream_with_tools('A) yes\nB) no', [], call_reason='chat:general_stream')]
+    history = [{'role': 'user', 'content': 'previous question'}]
+    events = [event async for event in core.chat_stream_with_tools(
+        'A) yes\nB) no', [], system_prompt='LLM instructions',
+        conversation_history=history, conversation_summary='previous summary',
+        call_reason='chat:general_stream')]
     assert events == [{'type': 'model', 'model': 'selected'}, {'type': 'token', 'text': 'yes'}]
-    assert await core.query_llm('A) yes\nB) no', [], call_reason='chat:general') == 'yes'
+    assert await core.query_llm(
+        'A) yes\nB) no', [], system_prompt='LLM instructions',
+        conversation_history=history, conversation_summary='previous summary',
+        call_reason='chat:general') == 'yes'
+    for call in decide.call_args_list:
+        assert call.args == ('A) yes\nB) no', {'model_path': 'selected'})
+        assert call.kwargs == {'allow_direct': True}
     provider.assert_not_called()
 
 

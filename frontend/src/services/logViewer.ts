@@ -1,5 +1,5 @@
 import {parseTextLogs} from './textLogParser';
-export type LogKind = 'app' | 'model' | 'llm';
+export type LogKind = 'app' | 'model' | 'decision' | 'llm';
 export interface LogUpdate {name: string; path: string; reset: boolean; content: string}
 export interface LogFile {name: string; path: string; content: string}
 const MAX_LOG_CHARACTERS = 256 * 1024;

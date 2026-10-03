@@ -17,6 +17,9 @@ class LogViewerTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    def test_decision_log_is_independent_of_response_model(self):
+        self.assertEqual(log_viewer.log_names("decision", "cloud-model"), ["decision"])
+
     def test_only_new_bytes_are_sent_and_unchanged_files_emit_nothing(self):
         self.path.write_text('first\n')
         cursor = log_viewer.LogCursor('app')
