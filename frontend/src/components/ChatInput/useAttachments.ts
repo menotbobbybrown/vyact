@@ -3,12 +3,9 @@ import {useTranslation} from 'react-i18next';
 import {isAudioChatFile, isSupportedChatFile} from '../../utils/fileValidation';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 
-// 붙여넣기 텍스트를 chip으로 처리할 최소 기준
-// (긴 한 줄짜리 지시문 — 예: 영어 스크립트 생성 형식 지정 등 — 이 첨부로 빠지지 않도록
-// 글자 수 기준을 여유 있게 잡는다. 실제 대량 텍스트/코드 붙여넣기는 대부분 400자를
-// 훌쩍 넘기거나 여러 줄이므로 PASTE_MIN_LINES 조건으로도 충분히 걸러진다.)
-const PASTE_MIN_CHARS = 300;
-const PASTE_MIN_LINES = 6;
+// 붙여넣기 텍스트가 글자 수 또는 줄 수 기준을 충족하면 첨부 카드로 처리한다.
+const PASTE_MIN_CHARS = 600;
+const PASTE_MIN_LINES = 7;
 const MAX_FILE_ATTACHMENTS = 10;
 const MAX_IMAGE_ATTACHMENTS = 5;
 
