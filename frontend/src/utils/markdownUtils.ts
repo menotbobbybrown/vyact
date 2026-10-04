@@ -125,10 +125,12 @@ const createCodeFile = (part: ContentPart, precedingText: string): CodeFile => {
 const renderListBlocks = (html: string): string => {
     const output: string[] = [];
     const openLists: Array<'ul' | 'ol'> = [];
+    const contentIndents: number[] = [];
     const lines = html.split('\n');
     const listItemPattern = /^([ ]*)(?:(\d+)\. +(.+)|([-*])(?: \[([ xX])\])? +(.+))$/;
     const closeList = () => {
         const type = openLists.pop();
+        contentIndents.pop();
         if (type) output.push(`</li></${type}>`);
     };
 
@@ -137,6 +139,10 @@ const renderListBlocks = (html: string): string => {
         if (!line.trim() && openLists.length) {
             const nextLine = lines.slice(lineIndex + 1).find(candidate => candidate.trim());
             const nextItem = nextLine?.match(listItemPattern);
+            if (nextLine && !nextItem && (nextLine.match(/^ */)?.[0].length ?? 0) >= contentIndents[contentIndents.length - 1]) {
+                output.push(line);
+                continue;
+            }
             if (nextItem) {
                 const nextDepth = Math.min(Math.floor(nextItem[1].length / 2), openLists.length);
                 if (nextDepth === openLists.length || openLists[nextDepth] === (nextItem[2] ? 'ol' : 'ul')) continue;
@@ -144,6 +150,14 @@ const renderListBlocks = (html: string): string => {
         }
         const match = line.match(listItemPattern);
         if (!match) {
+            const continuationIndent = line.match(/^ */)?.[0].length ?? 0;
+            if (line.trim()) {
+                while (openLists.length && continuationIndent < contentIndents[contentIndents.length - 1]) closeList();
+                if (openLists.length) {
+                    output.push(`<br/>${line.trim()}`);
+                    continue;
+                }
+            }
             while (openLists.length) closeList();
             output.push(line);
             continue;
@@ -162,9 +176,11 @@ const renderListBlocks = (html: string): string => {
         }
         if (openLists.length <= depth) {
             openLists.push(type);
+            contentIndents.push(0);
             output.push(`<${type} class="markdown-list" style="margin:10px 0;padding-left:22px;">`);
         }
 
+        contentIndents[depth] = indent.length + (number ? number.length + 2 : 2);
         const content = (numberedContent ?? bulletContent).trim();
         if (number) {
             output.push(`<li value="${number}" style="margin:9px 0;list-style-position:outside;list-style-type:decimal;">${content}`);

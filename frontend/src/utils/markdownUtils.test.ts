@@ -2,6 +2,22 @@ import {describe, expect, it} from 'vitest';
 import {groupContentParts, parseContent, renderMarkdown} from './markdownUtils';
 
 describe('renderMarkdown lists', () => {
+    it('keeps expression meanings and examples inside their numbered item', () => {
+        const html = renderMarkdown('1. **I’m going to + 동사**  \n   뜻: ~할 예정이에요.  \n   예: I’m going to eat rice.\n\n2. **I want to + 동사**\n   뜻: ~하고 싶어요.\n\nChoose a number');
+
+        expect(html.match(/<ol class="markdown-list"/g)).toHaveLength(1);
+        expect(html).toMatch(/<li value="1"[^>]*><strong>I’m going to \+ 동사<\/strong>\s*<br\/>뜻: ~할 예정이에요\.<br\/>예: I’m going to eat rice\.<\/li><li value="2"/);
+        expect(html).toMatch(/<\/ol><div class="para-break"><\/div>Choose a number/);
+    });
+
+    it('keeps continuation paragraphs and returns from a nested list to its parent', () => {
+        const html = renderMarkdown('1. Parent\n\n   Description\n   - Child\n     Child detail\n   Parent detail\n2. Next\nOutside');
+
+        expect(html).toMatch(/Parent<div class="para-break"><\/div><br\/>Description/);
+        expect(html).toMatch(/Child<br\/>Child detail<\/li><\/ul>Parent detail<\/li><li value="2"/);
+        expect(html).toMatch(/Next<\/li><\/ol>Outside/);
+    });
+
     it('keeps indented bullets inside their numbered parent and continues numbering', () => {
         const html = renderMarkdown('1. First\n   - Child A\n   - Child B\n2. Second');
 
