@@ -1,13 +1,15 @@
 import {useEffect, useState} from 'react';
-import {Cpu, Link2, Pencil, Plus, X} from 'lucide-react';
+import {Cpu, ExternalLink, Link2, Pencil, Plus, X} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
-import {api, type DecisionConnection} from '../../services/api';
+import {api, type DecisionConnection, type DecisionConnectionProtocol} from '../../services/api';
+import CustomSelect from '../CustomSelect/CustomSelect';
+import {DECISION_CONNECTION_FORMATS, DECISION_CONNECTION_OPTIONS} from '../../constants/decisionConnections';
 import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
 import '../ProviderSettingsModal/ProviderSettingsModal.css';
 import '../CustomProviderModal/CustomProviderModal.css';
 import '../common/ModalOverlay/ModalActions.css';
 
-const NEW_CONNECTION = {name: 'Jev', base_url: 'https://api.typesafe.ai/v1', model: 'jev-latest', api_key: ''};
+const NEW_CONNECTION = {name: 'Jev', protocol: 'typesafe' as DecisionConnectionProtocol, base_url: DECISION_CONNECTION_FORMATS.typesafe.baseUrl, model: DECISION_CONNECTION_FORMATS.typesafe.model, api_key: ''};
 type ConnectionDraft = typeof NEW_CONNECTION & {id?: string};
 
 export default function DecisionConnectionModal({initialPath, onClose, onSaved, onRefresh}: {
@@ -25,7 +27,7 @@ export default function DecisionConnectionModal({initialPath, onClose, onSaved, 
             if (!active) return;
             setConnections(items);
             const item = items.find(item => item.model_path === initialPath);
-            setDraft(item ? {...item, api_key: ''} : items.length ? null : {...NEW_CONNECTION});
+            setDraft(item ? {...item, protocol: item.protocol ?? 'typesafe', api_key: ''} : items.length ? null : {...NEW_CONNECTION});
         }).catch(() => {if (active) setError(t('decisionModels.loadFailed'));})
             .finally(() => {if (active) setLoading(false);});
         return () => {active = false;};
@@ -34,6 +36,7 @@ export default function DecisionConnectionModal({initialPath, onClose, onSaved, 
         setSaving(true); setError('');
         try {await action();} catch {setError(t('decisionModels.loadFailed'));} finally {setSaving(false);}
     };
+    const originalProtocol = connections.find(item => item.id === draft?.id)?.protocol ?? 'typesafe';
     return <ModalOverlay className="provider-editor-overlay" onClose={saving ? undefined : onClose} closeOnBackdrop={false}>
         <form role="dialog" aria-modal="true" aria-labelledby="decision-connections-title" className="provider-editor provider-connection-manager" onSubmit={event => {
             event.preventDefault();
@@ -52,16 +55,23 @@ export default function DecisionConnectionModal({initialPath, onClose, onSaved, 
             </header>
             {draft ? <div className="provider-connection-list">
                 <fieldset className="provider-editor-section" disabled={saving}>
-                    <div className="connection-protocol-heading"><span>{t('customProvider.protocol')}</span><a href="https://api.typesafe.ai/docs" target="_blank" rel="noreferrer">TypeSafe System One</a></div>
+                    <div className="provider-editor-field">
+                        <div className="connection-protocol-heading"><span>{t('customProvider.protocol')}</span><a href={DECISION_CONNECTION_FORMATS[draft.protocol].docsUrl} target="_blank" rel="noreferrer">{t('customProvider.protocolDocs')}<ExternalLink size={13}/></a></div>
+                        <CustomSelect options={DECISION_CONNECTION_OPTIONS} value={draft.protocol} disabled={saving} ariaLabel={t('customProvider.protocol')} onChange={value => {
+                            const protocol = value as DecisionConnectionProtocol;
+                            const format = DECISION_CONNECTION_FORMATS[protocol];
+                            setDraft({...draft, protocol, base_url: format.baseUrl, model: format.model, api_key: ''});
+                        }}/>
+                    </div>
                     <label className="provider-editor-field"><span>{t('customProvider.name')}</span><input value={draft.name} required maxLength={100} onChange={event => setDraft({...draft, name: event.target.value})}/></label>
                     <label className="provider-editor-field"><span>{t('customProvider.baseUrl')}</span><input type="url" value={draft.base_url} required onChange={event => setDraft({...draft, base_url: event.target.value})}/></label>
                     <label className="provider-editor-field"><span>{t('customProvider.modelId')}</span><input value={draft.model} required onChange={event => setDraft({...draft, model: event.target.value})}/></label>
-                    <label className="provider-editor-field"><span>{t('customProvider.apiKey')}</span><input type="password" autoComplete="new-password" value={draft.api_key} required={!draft.id} placeholder={draft.id ? t('decisionModels.keepKey') : undefined} onChange={event => setDraft({...draft, api_key: event.target.value})}/></label>
+                    <label className="provider-editor-field"><span>{t('customProvider.apiKey')}</span><input type="password" autoComplete="new-password" value={draft.api_key} required={!draft.id || draft.protocol !== originalProtocol} placeholder={draft.id && draft.protocol === originalProtocol ? t('decisionModels.keepKey') : undefined} onChange={event => setDraft({...draft, api_key: event.target.value})}/></label>
                 </fieldset>
             </div> : <div className="provider-connection-list">
                 {connections.map(item => <div className="provider-connection-row" key={item.id}>
                     <div className="provider-connection-details"><div className="provider-connection-summary"><strong>{item.name}</strong><span className="provider-connection-model"><Cpu size={14}/>{item.model}</span></div><span className="provider-connection-url">{item.base_url}</span></div>
-                    <button type="button" className="provider-connection-edit" aria-label={`${t('customProvider.edit')} ${item.name}`} onClick={() => setDraft({...item, api_key: ''})}><Pencil size={16}/></button>
+                    <button type="button" className="provider-connection-edit" aria-label={`${t('customProvider.edit')} ${item.name}`} onClick={() => setDraft({...item, protocol: item.protocol ?? 'typesafe', api_key: ''})}><Pencil size={16}/></button>
                 </div>)}
             </div>}
             {error && <p className="model-settings-error" role="alert">{error}</p>}

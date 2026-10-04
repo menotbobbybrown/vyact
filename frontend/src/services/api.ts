@@ -1,4 +1,5 @@
-export interface DecisionConnection { id: string; name: string; base_url: string; model: string; model_path: string; }
+export type DecisionConnectionProtocol = 'typesafe' | 'vercel';
+export interface DecisionConnection { protocol?: DecisionConnectionProtocol; id: string; name: string; base_url: string; model: string; model_path: string; }
 import type {
     ChatResponse,
     ConversationDetailResponse,

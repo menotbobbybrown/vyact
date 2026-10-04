@@ -1443,7 +1443,7 @@
     "error": "No se puede previsualizar este documento.",
     "extracted": "Texto extraído"
   },
-  "decisionModels": {"localModels":"Modelos locales","cloudConnections":"Conexiones nube","local":"Local","cloud":"Nube","addCloud":"+ Añadir conexión de modelo de decisión","cloudTitle":"Gestionar conexiones de modelos de decisión","keepKey":"Dejar vacío para conservar la clave actual",
+  "decisionModels": {"fallbackWarning":"Falló la solicitud al modelo de decisión. Continuando con el LLM seleccionado.","local":"Local","cloud":"Nube","addCloud":"+ Añadir conexión de modelo de decisión","cloudTitle":"Gestionar conexiones de modelos de decisión","keepKey":"Dejar vacío para conservar la clave actual",
     "tooltipIntro": "Modelo local que evalúa las condiciones y opciones de una pregunta. Se selecciona por separado del modelo de respuesta y puede usarse con modelos en la nube.",
     "tooltipBehavior": "Actualmente responde brevemente a preguntas con opciones explícitas. Las solicitudes que necesitan explicaciones pasan al modelo de respuesta.",
     "tooltipWarning": "Las decisiones pueden ser incorrectas.",

@@ -43,7 +43,7 @@ _STREAMERS = {"openai": openai_stream, "gemini": gemini_stream, "claude": claude
 _PROVIDER_LABEL = {"openai": "OpenAI", "gemini": "Gemini", "claude": "Claude"}
 
 
-async def _route_chat_decision(question, docs, attachments, reason, *, allow_direct=True):
+async def _route_chat_decision(question, docs, attachments, reason, *, allow_direct=True, warnings=None):
     if reason not in ('chat:general', 'chat:general_stream'):
         return None
     try:
@@ -51,7 +51,8 @@ async def _route_chat_decision(question, docs, attachments, reason, *, allow_dir
     except ValueError:
         return None
     answer = await decide_chat(question, settings,
-                             allow_direct=allow_direct and not (docs or attachments))
+                             allow_direct=allow_direct and not (docs or attachments),
+                             **({"warnings": warnings} if warnings is not None else {}))
     return (answer, settings.get("model_path", "").split("/")[-1]) if answer is not None else None
 
 
@@ -94,10 +95,14 @@ async def chat_stream_with_tools(
     reset_memory_stages()
     attachments = attachments or []
     conversation_history = conversation_history or []
+    decision_warnings = []
     direct_answer = await _route_chat_decision(
         question, context_docs, attachments, call_reason,
         allow_direct=not (post_tool_docs or isolated_system_prompt or format_instruction_override),
+        warnings=decision_warnings,
     )
+    for warning in decision_warnings:
+        yield warning
     if direct_answer is not None:
         yield {'type': 'model', 'model': direct_answer[1]}
         yield {'type': 'token', 'text': direct_answer[0]}

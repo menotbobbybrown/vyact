@@ -149,10 +149,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
     const footer = role === 'jev' ? (closeDropdown: () => void) => <div className="decision-model-footer">
         <button type="button" className="dd-model-action" onClick={() => {closeDropdown(); onProviderSettingsOpen(role);}}>
-            <Monitor size={14} aria-hidden="true"/><span>{t('decisionModels.localModels')}</span>
+            <Monitor size={14} aria-hidden="true"/><span>{t('decisionModels.local')}</span>
         </button>
         <button type="button" className="dd-model-action" onClick={() => {closeDropdown(); setCloudConnectionPath(undefined); setCloudConnectionsOpen(true);}}>
-            <Cloud size={14} aria-hidden="true"/><span>{t('decisionModels.cloudConnections')}</span>
+            <Cloud size={14} aria-hidden="true"/><span>{t('decisionModels.cloud')}</span>
         </button>
     </div> : undefined;
 

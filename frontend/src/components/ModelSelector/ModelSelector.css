@@ -344,7 +344,7 @@
 .decision-source-badge { flex-shrink: 0; padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--muted) 10%, transparent); color: var(--muted); font-size: 9px; font-weight: 500; line-height: 1.4; }
 .decision-source-badge.cloud { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
 .decision-model-footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 7px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--surface2) 45%, var(--surface)); }
-.decision-model-footer .dd-model-action { justify-content: center; gap: 6px; min-width: 0; padding: 8px 5px; color: var(--text-secondary); font-size: 11px; font-weight: 550; }
+.decision-model-footer .dd-model-action { justify-content: center; gap: 6px; min-width: 0; padding: 8px 5px; color: var(--text-secondary); font-size: 11px; font-weight: 550; white-space: nowrap; }
 .decision-model-footer .dd-model-action svg { flex-shrink: 0; color: var(--muted); }
 .decision-model-footer .dd-model-action:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .decision-model-footer .dd-model-action:hover svg { color: var(--accent); }

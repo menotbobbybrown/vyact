@@ -1444,7 +1444,7 @@
     "error": "无法预览此文档。",
     "extracted": "提取的文本"
   },
-  "decisionModels": {"localModels":"本地模型","cloudConnections":"云端连接","local":"本地","cloud":"云端","addCloud":"+ 添加决策模型连接","cloudTitle":"管理决策模型连接","keepKey":"留空以保留现有密钥",
+  "decisionModels": {"fallbackWarning":"决策模型请求失败，将使用所选 LLM 继续。","local":"本地","cloud":"云端","addCloud":"+ 添加决策模型连接","cloudTitle":"管理决策模型连接","keepKey":"留空以保留现有密钥",
     "tooltipIntro": "在本地评估问题条件和选项的模型。可独立于回答模型选择，也可与云端模型搭配使用。",
     "tooltipBehavior": "目前仅对有明确选项的问题给出简短回答。需要解释的问题交由回答模型处理。",
     "tooltipWarning": "判断可能出错。",

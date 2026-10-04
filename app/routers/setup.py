@@ -24,6 +24,7 @@ import re
 import secrets
 import socket
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -181,6 +182,7 @@ async def select_decision_model(req: DecisionModelRequest):
 
 
 class DecisionConnectionRequest(BaseModel):
+    protocol: Literal['typesafe', 'vercel'] = 'typesafe'
     id: str | None = None
     name: str = Field(min_length=1, max_length=100)
     base_url: str = Field(default='https://api.typesafe.ai/v1', max_length=2048)
@@ -205,12 +207,13 @@ async def save_decision_connection(req: DecisionConnectionRequest):
     parsed = urlparse(req.base_url.strip())
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise HTTPException(400, 'decision_connection_invalid')
-    api_key = req.api_key.strip() or (existing or {}).get('api_key', '')
+    same_protocol = req.protocol == (existing or {}).get('protocol', 'typesafe')
+    api_key = req.api_key.strip() or ((existing or {}).get('api_key', '') if same_protocol else '')
     if not api_key or not req.name.strip() or not req.model.strip():
         raise HTTPException(400, 'decision_connection_invalid')
     connection_id = req.id or uuid.uuid4().hex
     connection = {'id': connection_id, 'name': req.name.strip(), 'base_url': req.base_url.strip().rstrip('/'),
-                  'model': req.model.strip(), 'api_key': api_key,
+                  'model': req.model.strip(), 'api_key': api_key, 'protocol': req.protocol,
                   'model_path': f"cloud/{connection_id}/{req.name.strip().replace('/', '-')}"}
     if existing and config.get('decision_config', {}).get('model_path') == existing['model_path']:
         config['decision_config']['model_path'] = connection['model_path']

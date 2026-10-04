@@ -6,6 +6,7 @@ import {useTranslation} from 'react-i18next';
 import {api} from '../../services/api';
 import {generateUUID} from '../../utils/helpers';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
+import {showDecisionWarning} from '../../utils/decisionWarning';
 import type {Message, ArticleAttachment, InjectedContextItem, ResponseProgressMessage, ToolActivity} from '../../types';
 import {IMAGE_MODEL_IDS} from './useModels';
 import {streamSSE} from '../../utils/streamClient';
@@ -773,6 +774,9 @@ export function useChat(deps: UseChatDeps) {
                             }));
                             if (showVoiceChatModalRef.current && data.answer)
                                 window.dispatchEvent(new CustomEvent('voiceChatResponse', {detail: {text: data.answer}}));
+                        },
+                        onWarning: warning => {
+                            if (warning.code === 'decision_model_fallback') showDecisionWarning(t('decisionModels.fallbackWarning'), warning.message);
                         },
                         onError: (error) => {
                             window.dispatchEvent(new Event('voiceReadCancel'));

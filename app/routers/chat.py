@@ -1221,6 +1221,8 @@ async def query_stream(req: QueryRequest):
                         # 메모/뉴스RAG/첨부파일 자동조회 진행 표시 (tool과 동일한 start/end 형식으로 변환)
                         yield _sse("tool", {"phase": "start", "name": "search_related_context"})
                         yield _sse("tool", {"phase": "end", "name": "search_related_context"})
+                    elif ev["type"] == "decision_warning":
+                        yield _sse("warning", {"code": "decision_model_fallback", "message": ev["message"]})
                     elif ev["type"] == "error":
                         yield _sse("error", public_error_payload(
                             ev.get("code") or "request_failed",

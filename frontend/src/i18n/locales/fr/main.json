@@ -1444,7 +1444,7 @@
     "error": "Impossible de prévisualiser ce document.",
     "extracted": "Texte extrait"
   },
-  "decisionModels": {"localModels":"Modèles locaux","cloudConnections":"Connexions cloud","local":"Local","cloud":"Cloud","addCloud":"+ Ajouter une connexion de modèle de décision","cloudTitle":"Gérer les connexions des modèles de décision","keepKey":"Laisser vide pour conserver la clé actuelle",
+  "decisionModels": {"fallbackWarning":"La requête au modèle de décision a échoué. Poursuite avec le LLM sélectionné.","local":"Local","cloud":"Cloud","addCloud":"+ Ajouter une connexion de modèle de décision","cloudTitle":"Gérer les connexions des modèles de décision","keepKey":"Laisser vide pour conserver la clé actuelle",
     "tooltipIntro": "Modèle local qui évalue les conditions et les choix d’une question. Il se sélectionne indépendamment du modèle de réponse, y compris un modèle cloud.",
     "tooltipBehavior": "Répond actuellement brièvement aux questions avec des choix explicites. Les demandes nécessitant une explication passent au modèle de réponse.",
     "tooltipWarning": "Les décisions peuvent être incorrectes.",

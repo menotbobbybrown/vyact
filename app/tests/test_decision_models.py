@@ -136,7 +136,9 @@ async def test_both_chat_entry_points_can_skip_llm(monkeypatch):
         call_reason='chat:general') == 'yes'
     for call in decide.call_args_list:
         assert call.args == ('A) yes\nB) no', {'model_path': 'selected'})
-        assert call.kwargs == {'allow_direct': True}
+        assert call.kwargs.get('allow_direct') is True
+        assert set(call.kwargs) <= {'allow_direct', 'warnings'}
+        assert call.kwargs.get('warnings', []) == []
     provider.assert_not_called()
 
 
@@ -302,3 +304,88 @@ async def test_cloud_connections_do_not_expose_keys_and_preserve_key_on_edit(mon
     await setup.delete_decision_connection(saved['id'])
     assert config['decision_config']['model_path'] == ''
     assert config['decision_connections'] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('probability,expected', [(0.95, 'yes'), (0.79, None), (None, None)])
+async def test_vercel_evaluation_wire_format(monkeypatch, probability, expected):
+    requests = []
+    def handle(request):
+        requests.append(request)
+        answer = {'type': 'choice', 'choice': 'A'}
+        if probability is not None:
+            answer['probabilities'] = {'A': probability, 'B': 1 - probability, 'Z': 0}
+        return httpx.Response(200, json={'answers': {'route': answer}})
+    client_class = httpx.AsyncClient
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_class(transport=httpx.MockTransport(handle), **kwargs))
+    settings = {'model_path': 'cloud/test/Jev', 'connection': {'protocol': 'vercel', 'base_url': 'https://ai-gateway.vercel.sh/v4/ai', 'model': 'typesafe-ai/jev', 'api_key': 'test-key'}}
+    question = 'A) yes\nB) no'
+    assert await decision.decide_chat(question, settings) == expected
+    request = requests[0]
+    assert request.url.path == '/v4/ai/evaluation-model'
+    assert request.headers['ai-model-id'] == 'typesafe-ai/jev'
+    assert request.headers['ai-evaluation-model-specification-version'] == '4'
+    assert request.headers['ai-gateway-auth-method'] == 'api-key'
+    assert request.headers['ai-gateway-protocol-version'] == '0.0.1'
+    payload = json.loads(request.content)
+    assert payload['state'] == question
+    assert 'model' not in payload
+    assert payload['questions']['route']['criteria']['A'] == 'yes'
+
+
+@pytest.mark.asyncio
+async def test_protocol_switch_requires_new_key(monkeypatch):
+    from fastapi import HTTPException
+    from routers import setup
+    config = {'decision_connections': []}
+    monkeypatch.setattr(setup, 'load_config_async', AsyncMock(side_effect=lambda: config))
+    monkeypatch.setattr(setup, 'save_config_async', AsyncMock())
+    saved = await setup.save_decision_connection(setup.DecisionConnectionRequest(name='Jev', api_key='typesafe-key'))
+    with pytest.raises(HTTPException):
+        await setup.save_decision_connection(setup.DecisionConnectionRequest(id=saved['id'], name='Jev', protocol='vercel'))
+    changed = await setup.save_decision_connection(setup.DecisionConnectionRequest(id=saved['id'], name='Jev', protocol='vercel', base_url='https://ai-gateway.vercel.sh/v4/ai', model='typesafe-ai/jev', api_key='vercel-key'))
+    assert changed['protocol'] == 'vercel'
+    assert 'api_key' not in changed
+    assert config['decision_connections'][0]['api_key'] == 'vercel-key'
+
+
+@pytest.mark.asyncio
+async def test_provider_error_warning_preserves_message_and_fallback(monkeypatch):
+    message = 'AI Gateway requires a valid credit card on file to service requests.'
+    client_class = httpx.AsyncClient
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_class(transport=httpx.MockTransport(lambda _: httpx.Response(403, json={'error': {'message': message}})), **kwargs))
+    warnings = []
+    settings = {'model_path': 'cloud/test/Jev', 'connection': {'protocol': 'vercel', 'base_url': 'https://ai-gateway.vercel.sh/v4/ai', 'model': 'typesafe-ai/jev', 'api_key': 'test-key'}}
+    assert await decision.decide_chat('A) yes\nB) no', settings, warnings=warnings) is None
+    assert warnings == [{'type': 'decision_warning', 'message': message}]
+
+
+@pytest.mark.asyncio
+async def test_normal_cloud_fallback_has_no_warning(monkeypatch):
+    monkeypatch.setattr(decision, 'cloud_decision', AsyncMock(return_value=None))
+    warnings = []
+    assert await decision.decide_chat('A) yes\nB) no', {'model_path': 'cloud/test/Jev', 'connection': {'protocol': 'vercel'}}, warnings=warnings) is None
+    assert warnings == []
+
+
+def test_warning_redacts_api_key():
+    request = httpx.Request('POST', 'https://example.com')
+    response = httpx.Response(403, json={'error': {'message': 'Invalid key private-key'}}, request=request)
+    error = httpx.HTTPStatusError('Forbidden', request=request, response=response)
+    assert decision.decision_error_message(error, {'connection': {'api_key': 'private-key'}}) == 'Invalid key [REDACTED]'
+
+
+@pytest.mark.asyncio
+async def test_rag_stream_preserves_decision_warning_and_continues(monkeypatch):
+    import agent
+    warning = {'type': 'decision_warning', 'message': 'Provider verification required'}
+    async def model_stream(*args, **kwargs):
+        yield warning
+        yield {'type': 'token', 'text': 'LLM fallback answer'}
+    monkeypatch.setattr(agent, 'get_provider_config', AsyncMock(return_value={'selection_type': 'custom:test'}))
+    monkeypatch.setattr(agent, 'get_model_display_name', AsyncMock(return_value='Fallback LLM'))
+    monkeypatch.setattr(agent, 'chat_stream_with_tools', model_stream)
+    events = [event async for event in agent.rag_query_stream('A) yes\nB) no', skip_rag=True)]
+    assert events[0] == warning
+    assert events[1] == {'type': 'token', 'text': 'LLM fallback answer'}
+    assert events[-1]['result']['answer'] == 'LLM fallback answer'
