@@ -559,6 +559,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             decisionModel={decisionModel}
             onDecisionModelChange={onDecisionModelChange}
             onDecisionSettingsOpen={setDecisionSettingsPath}
+            onDecisionConnectionsChanged={onProviderChange}
             installed={installed}
             mtpSupported={mtpSupported}
             mtpActive={mtpActive}

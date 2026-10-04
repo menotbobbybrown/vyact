@@ -1443,7 +1443,7 @@
     "error": "Unable to preview this document.",
     "extracted": "Extracted text"
   },
-  "decisionModels": {
+  "decisionModels": {"localModels":"Local models","cloudConnections":"Cloud connections","local":"Local","cloud":"Cloud","addCloud":"+ Add decision model connection","cloudTitle":"Manage decision model connections","keepKey":"Leave blank to keep the existing key",
     "tooltipIntro": "A local model that evaluates conditions and answer choices. Select it independently of your response model, including cloud models.",
     "tooltipBehavior": "Currently gives short answers to questions with explicit choices. Requests needing explanations go to the response model.",
     "tooltipWarning": "Decisions can be incorrect.",

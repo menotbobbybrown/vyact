@@ -37,7 +37,7 @@ from services.tool_messages import get_tool_language
 from .messages import llm_message
 from services.local_model_errors import LocalModelNotDownloadedError
 from services.user_memory_tools import reset_memory_stages
-from services.decision_models import decide_chat
+from services.decision_models import decide_chat, resolve_decision_settings
 
 _STREAMERS = {"openai": openai_stream, "gemini": gemini_stream, "claude": claude_stream}
 _PROVIDER_LABEL = {"openai": "OpenAI", "gemini": "Gemini", "claude": "Claude"}
@@ -46,7 +46,10 @@ _PROVIDER_LABEL = {"openai": "OpenAI", "gemini": "Gemini", "claude": "Claude"}
 async def _route_chat_decision(question, docs, attachments, reason, *, allow_direct=True):
     if reason not in ('chat:general', 'chat:general_stream'):
         return None
-    settings = (await load_config_async()).get('decision_config', {})
+    try:
+        settings = resolve_decision_settings(await load_config_async())
+    except ValueError:
+        return None
     answer = await decide_chat(question, settings,
                              allow_direct=allow_direct and not (docs or attachments))
     return (answer, settings.get("model_path", "").split("/")[-1]) if answer is not None else None

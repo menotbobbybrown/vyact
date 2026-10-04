@@ -1454,7 +1454,7 @@
     "error": "문서를 미리 볼 수 없습니다.",
     "extracted": "추출된 텍스트"
   },
-  "decisionModels": {
+  "decisionModels": {"localModels":"로컬 모델","cloudConnections":"클라우드 연결","local":"로컬","cloud":"클라우드","addCloud":"+ 판단 모델 연결 추가","cloudTitle":"판단 모델 연결 관리","keepKey":"비워 두면 기존 키 유지",
     "tooltipIntro": "질문의 조건과 선택지를 검토하는 로컬 모델입니다. 응답 모델과 별도로 선택하며, 클라우드 응답 모델과 함께 사용할 수 있습니다.",
     "tooltipBehavior": "현재는 선택지가 있는 질문에 짧게 답합니다. 설명이 필요한 질문은 응답 모델로 넘깁니다.",
     "tooltipWarning": "판단 결과가 틀릴 수 있습니다.",

@@ -1,5 +1,5 @@
-.provider-connection-manager { height: auto; max-height: min(88vh, 820px); }
-.provider-connection-list { display: grid; gap: 10px; padding: 16px 24px; overflow-y: auto; min-height: 0; }
+.provider-editor.provider-connection-manager { height: auto; max-height: min(88vh, 820px); }
+.provider-connection-list { flex: 0 1 auto; align-content: start; display: grid; gap: 10px; padding: 16px 24px; overflow-y: auto; min-height: 0; }
 .provider-connection-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--surface2) 45%, transparent); }
 .provider-connection-details { display: grid; gap: 5px; flex: 1; min-width: 0; }
 .provider-connection-details strong { color: var(--text); font-size: var(--modal-text); font-weight: 600; }

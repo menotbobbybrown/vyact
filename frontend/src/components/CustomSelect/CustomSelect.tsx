@@ -33,7 +33,7 @@ interface CustomSelectProps {
     clearable?: boolean;
     onClear?: () => void;
     clearLabel?: string;
-    footer?: React.ReactNode;
+    footer?: React.ReactNode | ((closeDropdown: () => void) => React.ReactNode);
     emptyState?: React.ReactNode;
     ariaLabel?: string;
     portal?: boolean;
@@ -232,7 +232,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 )}
             </div>
 
-            {footer && footer}
+            {typeof footer === 'function' ? footer(closeDropdown) : footer}
         </div>
     ) : null;
 

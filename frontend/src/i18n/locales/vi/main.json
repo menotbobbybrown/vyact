@@ -1444,7 +1444,7 @@
     "error": "Không thể xem trước tài liệu này.",
     "extracted": "Văn bản được trích xuất"
   },
-  "decisionModels": {
+  "decisionModels": {"localModels":"Mô hình cục bộ","cloudConnections":"Kết nối đám mây","local":"Cục bộ","cloud":"Đám mây","addCloud":"+ Thêm kết nối mô hình quyết định","cloudTitle":"Quản lý kết nối mô hình quyết định","keepKey":"Để trống để giữ khóa hiện tại",
     "tooltipIntro": "Mô hình cục bộ đánh giá điều kiện và các lựa chọn của câu hỏi. Có thể chọn riêng với mô hình trả lời, kể cả mô hình đám mây.",
     "tooltipBehavior": "Hiện trả lời ngắn cho câu hỏi có lựa chọn rõ ràng. Câu hỏi cần giải thích được chuyển cho mô hình trả lời.",
     "tooltipWarning": "Kết quả có thể sai.",

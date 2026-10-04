@@ -1,7 +1,7 @@
 import OverflowTooltipText from '../common/OverflowTooltipText/OverflowTooltipText';
 import ModelCapabilityIcons from '../common/ModelCapabilityIcons/ModelCapabilityIcons';
 import React, {useState} from 'react';
-import {Ellipsis, Pencil, Settings, Trash2} from 'lucide-react';
+import {Cloud, Ellipsis, Monitor, Pencil, Settings, Trash2} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import type {SelectOption} from '../CustomSelect/CustomSelect';
@@ -9,12 +9,14 @@ import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
 import ActionMenu from '../common/ActionMenu/ActionMenu';
 import {type ModelRole} from '../common/ModelRoleTabs/ModelRoleTabs';
 import './ModelSelector.css';
+import DecisionConnectionModal from '../DecisionModelSettingsModal/DecisionConnectionModal';
 
 interface ModelSelectorProps {
     role?: ModelRole;
     decisionInstalled: string[];
     decisionModel: string;
     onDecisionModelChange: (model: string) => Promise<void>;
+    onDecisionConnectionsChanged: () => Promise<void>;
     onDecisionSettingsOpen: (model: string) => void;
     installed: string[];
     mtpSupported: string[];
@@ -37,7 +39,7 @@ type ModelType = 'chat' | 'image_gen' | 'image_edit';
 const getModelDisplayName = (modelId: string) => modelId.split('/').filter(Boolean).pop() || modelId;
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({
-                                                         role = 'llm', decisionInstalled, decisionModel, onDecisionModelChange, onDecisionSettingsOpen,
+                                                         role = 'llm', decisionInstalled, decisionModel, onDecisionModelChange, onDecisionSettingsOpen, onDecisionConnectionsChanged,
                                                          installed,
                                                          mtpSupported,
                                                          mtpActive,
@@ -55,6 +57,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                                                      }) => {
     const {t} = useTranslation('main');
     const activeSelection = role === 'jev' ? decisionModel : selectedModel;
+    const [cloudConnectionsOpen, setCloudConnectionsOpen] = useState(false);
+    const [cloudConnectionPath, setCloudConnectionPath] = useState<string>();
     const [modelToDelete, setModelToDelete] = useState<string | null>(null);
     const [modelMenuOpen, setModelMenuOpen] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -72,7 +76,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 
     // 트리거: dot + 모델명
     const renderTrigger = (_label: string, open: boolean) => {
-        const isInstalled = installed.includes(activeSelection);
+        const isInstalled = installed.includes(activeSelection) || activeSelection.startsWith('cloud/');
         const showMtp = role === 'llm' && currentProvider === 'vyact' && mtpActive === selectedModel;
         const showDFlash2 = role === 'llm' && currentProvider === 'vyact' && dflash2Active === selectedModel;
         const supportsVision = role === 'llm' && currentProvider === 'vyact' && visionSupported.includes(selectedModel);
@@ -93,7 +97,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     // 옵션 아이템: dot/체크 + 모델명 + 추천뱃지 + 설치상태
     const renderOption = (opt: SelectOption, isSelected: boolean, closeDropdown: () => void) => {
         if (!opt.value) return <div className="dd-model-disabled-label">{opt.label}</div>;
-        const isInst = installed.includes(opt.value);
+        const isCloud = opt.value.startsWith('cloud/');
+        const isInst = installed.includes(opt.value) || isCloud;
         const showMtp = role === 'llm' && currentProvider === 'vyact' && mtpSupported.includes(opt.value);
         const showDFlash2 = role === 'llm' && currentProvider === 'vyact' && dflash2Supported.includes(opt.value);
         const supportsVision = role === 'llm' && currentProvider === 'vyact' && visionSupported.includes(opt.value);
@@ -123,6 +128,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                 {/* 남은 폭 안에서만 표시되는 모델명 */}
                 <div className="dd-model-name">
                     <OverflowTooltipText as="span" className="dd-model-label" text={opt.label}/>
+                    {role === 'jev' && <span className={`decision-source-badge${isCloud ? ' cloud' : ''}`}>{t(isCloud ? 'decisionModels.cloud' : 'decisionModels.local')}</span>}
                 </div>
 
                 {isInst && <ActionMenu
@@ -134,15 +140,21 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     triggerClassName="dd-model-more"
                     menuClassName="dd-model-actions-menu"
                 >
-                    <button type="button" className="dd-model-action" onClick={() => {setModelMenuOpen(null); closeDropdown(); if (role === 'jev') onDecisionSettingsOpen(opt.value); else onModelSettingsOpen(opt.value);}}><Settings size={15}/>{t(role === 'jev' ? 'decisionModels.settings' : 'modelSettings.title')}</button>
-                    {!isSelected && opt.value !== selectedModel && opt.value !== decisionModel && <button type="button" className="dd-model-action danger" onClick={() => {setModelMenuOpen(null); setModelToDelete(opt.value);}}><Trash2 size={15}/>{t('modelSelector.delete')}</button>}
+                    <button type="button" className="dd-model-action" onClick={() => {setModelMenuOpen(null); closeDropdown(); if (isCloud) {setCloudConnectionPath(opt.value); setCloudConnectionsOpen(true);} else if (role === 'jev') onDecisionSettingsOpen(opt.value); else onModelSettingsOpen(opt.value);}}><Settings size={15}/>{t(role === 'jev' ? 'decisionModels.settings' : 'modelSettings.title')}</button>
+                    {!isCloud && !isSelected && opt.value !== selectedModel && opt.value !== decisionModel && <button type="button" className="dd-model-action danger" onClick={() => {setModelMenuOpen(null); setModelToDelete(opt.value);}}><Trash2 size={15}/>{t('modelSelector.delete')}</button>}
                 </ActionMenu>}
             </>
         );
     };
 
-    // 하단 커스텀 모델 입력
-    const footer = undefined;
+    const footer = role === 'jev' ? (closeDropdown: () => void) => <div className="decision-model-footer">
+        <button type="button" className="dd-model-action" onClick={() => {closeDropdown(); onProviderSettingsOpen(role);}}>
+            <Monitor size={14} aria-hidden="true"/><span>{t('decisionModels.localModels')}</span>
+        </button>
+        <button type="button" className="dd-model-action" onClick={() => {closeDropdown(); setCloudConnectionPath(undefined); setCloudConnectionsOpen(true);}}>
+            <Cloud size={14} aria-hidden="true"/><span>{t('decisionModels.cloudConnections')}</span>
+        </button>
+    </div> : undefined;
 
     if (role === 'llm' && currentProvider !== 'vyact') {
         return (
@@ -169,7 +181,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
             disabled={disabled}
             searchPlaceholder={t('modelSelector.modelSearch')}
             onOpen={() => setModelMenuOpen(null)}
-            searchAction={role === 'jev' || currentProvider === 'vyact' ? (
+            searchAction={role === 'llm' && currentProvider === 'vyact' ? (
                 <button
                     type="button"
                     className="custom-select-search-action"
@@ -184,6 +196,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
             renderOption={renderOption}
             footer={footer}
         />
+        {cloudConnectionsOpen && <DecisionConnectionModal initialPath={cloudConnectionPath} onClose={() => setCloudConnectionsOpen(false)} onSaved={onDecisionModelChange} onRefresh={onDecisionConnectionsChanged}/>}
         {modelToDelete && <ConfirmModal
             title={t('modelSelector.deleteModelConfirm', {model: getModelDisplayName(modelToDelete)})}
             description={t('modelSelector.deleteModelDescription')}

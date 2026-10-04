@@ -253,3 +253,52 @@ async def test_cloud_provider_preserves_installed_and_selected_decision_model(mo
     assert result['decision_current'] == model
     assert result['decision_installed'] == [model]
     assert result['installed'] == [model]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('confidence,label,expected', [(0.95, 'A', 'yes'), (0.79, 'A', None), (0.95, 'Z', None), (float('nan'), 'A', None)])
+async def test_cloud_choice_preserves_direct_answer_boundary(monkeypatch, confidence, label, expected):
+    requests = []
+    def handle(request):
+        requests.append(request)
+        return httpx.Response(200, json={'answers': {'route': {'type': 'choice', 'choice': label, 'confidence': confidence}}})
+    client_class = httpx.AsyncClient
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_class(transport=httpx.MockTransport(handle), **kwargs))
+    monkeypatch.setattr(decision, '_start_decision_runtime', lambda _: pytest.fail('Cloud decision must not start a local runtime'))
+    settings = {'model_path': 'cloud/test/Jev', 'connection': {'base_url': 'https://api.typesafe.ai/v1', 'model': 'jev-latest', 'api_key': 'test-key'}}
+    question = 'Choose\nA) yes\nB) no'
+    assert await decision.decide_chat(question, settings, system_prompt='Never forwarded') == expected
+    payload = json.loads(requests[0].content)
+    assert payload['state'] == question
+    assert payload['model'] == 'jev-latest'
+    assert 'Never forwarded' not in requests[0].content.decode()
+    assert payload['questions']['route']['criteria']['A'] == 'yes'
+    assert requests[0].url.path == '/v1/systemone'
+    assert requests[0].headers['Authorization'] == 'Bearer test-key'
+
+
+@pytest.mark.asyncio
+async def test_cloud_failure_falls_back(monkeypatch):
+    client_class = httpx.AsyncClient
+    monkeypatch.setattr(decision.httpx, 'AsyncClient', lambda **kwargs: client_class(transport=httpx.MockTransport(lambda _: httpx.Response(401)), **kwargs))
+    settings = {'model_path': 'cloud/test/Jev', 'connection': {'base_url': 'https://api.typesafe.ai/v1', 'model': 'jev-latest', 'api_key': 'test-key'}}
+    assert await decision.decide_chat('A) yes\nB) no', settings) is None
+
+
+@pytest.mark.asyncio
+async def test_cloud_connections_do_not_expose_keys_and_preserve_key_on_edit(monkeypatch):
+    from routers import setup
+    config = {'decision_connections': []}
+    monkeypatch.setattr(setup, 'load_config_async', AsyncMock(side_effect=lambda: config))
+    monkeypatch.setattr(setup, 'save_config_async', AsyncMock())
+    saved = await setup.save_decision_connection(setup.DecisionConnectionRequest(name='Jev', api_key='private-test-key'))
+    assert 'api_key' not in saved
+    assert 'api_key' not in (await setup.get_decision_connections())[0]
+    config['decision_config'] = {'model_path': saved['model_path']}
+    edited = await setup.save_decision_connection(setup.DecisionConnectionRequest(id=saved['id'], name='Updated'))
+    assert config['decision_connections'][0]['api_key'] == 'private-test-key'
+    assert edited['model_path'].endswith('/Updated')
+    assert config['decision_config']['model_path'] == edited['model_path']
+    await setup.delete_decision_connection(saved['id'])
+    assert config['decision_config']['model_path'] == ''
+    assert config['decision_connections'] == []

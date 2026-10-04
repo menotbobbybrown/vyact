@@ -1,3 +1,4 @@
+export interface DecisionConnection { id: string; name: string; base_url: string; model: string; model_path: string; }
 import type {
     ChatResponse,
     ConversationDetailResponse,
@@ -755,6 +756,16 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
     async getStatus(): Promise<StatusResponse> {
         const res = await fetch(`${API_BASE}/status`);
         return res.json();
+    },
+
+    async getDecisionConnections(): Promise<DecisionConnection[]> {
+        return fetchJson(`${API_BASE}/models/decision/connections`);
+    },
+    async saveDecisionConnection(connection: Partial<DecisionConnection> & {name: string; model: string; base_url: string; api_key: string}): Promise<DecisionConnection> {
+        return fetchJson(`${API_BASE}/models/decision/connections`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(connection)});
+    },
+    async deleteDecisionConnection(id: string): Promise<void> {
+        await fetchJson(`${API_BASE}/models/decision/connections/${encodeURIComponent(id)}`, {method: 'DELETE'});
     },
 
     async getDecisionModel(): Promise<{model_path: string; context_size: number; timeout_seconds: number}> {

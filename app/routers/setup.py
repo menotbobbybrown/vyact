@@ -62,7 +62,7 @@ from services.reasoning_capabilities import get_gguf_reasoning_capabilities, get
 from services.vyact_runtime import list_selectable_models, get_downloaded_model_path, get_model_modalities, start_configured_runtime, stop_all_vyact_runtimes
 
 from services.decision_models import (
-    DECISION_CONTEXT, DECISION_TIMEOUT, activate_decision_model, is_decision_model, search_decision_models,
+    DECISION_CONTEXT, DECISION_TIMEOUT, activate_decision_model, is_decision_model, search_decision_models, resolve_decision_settings,
 )
 
 logger = get_logger(__name__)
@@ -160,24 +160,75 @@ async def get_decision_model():
 @protected('runtime')
 async def select_decision_model(req: DecisionModelRequest):
     config = await load_config_async()
-    if req.model_path and not is_decision_model(req.model_path):
+    if req.model_path and not req.model_path.startswith("cloud/") and not is_decision_model(req.model_path):
         raise HTTPException(400, 'decision_model_unsupported')
     previous = config.get('decision_config', {})
     settings = req.model_dump()
     try:
-        await activate_decision_model(settings)
+        await activate_decision_model(resolve_decision_settings(config, settings))
         config = await load_config_async()
         config['decision_config'] = settings
         await save_config_async(config)
     except Exception as error:
         try:
-            await activate_decision_model(previous)
+            await activate_decision_model(resolve_decision_settings(config, previous))
         except Exception:
             logger.exception('[decision] previous model restoration failed')
         logger.exception('[decision] activation failed')
         error_code = str(error) if str(error) in {'decision_runtime_upgrade_required', 'decision_model_insufficient_memory'} else 'decision_model_load_failed'
         raise HTTPException(400, error_code) from error
     return settings
+
+
+class DecisionConnectionRequest(BaseModel):
+    id: str | None = None
+    name: str = Field(min_length=1, max_length=100)
+    base_url: str = Field(default='https://api.typesafe.ai/v1', max_length=2048)
+    model: str = Field(default='jev-latest', min_length=1, max_length=256)
+    api_key: str = Field(default='', max_length=4096)
+
+
+@router.get('/models/decision/connections')
+async def get_decision_connections():
+    config = await load_config_async()
+    return [{key: value for key, value in item.items() if key != 'api_key'}
+            for item in config.get('decision_connections', [])]
+
+
+@router.post('/models/decision/connections')
+async def save_decision_connection(req: DecisionConnectionRequest):
+    config = await load_config_async()
+    connections = config.setdefault('decision_connections', [])
+    existing = next((item for item in connections if item['id'] == req.id), None)
+    if req.id and existing is None:
+        raise HTTPException(404, 'decision_connection_missing')
+    parsed = urlparse(req.base_url.strip())
+    if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise HTTPException(400, 'decision_connection_invalid')
+    api_key = req.api_key.strip() or (existing or {}).get('api_key', '')
+    if not api_key or not req.name.strip() or not req.model.strip():
+        raise HTTPException(400, 'decision_connection_invalid')
+    connection_id = req.id or uuid.uuid4().hex
+    connection = {'id': connection_id, 'name': req.name.strip(), 'base_url': req.base_url.strip().rstrip('/'),
+                  'model': req.model.strip(), 'api_key': api_key,
+                  'model_path': f"cloud/{connection_id}/{req.name.strip().replace('/', '-')}"}
+    if existing and config.get('decision_config', {}).get('model_path') == existing['model_path']:
+        config['decision_config']['model_path'] = connection['model_path']
+    config['decision_connections'] = [item for item in connections if item['id'] != connection_id] + [connection]
+    await save_config_async(config)
+    return {key: value for key, value in connection.items() if key != 'api_key'}
+
+
+@router.delete('/models/decision/connections/{connection_id}')
+async def delete_decision_connection(connection_id: str):
+    config = await load_config_async()
+    connections = config.get('decision_connections', [])
+    connection = next((item for item in connections if item['id'] == connection_id), None)
+    if connection and config.get('decision_config', {}).get('model_path') == connection['model_path']:
+        config['decision_config']['model_path'] = ''
+    config['decision_connections'] = [item for item in connections if item['id'] != connection_id]
+    await save_config_async(config)
+    return {'ok': True}
 
 
 class ModelSelectRequest(BaseModel):
@@ -766,7 +817,7 @@ async def get_models():
     mlx_available = is_apple_silicon()
     installed_models = [*list_selectable_models(), *(list_downloaded_mlx_models() if mlx_available else [])]
     decision_fields = {
-        "decision_installed": [model for model in installed_models if is_decision_model(model)],
+        "decision_installed": [model for model in installed_models if is_decision_model(model)] + [item["model_path"] for item in cfg.get("decision_connections", [])],
         "decision_current": cfg.get("decision_config", {}).get("model_path", ""),
     }
     if cfg.get("type") == "vyact":

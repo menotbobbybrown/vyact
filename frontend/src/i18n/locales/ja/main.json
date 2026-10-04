@@ -1444,7 +1444,7 @@
     "error": "文書をプレビューできません。",
     "extracted": "抽出されたテキスト"
   },
-  "decisionModels": {
+  "decisionModels": {"localModels":"ローカルモデル","cloudConnections":"クラウド接続","local":"ローカル","cloud":"クラウド","addCloud":"+ 判断モデル接続を追加","cloudTitle":"判断モデル接続管理","keepKey":"空欄で既存のキーを保持",
     "tooltipIntro": "質問の条件と選択肢を評価するローカルモデルです。応答モデルとは別に選択でき、クラウドモデルとも併用できます。",
     "tooltipBehavior": "現在は選択肢のある質問に短く回答します。説明が必要な質問は応答モデルに渡します。",
     "tooltipWarning": "判断が誤る場合があります。",
