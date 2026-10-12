@@ -1,4 +1,4 @@
-const {app, BrowserView, BrowserWindow, WebContentsView, dialog, ipcMain, session, shell} = require("electron");
+const {app, BrowserView, BrowserWindow, WebContentsView, dialog, ipcMain, session, shell, webFrameMain} = require("electron");
 const path = require("path");
 const {spawn, execSync, execFileSync, spawnSync} = require("child_process");
 const fs = require("fs");
@@ -6,6 +6,7 @@ const http = require("http");
 const crypto = require("crypto");
 const {autoUpdater} = require("electron-updater");
 const platform = require("./platform");
+const {attachYouTubeDefaultQuality} = require("./youtube-playback-quality");
 const {persistPythonRuntime, isPythonRuntimeUsable} = require("./python-runtime");
 const {logElasticsearchDiagnostics} = require("./elasticsearch-startup");
 
@@ -864,6 +865,7 @@ function createWindow() {
         },
         show: true,
     });
+    attachYouTubeDefaultQuality(mainWindow.webContents, webFrameMain, error => log(`YouTube quality initialization failed: ${error.message}`));
     mainWindow.maximize();
 
     // Cmd+Tab can focus an already-visible window without leaving the active
