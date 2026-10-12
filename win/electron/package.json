@@ -37,6 +37,7 @@
     },
     "files": [
       "main.js",
+      "youtube-playback-quality.js",
       "platform.js",
       "python-runtime.js",
       "elasticsearch-startup.js",
