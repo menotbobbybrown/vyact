@@ -254,9 +254,8 @@ async def send_mail(request: Request, account_id: str = ""):
 
 @router.api_route("/accounts/{account_id}/mail/signature", methods=["GET", "PUT"])
 async def signature(account_id: str, request: Request):
-    await auth.account(account_id)
+    key = await auth.mail_settings_document_id(account_id, "signature")
     es = get_es()
-    key = f"microsoft_signature_{account_id}"
     try:
         if request.method == "PUT":
             value = await request.json()
@@ -760,13 +759,11 @@ async def cancel_job(job_id: str, account_id: str = ""):
 
 @router.get("/accounts/{account_id}/mail/recipient-groups")
 async def get_recipient_groups(account_id: str):
-    await auth.account(account_id)
-    key = f'microsoft_recipient_groups:{account_id}'
+    key = await auth.mail_settings_document_id(account_id, "recipient_groups")
     return await read_groups(key)
 
 
 @router.put("/accounts/{account_id}/mail/recipient-groups")
 async def put_recipient_groups(account_id: str, request: RecipientGroupsRequest):
-    await auth.account(account_id)
-    key = f'microsoft_recipient_groups:{account_id}'
+    key = await auth.mail_settings_document_id(account_id, "recipient_groups")
     return await save_groups(key, request)

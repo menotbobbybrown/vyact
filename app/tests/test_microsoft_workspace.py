@@ -35,7 +35,7 @@ class MicrosoftWorkspaceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_disconnect_invalidates_pending_login(self):
         auth._pending["disconnect-test"] = {"account_id": "one"}
-        with patch.object(auth, "save_token", AsyncMock()) as save:
+        with patch.object(auth, "read_token", AsyncMock(return_value={})), patch.object(auth, "save_token", AsyncMock()) as save:
             await auth.disconnect("one")
         self.assertNotIn("disconnect-test", auth._pending)
         save.assert_awaited_once_with("one", {})

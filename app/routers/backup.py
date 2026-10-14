@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from services.microsoft_workspace.backup import upload_backup
-from services.microsoft_workspace.auth import revoke_all_tokens as revoke_all_microsoft_tokens
+from services.microsoft_workspace.auth import migrate_mail_settings, revoke_all_tokens as revoke_all_microsoft_tokens
 from services.mcp_config import list_servers
 from config import INSTALL_DIR
 from services.db import (
@@ -334,6 +334,7 @@ async def export_backup(req: ExportRequest = None):
     """선택한 인덱스 → JSON 또는 ZIP 다운로드"""
     es = get_es()
     try:
+        await migrate_mail_settings()
         all_indices = await _get_user_indices(es)
         if req and req.indices:
             index_names = _expand_selected_indices(req.indices, all_indices)
@@ -630,6 +631,7 @@ async def export_backup_to_drive(req: ExportRequest = None):
 
     es = get_es()
     try:
+        await migrate_mail_settings()
         all_indices = await _get_user_indices(es)
         if req and req.indices:
             index_names = _expand_selected_indices(req.indices, all_indices)

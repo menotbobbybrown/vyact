@@ -48,7 +48,7 @@ async def test_restore_without_integration_settings_does_not_require_reconnectio
 @pytest.mark.asyncio
 async def test_microsoft_restore_revokes_only_microsoft_tokens_and_pending_login():
     es = AsyncMock()
-    with patch.object(auth, "get_es", return_value=es), patch.object(auth, "_pending", {"state": {"account_id": "one"}}), patch.object(auth, "_generations", {}), patch.object(auth, "_locks", {}):
+    with patch.object(auth, "migrate_mail_settings", AsyncMock()), patch.object(auth, "get_es", return_value=es), patch.object(auth, "_pending", {"state": {"account_id": "one"}}), patch.object(auth, "_generations", {}), patch.object(auth, "_locks", {}):
         await auth.revoke_all_tokens()
         assert auth._pending == {}
         assert auth._generations["one"] == 1

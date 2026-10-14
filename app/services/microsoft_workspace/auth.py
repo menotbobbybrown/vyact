@@ -17,6 +17,7 @@ from logger import get_logger
 from services.db import INTEGRATION_CREDENTIALS_INDEX, get_es
 from services.mcp_config import list_servers
 from services.microsoft_workspace import request_limits as limits
+from services.microsoft_workspace.mail_settings import document_id, migrate_legacy_settings
 from services.microsoft_workspace.transport import managed_request
 
 AUTHORITY = "https://login.microsoftonline.com/common/oauth2/v2.0"
@@ -63,12 +64,30 @@ async def save_token(account_id: str, value: dict) -> None:
         await es.close()
 
 
+async def mail_settings_document_id(account_id: str, kind: str) -> str:
+    _, item = await account(account_id)
+    token = await read_token(item["id"])
+    email = token.get("email", "").strip().lower()
+    if not email:
+        raise HTTPException(401, "microsoft.accountUnavailable")
+    await migrate_legacy_settings(item["id"], email)
+    return document_id(kind, email)
+
+
+async def migrate_mail_settings() -> None:
+    for item in (await config()).get("accounts", []):
+        token = await read_token(item["id"])
+        await migrate_legacy_settings(item["id"], token.get("email", ""))
+
+
 async def disconnect(account_id: str) -> None:
     _generations[account_id] = _generations.get(account_id, 0) + 1
     for state, pending in list(_pending.items()):
         if pending["account_id"] == account_id:
             _pending.pop(state, None)
     async with _locks.setdefault(account_id, asyncio.Lock()):
+        token = await read_token(account_id)
+        await migrate_legacy_settings(account_id, token.get("email", ""))
         await save_token(account_id, {})
 
 
@@ -76,6 +95,7 @@ async def revoke_all_tokens() -> None:
     """Clear Microsoft credentials and invalidate pending OAuth callbacks on restore."""
     for account_id in set(_generations) | set(_locks) | {pending["account_id"] for pending in _pending.values()}:
         _generations[account_id] = _generations.get(account_id, 0) + 1
+    await migrate_mail_settings()
     _pending.clear()
     async with AsyncExitStack() as stack:
         # Wait for in-flight refreshes before deleting credentials they may have saved.
@@ -152,6 +172,8 @@ async def complete_login(state: str, code: str) -> None:
     async with _locks.setdefault(pending["account_id"], asyncio.Lock()):
         if pending["generation"] != _generations.get(pending["account_id"], 0):
             raise HTTPException(400, "microsoft.loginExpired")
+        previous_token = await read_token(pending["account_id"])
+        await migrate_legacy_settings(pending["account_id"], previous_token.get("email", ""))
         await save_token(pending["account_id"], token)
 
 
@@ -173,6 +195,7 @@ async def access_token(account_id: str = "") -> tuple[str, dict]:
                     logger.warning("Microsoft token service failure account=%s status=%s", account_id, response.status_code)
                     raise HTTPException(503, "microsoft_connection_failed")
                 if response.status_code == 400:
+                    await migrate_legacy_settings(account_id, token.get("email", ""))
                     await save_token(account_id, {})
                 raise HTTPException(401, "microsoft.accountUnavailable")
             token.update(response.json())
