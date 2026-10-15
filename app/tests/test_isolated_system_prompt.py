@@ -14,7 +14,7 @@ class IsolatedSystemPromptTests(unittest.TestCase):
         )
 
         self.assertIn("[Response length]", result)
-        self.assertIn("Answer simple requests", result)
+        self.assertIn("For a single fact or brief explanation", result)
         self.assertIn("1–3 sentences", result)
 
     def test_reasoning_prompt_reserves_tokens_before_dynamic_context(self):
@@ -25,7 +25,7 @@ class IsolatedSystemPromptTests(unittest.TestCase):
             reasoning=True,
         )
 
-        instruction = "추론은 간결히 하고 최종 답변용 토큰을 남겨두세요."
+        instruction = "Reserve the response budget for the requested answer, code, and verification results."
         self.assertIn(instruction, result)
         self.assertLess(result.index("[Response length]"), result.index(instruction))
         self.assertLess(result.index(instruction), result.index("Current date:"))

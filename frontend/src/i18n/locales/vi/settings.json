@@ -584,9 +584,11 @@
     "userInputDescription": "Câu hỏi nhập trong ô trò chuyện. Được gửi dưới dạng tin nhắn user sau hướng dẫn hệ thống và lịch sử hội thoại.",
     "drag": "Kéo {{title}} để di chuyển",
     "defaults": {
-      "base": "## Đầu ra\nDùng Markdown ngắn gọn, đoạn văn có ý nghĩa, tiêu đề `###` và danh sách tối đa hai cấp. Dùng dấu huyền ngược cho lệnh và định danh; khối mã có ngôn ngữ và đường dẫn tệp.\n\nVới dự án hoàn chỉnh, đưa vào toàn bộ nội dung các tệp chính:\n<vyproject name=\"...\">\n<file path=\"...\">nội dung đầy đủ</file>\n</vyproject>\n\n## Yêu cầu tiếp theo\nChỉ với câu trả lời có thông tin đáng kể, có thể thêm 2–3 yêu cầu tiếp theo ngắn gọn bằng ngôn ngữ trả lời:\n<followups>\n- ...\n</followups>\nKhông thêm văn bản hiển thị sau các thẻ này; siêu dữ liệu ẩn cần thiết có thể theo sau.",
-      "length": "[Độ dài trả lời]\nTrả lời yêu cầu đơn giản trong 1–3 câu; mở rộng cho việc phức tạp hoặc khi được yêu cầu chi tiết.",
-      "reasoning": "[Ngân sách suy luận]\nSuy luận ngắn gọn và dành token cho câu trả lời cuối.",
+      "base": "Chia phần giải thích theo chủ đề và dùng tiêu đề `###` khi có nhiều phần. Danh sách tối đa hai cấp. Dùng dấu huyền ngược cho lệnh và định danh, khối mã có ngôn ngữ cho mã nguồn. Nêu đường dẫn đã biết, không tự đoán. Ưu tiên định dạng rõ ràng trong yêu cầu hiện tại hoặc prompt đã chọn. Với chỉ JSON, chỉ mã, chỉ văn bản thuần hoặc mẫu chỉ định, không thêm tiêu đề, giải thích hay thẻ ngoài định dạng đó.",
+      "projectOutput": "Khi người dùng yêu cầu toàn bộ dự án chạy được, xuất toàn bộ nội dung từng tệp cần để chạy theo cấu trúc dưới đây. Thay tên dự án và đường dẫn tương đối bằng giá trị thực. Không dùng thẻ này cho giải thích, đoạn mã hoặc sửa từng tệp riêng. Nếu yêu cầu hiện tại hoặc prompt đã chọn nêu định dạng khác, dùng định dạng đó.\n\n<vyproject name=\"project-name\">\n<file path=\"relative/path\">…</file>\n</vyproject>",
+      "followups": "Sau giải thích, so sánh hoặc đề xuất, chỉ thêm 2–3 yêu cầu tiếp theo ngắn bằng ngôn ngữ trả lời trong thẻ dưới đây khi có ít nhất hai yêu cầu giúp tiếp tục cùng tác vụ. Bỏ qua với chào hỏi, xác nhận, sự thật đơn giản, dịch và viết lại; cũng bỏ qua khi chỉ JSON, chỉ mã, mẫu chỉ định hoặc không thêm văn bản. Không viết chữ hiển thị sau </followups>; chỉ thẻ siêu dữ liệu nội bộ được yêu cầu riêng mới có thể theo sau.\n\n<followups>\n- …\n- …\n</followups>",
+      "length": "Trả lời một sự thật hoặc giải thích ngắn trong 1–3 câu. Với tác vụ nhiều bước, so sánh hoặc triển khai, đưa ra các bước và chi tiết cần để hoàn thành yêu cầu. Tuân theo độ dài người dùng chỉ định.",
+      "reasoning": "Không lặp lại suy luận hoặc xem xét phương án không liên quan. Dành đủ dung lượng cho câu trả lời, mã và kết quả kiểm chứng được yêu cầu.",
       "tools": "[Quan trọng — Quy tắc công cụ]\nGọi công cụ được cung cấp khi thực sự hỗ trợ yêu cầu và xác minh kết quả. Không bịa chức năng, quyền hay kết quả. Trước khi gọi, giải thích đối tượng và hành động tiếp theo bằng 1–2 câu theo ngôn ngữ người dùng, rồi gọi trong cùng phản hồi. Không kết thúc chỉ với giải thích."
     },
     "generalTab": "Chung",
@@ -627,79 +629,87 @@
     "items": {
       "selectedPrompt": {
         "title": "Lời nhắc người dùng đã chọn",
-        "description": "Áp dụng lời nhắc đã chọn trong bộ chọn lời nhắc của cuộc trò chuyện."
+        "description": "Áp dụng prompt đã lưu được chọn trong bộ chọn prompt của cuộc trò chuyện. Không thêm nếu chưa chọn."
+      },
+      "projectOutput": {
+        "title": "Đầu ra dự án",
+        "description": "Xuất toàn bộ tệp khi yêu cầu dự án hoàn chỉnh chạy được. Không dùng thẻ dự án cho đoạn mã, sửa từng tệp hoặc yêu cầu định dạng khác."
+      },
+      "followups": {
+        "title": "Gợi ý tiếp theo",
+        "description": "Đề xuất 2–3 yêu cầu để tiếp tục cùng tác vụ sau giải thích, so sánh hoặc đề xuất. Bỏ qua với dịch, viết lại, trả lời đơn giản, chỉ JSON hoặc chỉ mã."
       },
       "base": {
         "title": "Định dạng đầu ra mặc định",
-        "description": "Quy tắc đầu ra khi không có lời nhắc khác"
+        "description": "Áp dụng quy tắc Markdown, đoạn văn và mã mặc định cùng prompt đã chọn. Ưu tiên yêu cầu định dạng đầu ra rõ ràng."
       },
       "project": {
         "title": "Hướng dẫn dự án",
-        "description": "Hướng dẫn từ dự án đã chọn"
+        "description": "Trong trò chuyện dự án, thêm chỉ dẫn đã lưu của dự án hiện tại nếu có."
       },
       "projectMemory": {
         "title": "Bộ nhớ dự án",
-        "description": "Tóm tắt, quyết định và việc cần làm của dự án"
+        "description": "Thêm tóm tắt, quyết định và việc cần làm đã lưu của dự án nếu có."
       },
       "personalMemory": {
         "title": "Bộ nhớ cá nhân",
-        "description": "Tìm ký ức liên quan và chỉ đưa vào kết quả đạt ngưỡng điểm."
+        "description": "Trong trò chuyện thông thường, tìm ký ức liên quan và chỉ thêm kết quả đạt ngưỡng điểm. Thêm chỉ dẫn ghi nhớ tự động khi có công cụ bộ nhớ."
       },
       "folders": {
         "title": "Thư mục đã đăng ký",
-        "description": "Đường dẫn và mã định danh thư mục dự án và mã nguồn"
+        "description": "Thêm đường dẫn, mã định danh và chỉ dẫn sử dụng khi cuộc trò chuyện hoặc dự án được gán thư mục mã nguồn."
       },
       "tone": {
         "title": "Giọng điệu trả lời",
-        "description": "Giọng điệu đã chọn trong cài đặt chung"
+        "description": "Áp dụng giọng trả lời đã chọn trong cài đặt chung nếu đã thiết lập."
       },
       "metadata": {
         "title": "Siêu dữ liệu nội bộ",
-        "description": "Hướng dẫn tóm tắt, tiêu đề, tệp đính kèm và cập nhật bộ nhớ dự án"
+        "description": "Thêm chỉ dẫn tóm tắt cuộc trò chuyện. Thêm chỉ dẫn tiêu đề khi yêu cầu tạo tiêu đề, tóm tắt tệp khi có tệp đính kèm và cập nhật ký ức khi tải bộ nhớ dự án."
       },
       "external": {
-        "title": "Hướng dẫn dữ liệu ngoài",
-        "description": "Hướng dẫn diễn giải dữ liệu ngoài đã chọn"
+        "title": "Chỉ dẫn nguồn tìm kiếm",
+        "description": "Thêm chỉ dẫn riêng của bộ sưu tập kiến thức đã chọn trong nguồn tìm kiếm và quy tắc diễn giải dữ liệu bên ngoài đã chọn. Không thêm chỉ dẫn bộ sưu tập nếu chưa thiết lập."
       },
       "length": {
         "title": "Độ dài trả lời",
-        "description": "Trả lời ngắn cho yêu cầu đơn giản; chi tiết khi cần cho việc phức tạp"
+        "description": "Yêu cầu 1–3 câu cho một sự thật hoặc giải thích ngắn, và các bước cùng chi tiết cần thiết cho tác vụ nhiều bước, so sánh và triển khai. Ưu tiên độ dài được chỉ định."
       },
       "reasoning": {
         "title": "Ngân sách suy luận",
-        "description": "Dành token cho câu trả lời cuối khi bật suy luận"
+        "description": "Chỉ khi bật suy luận, yêu cầu suy luận ngắn gọn để dành token cho câu trả lời cuối cùng."
       },
       "date": {
         "title": "Ngày hiện tại",
-        "description": "Tự động chèn ngày của yêu cầu"
+        "description": "Khi được thêm, cung cấp ngày tại thời điểm gửi yêu cầu."
       },
       "profile": {
         "title": "Hồ sơ người dùng",
-        "description": "Thông tin từ cài đặt hồ sơ hiện có"
+        "description": "Thêm hồ sơ người dùng đã lưu nếu có. Bỏ qua với yêu cầu dùng chỉ dẫn tùy chỉnh cho dữ liệu bên ngoài."
       },
       "summary": {
         "title": "Tóm tắt hội thoại trước",
-        "description": "Ngữ cảnh nén khi tin nhắn cũ bị loại bỏ"
+        "description": "Thêm bản tóm tắt trước đó đã lưu của cuộc trò chuyện hiện tại nếu có, riêng với các tin nhắn trước."
       },
       "skills": {
         "title": "Hướng dẫn kỹ năng",
-        "description": "Hướng dẫn của kỹ năng khớp với câu hỏi"
+        "description": "Chỉ thêm chỉ dẫn của kỹ năng đã bật có điểm khớp với câu hỏi đạt ngưỡng."
       },
       "language": {
         "title": "Ngôn ngữ trả lời",
-        "description": "Dùng ngôn ngữ giao diện trừ khi có yêu cầu ngôn ngữ khác"
+        "description": "Yêu cầu trả lời bằng ngôn ngữ giao diện đã đặt, ưu tiên ngôn ngữ người dùng yêu cầu rõ ràng."
       },
       "tools": {
         "title": "Quy tắc công cụ chung",
-        "description": "Hướng dẫn mặc định về gọi công cụ và giải thích trước thao tác"
+        "description": "Khi yêu cầu có công cụ, áp dụng quy tắc chung về gọi công cụ, kiểm tra kết quả và giải thích trước khi thực hiện."
       },
       "toolContext": {
         "title": "Ngữ cảnh công cụ tự động",
-        "description": "Công cụ đã chọn, GitHub, mã nguồn, trình duyệt và xác minh thực thi, người nhận"
+        "description": "Thêm chỉ dẫn GitHub, mã nguồn, trình duyệt và xác minh người nhận theo công cụ có sẵn, gồm cả công cụ được chỉ định bằng @."
       },
       "mcp": {
         "title": "Lời nhắc MCP",
-        "description": "Hướng dẫn tùy chỉnh hiện có của công cụ MCP thực sự được cung cấp"
+        "description": "Thêm prompt của máy chủ MCP đã bật hoặc được chọn bằng @ có công cụ được cung cấp cho yêu cầu. Dùng chỉ dẫn mặc định nếu không có nội dung tùy chỉnh."
       }
     }
   }

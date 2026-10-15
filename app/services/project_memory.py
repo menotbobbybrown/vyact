@@ -4,6 +4,8 @@ This module deliberately has no MCP dependency. The selected chat model emits a
 hidden JSON block together with its normal answer; the block is then merged into
 the project document in Elasticsearch.
 """
+
+
 import json
 import re
 import uuid
@@ -11,6 +13,9 @@ from datetime import datetime, timezone
 
 from logger import get_logger
 from services.db import PROJECTS_INDEX, get_es
+from services.prompt_defaults import (
+    PROJECT_MEMORY_UPDATE_TEMPLATE,
+)
 
 logger = get_logger(__name__)
 
@@ -80,23 +85,7 @@ async def get_project_memory(project_id: str) -> dict:
 
 def build_project_memory_instruction(memory: dict) -> str:
     current = json.dumps(project_memory_prompt_view(memory), ensure_ascii=False, separators=(",", ":"))
-    return (
-        "\n\n## Project memory update (hidden; never mention it to the user)\n"
-        "The current project memory follows. Update it only with facts explicitly confirmed by this user message and response. "
-        "Never turn guesses or general advice into decisions or action items.\n"
-        f"Current memory: {current}\n"
-        "At the very end, output the JSON tag below exactly once. Keep summary to at most four sentences while preserving prior key context and reflecting this turn. "
-        "Put only newly confirmed items from this turn in decisions and action_items; use empty arrays when there are none. "
-        "Include due_date as an ISO 8601 date and owner only when explicitly stated.\n"
-        '<project_memory>{"summary":"...","decisions":["..."],'
-        '"action_items":[{"text":"...","owner":"","due_date":""}],"updates":[]}</project_memory>\n'
-        "Only when the user explicitly replaces a decision or confirms a task is done, add an updates entry: "
-        '{"type":"decision","id":"existing ID","previous_text":"exact existing text","replacement":"new decision"} or '
-        '{"type":"action_item","id":"existing ID","previous_text":"exact existing text","status":"completed"}. '
-        "Use only active items shown above. If the target or intent is uncertain, omit the update. "
-        "Do not treat questions, proposals, or assistant suggestions as changes. Do not repeat replacements in decisions.\n"
-        "Put no text other than JSON inside the tag."
-    )
+    return PROJECT_MEMORY_UPDATE_TEMPLATE.format(current_memory=current)
 
 
 def _new_item(text: str, conv_id: str, **extra: str) -> dict:

@@ -10,12 +10,18 @@ services/user_profile.py – 사용자 프로필 관리
 일반 채팅 query_llm 호출 시:
 - user_profile 텍스트를 system_message 앞에 주입
 """
+
+
 from datetime import datetime, timezone
 
 from elasticsearch import NotFoundError
 
 from services.db import get_es, HIST_INDEX
 from logger import get_logger
+from services.prompt_defaults import (
+    RESPONSE_STYLE_GUIDANCE,
+    RESPONSE_STYLE_INSTRUCTIONS,
+)
 
 logger = get_logger(__name__)
 
@@ -23,44 +29,6 @@ USER_PROFILE_INDEX = "user_profile"
 USER_PROFILE_ID = "default"
 MAX_PROFILE_LENGTH = 200
 DEFAULT_RESPONSE_STYLE = "default"
-RESPONSE_STYLE_GUIDANCE = (
-    "Apply style only to conversational wording. Prioritize the user's instructions and required "
-    "language, tone, length, and format; preserve accuracy, uncertainty, and necessary detail. "
-    "Add no greetings, filler, or length for style alone. Preserve requested content and register "
-    "in translations, quotations, code, structured output, and drafts; add persona only if requested. "
-    "For sensitive or distressing topics, stay neutral and respectful without sarcasm or roleplay."
-)
-RESPONSE_STYLE_INSTRUCTIONS = {
-    "professional": (
-        "Use a composed, professional tone with precise, accessible wording and clear organization. "
-        "Avoid unnecessary jargon or ornate phrasing."
-    ),
-    "friendly": (
-        "Be warm, approachable, natural, and focused. Avoid forced familiarity, flattery, "
-        "small talk, or extra length."
-    ),
-    "candid": (
-        "State conclusions and concerns directly and respectfully, with concrete reasons and "
-        "constructive alternatives when useful. Avoid needless bluntness."
-    ),
-    "quirky": (
-        "Use light playfulness or imaginative analogies when helpful. Keep the point clear; "
-        "never force jokes, invent facts, or add length for entertainment."
-    ),
-    "efficient": (
-        "Lead with the answer or next action in short, plain sentences. Omit repetition and "
-        "preambles; retain essential reasoning, qualifications, and steps."
-    ),
-    "cynical": (
-        "Use restrained dry wit and mild skepticism when appropriate. Critique ideas or situations "
-        "respectfully; stay constructive. Never assume the worst from uncertainty or force sarcasm."
-    ),
-    "royal_court": (
-        "Use a courteous, concise royal-attendant tone. Sparingly address the user with a natural "
-        "royal title in the response language (e.g. '전하' or 'Your Majesty'). Avoid excessive "
-        "flattery, archaic verbosity, or automatic agreement."
-    ),
-}
 
 
 async def ensure_user_profile_index():

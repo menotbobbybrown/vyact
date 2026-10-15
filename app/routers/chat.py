@@ -1,7 +1,9 @@
 """
 routers/chat.py – 채팅 / 검색 / 인덱스
 """
-from services.prompt_processing import append_part, enabled, begin_composition, current_composition
+
+
+from services.prompt_processing import append_part, enabled, begin_composition, current_composition, fallback_system_prompt
 import uuid
 import re
 import asyncio
@@ -33,7 +35,7 @@ from services.llm.tools import tool_result_failed
 from services.startup_activity import begin_chat_activity, end_chat_activity
 from error_responses import public_error_payload
 from config import IMAGE_MODEL_IDS
-from prompts import VOICE_MODE_SUFFIX, FORMAT_INSTRUCTION
+from prompts import VOICE_MODE_SUFFIX
 from routers.deps import load_config_async, load_ui_language_async
 from routers.chat_helpers import (
     load_system_prompt, unwrap_pasted_text,
@@ -69,6 +71,12 @@ from services.external_data.selected_documents import load_selected_external_doc
 from services.external_data.messages import get_all_searches_failed_message
 from services.user_profile import get_response_style_instruction
 from services.conversation_title import readable_conversation_title
+from services.prompt_defaults import (
+    PROJECT_FOLDERS_HEADING,
+    PROJECT_MANIFEST_TEMPLATE,
+    PROJECT_FOLDER_TOOL_INSTRUCTION,
+    EXTERNAL_DATA_INSTRUCTION,
+)
 
 logger = get_logger(__name__)
 
@@ -78,30 +86,6 @@ router = APIRouter()
 def _log_user_query(question: str) -> None:
     """API가 전달받은 사용자 질문 원문을 RAG용 가공 질의와 구분해 기록한다."""
     logger.info("[user_query] query=%r", question)
-
-EXTERNAL_DATA_INSTRUCTION = """
-[External public-data guidance]
-The attached Government24 records are search candidates, not confirmed recommendations.
-Apply hard eligibility constraints before writing the answer. A record with an explicit conflict in
-residence, age, household type, income, housing, employment, or another mandatory condition must
-not appear under eligible, likely, recommended, or currently available benefits. Do not ask follow-up
-questions about a record that is already disqualified by a known hard constraint.
-
-Use these result groups strictly:
-1. Eligible now: every stated mandatory condition matches and the application is currently open.
-2. Needs confirmation: no stated condition conflicts, but a mandatory fact or schedule is unknown.
-3. Excluded: a stated condition conflicts or the deadline has passed.
-If group 1 is empty, say clearly that no benefit can currently be confirmed. Keep excluded records
-brief or omit them unless explaining why a seemingly relevant result was rejected. A missing required
-condition such as childbirth, disability, emergency housing risk, or employment is never a positive
-match; it belongs in needs confirmation only when no known fact conflicts.
-
-Never invent missing eligibility conditions, and cite the underlying record when making a factual
-claim. An active lifecycle status only means the record is still present in the source API; it does
-not prove applications are currently open. Compare explicit application deadlines with today's date,
-exclude expired records from currently available benefits, and mark unclear or recurring schedules
-as needing confirmation. Answer in the user's language.
-""".strip()
 
 
 async def _with_response_style(system_prompt: str) -> str:
@@ -286,16 +270,12 @@ async def _build_project_folder_context(folder_paths: list[str]) -> str:
         from services.code_tools import build_code_folder_map, build_project_manifest
         folders = build_code_folder_map(folder_paths)
         manifest = await asyncio.to_thread(build_project_manifest, folder_paths)
-        folder_context = "[Project source folders]\n" + "\n".join(
+        folder_context = PROJECT_FOLDERS_HEADING + "\n".join(
             f"- {folder_id}: {path}" for folder_id, path in folders.items()
         )
         if manifest:
-            folder_context += (
-                "\n\n[Project file structure — generated manifest]\n"
-                + manifest
-                + "\nThis manifest shows paths only. Use code_read_file or code_grep_search when file contents are needed."
-            )
-        return folder_context + "\nEvery code_* tool call must specify the target folder_id."
+            folder_context += PROJECT_MANIFEST_TEMPLATE.format(manifest=manifest)
+        return folder_context + PROJECT_FOLDER_TOOL_INSTRUCTION
     except Exception as e:
         logger.warning("[query_stream] 프로젝트 폴더 컨텍스트 생성 실패: %s", e)
         return ""
@@ -647,7 +627,7 @@ async def _query_response(req: QueryRequest):
     elif articles:
         # 기사/문서 첨부
         from services.conv_summary import build_summary_instruction
-        response_system_prompt = (system_prompt if system_prompt else FORMAT_INSTRUCTION) + build_summary_instruction(
+        response_system_prompt = fallback_system_prompt(system_prompt) + build_summary_instruction(
             "", False, project_memory, request_conversation_title,
         )
         if external_instruction:
@@ -687,7 +667,7 @@ async def _query_response(req: QueryRequest):
             result = {"answer": url_error_answer, "sources": [], "model": await get_model_display_name()}
         elif url_docs:
             from services.conv_summary import build_summary_instruction
-            response_system_prompt = (system_prompt if system_prompt else FORMAT_INSTRUCTION) + build_summary_instruction(
+            response_system_prompt = fallback_system_prompt(system_prompt) + build_summary_instruction(
                 "", False, project_memory, request_conversation_title,
             )
             if external_instruction:
@@ -711,7 +691,7 @@ async def _query_response(req: QueryRequest):
         else:
             _has_file_att = any(a.get("type") in ("file", "zip") for a in req.attachments)
             from services.conv_summary import build_summary_instruction
-            _summary_base_prompt = system_prompt if system_prompt else FORMAT_INSTRUCTION
+            _summary_base_prompt = fallback_system_prompt(system_prompt)
             _summary_system_prompt = _summary_base_prompt + build_summary_instruction(
                 "", _has_file_att, project_memory, request_conversation_title,
             )
@@ -1103,7 +1083,7 @@ async def query_stream(req: QueryRequest):
                     _fmt_override = ""
                 else:
                     from services.conv_summary import build_summary_instruction
-                    _summary_base_prompt = system_prompt if system_prompt else FORMAT_INSTRUCTION
+                    _summary_base_prompt = fallback_system_prompt(system_prompt)
                     _summary_system_prompt = _summary_base_prompt + build_summary_instruction(
                         "", has_file_attachment, project_memory, request_conversation_title,
                     )
@@ -1348,7 +1328,7 @@ async def query_stream(req: QueryRequest):
             selected_docs_system_prompt = system_prompt
             if not req.voice_mode and not req.minimal_prompt:
                 from services.conv_summary import build_summary_instruction
-                selected_docs_system_prompt = (system_prompt if system_prompt else FORMAT_INSTRUCTION) + build_summary_instruction(
+                selected_docs_system_prompt = fallback_system_prompt(system_prompt) + build_summary_instruction(
                     "", False, project_memory, request_conversation_title,
                 )
             if selected_external_instruction:

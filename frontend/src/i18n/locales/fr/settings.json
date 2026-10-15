@@ -584,9 +584,11 @@
     "userInputDescription": "La question saisie dans le champ de discussion. Envoyée comme message user après les instructions système et l’historique.",
     "drag": "Glisser {{title}} pour déplacer",
     "defaults": {
-      "base": "## Sortie\nUtilisez un Markdown concis, des paragraphes pertinents, des titres `###` et des listes de deux niveaux maximum. Entourez commandes et identifiants d’accents graves ; utilisez des blocs de code indiquant le langage et le chemin du fichier.\n\nPour un projet complet, incluez le contenu intégral de tous les fichiers clés :\n<vyproject name=\"...\">\n<file path=\"...\">contenu intégral</file>\n</vyproject>\n\n## Demandes suivantes\nUniquement pour les réponses informatives substantielles, ajoutez éventuellement 2 à 3 demandes suivantes concises dans la langue de réponse :\n<followups>\n- ...\n</followups>\nAucun texte visible après ces balises ; les métadonnées cachées nécessaires peuvent suivre.",
-      "length": "[Longueur de réponse]\nRépondez aux demandes simples en 1 à 3 phrases ; développez pour les tâches complexes ou sur demande.",
-      "reasoning": "[Budget de raisonnement]\nGardez le raisonnement concis et réservez des jetons pour la réponse finale.",
+      "base": "Séparez les explications par sujet et utilisez des titres `###` pour plusieurs sections. Limitez les listes à deux niveaux. Mettez commandes et identifiants entre accents graves et utilisez des blocs de code avec langage. Indiquez les chemins connus sans en inventer. Donnez priorité au format explicite de la demande actuelle ou du prompt choisi. Pour JSON seul, code seul, texte brut seul ou un modèle imposé, n’ajoutez aucun titre, texte ou balise hors de ce format.",
+      "projectOutput": "Si un projet complet exécutable est demandé, fournissez le contenu intégral de chaque fichier nécessaire dans la structure ci-dessous. Remplacez le nom du projet et les chemins relatifs par les valeurs réelles. N’utilisez pas ces balises pour des explications, extraits ou modifications de fichiers individuels. Si la demande actuelle ou le prompt choisi impose un autre format, utilisez-le.\n\n<vyproject name=\"project-name\">\n<file path=\"relative/path\">…</file>\n</vyproject>",
+      "followups": "Après une explication, comparaison ou recommandation, ajoutez 2 à 3 demandes suivantes courtes dans la langue de réponse avec les balises ci-dessous uniquement si au moins deux permettent de poursuivre la même tâche. Omettez-les pour salutations, confirmations, faits simples, traductions et réécritures, ainsi que pour JSON seul, code seul, modèle imposé ou interdiction de texte supplémentaire. Aucun texte visible après </followups> ; seules les balises de métadonnées internes demandées séparément peuvent suivre.\n\n<followups>\n- …\n- …\n</followups>",
+      "length": "Répondez à un fait unique ou une brève explication en 1 à 3 phrases. Pour les tâches en plusieurs étapes, comparaisons ou implémentations, incluez les étapes et détails nécessaires à leur réalisation. Respectez la longueur demandée par l’utilisateur.",
+      "reasoning": "Ne répétez pas le raisonnement et n’explorez pas d’alternatives sans rapport. Réservez assez de place pour la réponse, le code et les résultats de vérification demandés.",
       "tools": "[Important — Règles des outils]\nAppelez les outils proposés lorsqu’ils répondent réellement à la demande et vérifiez leurs résultats. N’inventez ni fonctions, ni permissions, ni résultats. Avant l’appel, expliquez la cible et l’action suivante en 1 à 2 phrases dans la langue de l’utilisateur, puis appelez l’outil dans la même réponse. Ne terminez pas après l’explication."
     },
     "generalTab": "Général",
@@ -627,79 +629,87 @@
     "items": {
       "selectedPrompt": {
         "title": "Prompt utilisateur sélectionné",
-        "description": "Applique le prompt choisi dans le sélecteur de prompts du chat."
+        "description": "Applique le prompt enregistré choisi dans le sélecteur du chat. N’ajoute rien si aucun n’est sélectionné."
+      },
+      "projectOutput": {
+        "title": "Sortie de projets",
+        "description": "Fournit les fichiers complets pour un projet exécutable complet. Sans balises de projet pour les extraits, modifications de fichiers individuels ou autre format imposé."
+      },
+      "followups": {
+        "title": "Suggestions de suivi",
+        "description": "Propose 2 à 3 demandes pour poursuivre la même tâche après une explication, comparaison ou recommandation. Omis pour traductions, réécritures, réponses simples, JSON seul ou code seul."
       },
       "base": {
         "title": "Format de sortie par défaut",
-        "description": "Règles de sortie utilisées sans autre prompt"
+        "description": "Applique les règles Markdown, de paragraphes et de code par défaut avec le prompt choisi. Les demandes explicites de format sont prioritaires."
       },
       "project": {
         "title": "Instructions du projet",
-        "description": "Instructions du projet sélectionné"
+        "description": "Inclut les consignes enregistrées du projet actuel dans ses chats, si elles existent."
       },
       "projectMemory": {
         "title": "Mémoire du projet",
-        "description": "Résumé, décisions et tâches du projet"
+        "description": "Inclut le résumé, les décisions et les tâches enregistrés du projet lorsqu’ils existent."
       },
       "personalMemory": {
         "title": "Mémoire personnelle",
-        "description": "Recherche les souvenirs pertinents et inclut uniquement les résultats atteignant le seuil de score."
+        "description": "Dans les chats généraux, recherche les souvenirs liés à la question et n’inclut que ceux atteignant le seuil de score. Ajoute les consignes de mémorisation automatique si les outils de mémoire sont disponibles."
       },
       "folders": {
         "title": "Dossiers enregistrés",
-        "description": "Chemins et identifiants des dossiers de projet et de code"
+        "description": "Inclut les chemins, identifiants et consignes d’utilisation lorsqu’un dossier de code est associé au chat ou au projet."
       },
       "tone": {
         "title": "Ton des réponses",
-        "description": "Ton choisi dans les paramètres généraux"
+        "description": "Applique le ton de réponse choisi dans les paramètres généraux, s’il est défini."
       },
       "metadata": {
         "title": "Métadonnées internes",
-        "description": "Instructions pour les résumés, titres, pièces jointes et mises à jour de mémoire du projet"
+        "description": "Inclut les consignes de résumé de conversation. Ajoute celles du titre si sa génération est demandée, du résumé des pièces jointes pour les fichiers joints et de mise à jour de mémoire si la mémoire du projet est chargée."
       },
       "external": {
-        "title": "Instructions des données externes",
-        "description": "Consignes pour les données externes sélectionnées"
+        "title": "Consignes des sources de recherche",
+        "description": "Inclut les consignes propres aux collections choisies dans les sources de recherche et les règles d’interprétation des données externes sélectionnées. Omet les consignes des collections si elles ne sont pas définies."
       },
       "length": {
         "title": "Longueur de réponse",
-        "description": "Réponses brèves aux demandes simples, détaillées selon la complexité"
+        "description": "Demande 1 à 3 phrases pour un fait ou une brève explication, et les étapes et détails nécessaires aux tâches en plusieurs étapes, comparaisons et implémentations. La longueur demandée est prioritaire."
       },
       "reasoning": {
         "title": "Budget de raisonnement",
-        "description": "Réserver des jetons pour la réponse finale lorsque le raisonnement est activé"
+        "description": "Uniquement lorsque le raisonnement est activé, demande un raisonnement concis pour conserver des tokens pour la réponse finale."
       },
       "date": {
         "title": "Date actuelle",
-        "description": "Insérer automatiquement la date de la requête"
+        "description": "Lorsque cet élément est inclus, fournit la date au moment de la demande."
       },
       "profile": {
         "title": "Profil utilisateur",
-        "description": "Informations issues des paramètres de profil existants"
+        "description": "Inclut le profil utilisateur enregistré, s’il existe. Omis pour les demandes utilisant des consignes personnalisées de données externes."
       },
       "summary": {
         "title": "Résumé de conversation antérieure",
-        "description": "Contexte condensé lorsque les anciens messages sont écartés"
+        "description": "Inclut le résumé antérieur enregistré de la conversation actuelle, s’il existe, séparément des messages précédents."
       },
       "skills": {
         "title": "Instructions des compétences",
-        "description": "Instructions des compétences correspondant à la question"
+        "description": "Inclut uniquement les consignes des compétences activées dont le score de correspondance avec la question atteint le seuil."
       },
       "language": {
         "title": "Langue de réponse",
-        "description": "Utiliser la langue de l’interface sauf demande contraire"
+        "description": "Demande une réponse dans la langue configurée de l’interface, en donnant priorité à une langue explicitement demandée."
       },
       "tools": {
         "title": "Règles communes des outils",
-        "description": "Instructions par défaut pour les appels et les explications avant action"
+        "description": "Lorsque des outils sont disponibles pour la demande, applique les règles communes d’appel, de vérification des résultats et d’explication avant exécution."
       },
       "toolContext": {
         "title": "Contexte automatique des outils",
-        "description": "Outil sélectionné, GitHub, code, navigateur et vérifications d’exécution et de destinataires"
+        "description": "Ajoute les consignes GitHub, code, navigateur et vérification des destinataires selon les outils disponibles, y compris ceux spécifiés avec @."
       },
       "mcp": {
         "title": "Prompts MCP",
-        "description": "Instructions personnalisées existantes des outils MCP réellement disponibles"
+        "description": "Inclut les prompts des serveurs MCP activés ou choisis avec @ dont les outils sont disponibles pour la demande. Utilise les consignes par défaut sans texte personnalisé."
       }
     }
   }

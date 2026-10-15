@@ -1,23 +1,11 @@
 """
 prompts/format.py – 정적 프롬프트 상수
 """
+from services.prompt_defaults import (
+    FORMAT_INSTRUCTION,
+)
 
-FORMAT_INSTRUCTION = """\
-## Output
-Use concise Markdown, meaningful paragraphs, `###` headings, and at most two list levels. Use backticks for commands and identifiers; language-tagged code blocks with file paths for code.
 
-For complete projects, include all key files with full contents:
-<vyproject name="...">
-<file path="...">complete content</file>
-</vyproject>
-
-## Follow-ups
-Only for substantive informational answers, optionally append 2–3 concise next requests in the response language:
-<followups>
-- ...
-</followups>
-No visible text after these tags; required hidden metadata may follow.
-"""
 
 VOICE_MODE_SUFFIX = "\n\nDo not use emoticons or emoji."
 

@@ -1,9 +1,9 @@
-import type {PromptDraft} from './promptProcessingDraft';
+import {canExcludePrompt, type PromptDraft} from './promptProcessingDraft';
 
 /** Dropping onto a row takes its position: downward after it, upward before it. */
 export function reorderPromptDraft(draft: PromptDraft[], draggedId: string, enabled: boolean, targetId?: string): PromptDraft[] {
     const item = draft.find(candidate => candidate.id === draggedId);
-    if (!item || targetId === draggedId) return draft;
+    if (!item || (!enabled && !canExcludePrompt(item.id)) || targetId === draggedId) return draft;
     const originalDestination = draft.filter(candidate => candidate.enabled === enabled);
     const targetIndex = targetId ? originalDestination.findIndex(candidate => candidate.id === targetId) : -1;
     const destination = originalDestination.filter(candidate => candidate.id !== draggedId);

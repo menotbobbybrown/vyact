@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 from prompts import build_system_message
 from services.prompt_processing import (
     PromptComposition, current_composition, defaults, capture, compose, enabled,
-    load_settings, save_settings, chat_composition_only, invalidate_settings_cache, begin_composition,
+    load_settings, save_settings, chat_composition_only, invalidate_settings_cache, begin_composition, normalize_settings,
 )
 from services.llm.prepare import prepare_request
 from services.llm.tools import build_tool_directive
@@ -30,7 +30,7 @@ class PromptCompositionTests(unittest.TestCase):
         capture("selectedPrompt", "SELECTED")
         capture("metadata", "HIDDEN")
         result = build_system_message("LEGACY FALLBACK", None, "PROFILE", "SKILL", "SUMMARY", "ko", reasoning=True)
-        self.assertEqual(result, "")
+        self.assertEqual(result, "SELECTED")
 
     def test_order_edits_and_custom_instructions_follow_stored_order(self):
         current_composition.get().items = [
@@ -43,13 +43,51 @@ class PromptCompositionTests(unittest.TestCase):
         self.assertTrue(result.endswith("EDITED LENGTH"))
         self.assertNotIn("Current date", result)
 
-    def test_selected_prompt_replaces_default_format_and_can_be_excluded(self):
+    def test_selected_prompt_keeps_included_format_rules(self):
         capture("selectedPrompt", "SELECTED")
-        self.assertNotIn("## Output", build_system_message("", None))
-        next(item for item in current_composition.get().items if item["id"] == "selectedPrompt")["enabled"] = False
         result = build_system_message("", None)
-        self.assertNotIn("SELECTED", result)
-        self.assertIn("## Output", result)
+        self.assertIn("SELECTED", result)
+        self.assertIn("[Default writing format]", result)
+        self.assertIn("<vyproject", result)
+        self.assertIn("<followups>", result)
+        self.assertIn("take precedence", result)
+
+    def test_split_format_rules_can_be_excluded_independently(self):
+        capture("selectedPrompt", "SELECTED")
+        for item in current_composition.get().items:
+            if item["id"] in {"projectOutput", "followups"}:
+                item["enabled"] = False
+        result = build_system_message("", None)
+        self.assertIn("SELECTED", result)
+        self.assertIn("[Default writing format]", result)
+        self.assertNotIn("<vyproject", result)
+        self.assertNotIn("<followups>", result)
+        next(item for item in current_composition.get().items if item["id"] == "base")["enabled"] = False
+        next(item for item in current_composition.get().items if item["id"] == "followups")["enabled"] = True
+        result = build_system_message("", None)
+        self.assertNotIn("[Default writing format]", result)
+        self.assertIn("<followups>", result)
+
+    def test_legacy_settings_migrate_without_changing_edits_or_existing_order(self):
+        for state in (True, False):
+            items = [{"id": "selectedPrompt", "enabled": True},
+                     {"id": "base", "enabled": state, "content": "CUSTOM FORMAT"},
+                     {"id": "date", "enabled": False}]
+            migrated = normalize_settings({"general": items})["general"]
+            self.assertEqual([item["id"] for item in migrated],
+                             ["selectedPrompt", "base", "projectOutput", "followups", "date"])
+            self.assertEqual(migrated[1]["content"], "CUSTOM FORMAT")
+            self.assertEqual([item["enabled"] for item in migrated[2:4]], [state, state])
+            self.assertEqual(len(items), 3)
+
+    def test_request_selected_fragments_survive_bulk_exclusion(self):
+        for item in current_composition.get().items:
+            item["enabled"] = False
+        for key in ("selectedPrompt", "external", "toolContext", "mcp"):
+            self.assertTrue(enabled(key))
+            capture(key, key)
+        capture("personalMemory", "EXCLUDED MEMORY")
+        self.assertEqual(compose(), "selectedPrompt\n\nexternal\n\ntoolContext\n\nmcp")
 
     def test_reasoning_override_is_still_conditional(self):
         current_composition.get().items = [{"id": "reasoning", "enabled": True, "content": "THINK"}]
@@ -61,7 +99,7 @@ class PromptCompositionTests(unittest.TestCase):
         self.assertNotIn("project", [item["id"] for item in defaults("general")])
         valid = {scope: defaults(scope) for scope in ("general", "project")}
         PromptSettings.model_validate(valid)
-        valid["general"][1]["content"] = "ILLEGAL"
+        next(item for item in valid["general"] if item["id"] == "selectedPrompt")["content"] = "ILLEGAL"
         with self.assertRaises(ValidationError):
             PromptSettings.model_validate(valid)
 
@@ -94,10 +132,10 @@ class PromptRuntimeTests(unittest.IsolatedAsyncioTestCase):
         skills.assert_not_awaited()
 
     async def test_tool_directive_is_excluded_from_system(self):
-        with patch("services.mcp_config.get_active_mcp_prompt", AsyncMock()) as mcp:
+        with patch("services.mcp_config.get_active_mcp_prompt", AsyncMock(return_value="")) as mcp:
             self.assertEqual(await build_tool_directive(["test_tool"]), "")
         self.assertEqual(compose(), "")
-        mcp.assert_not_awaited()
+        mcp.assert_awaited_once()
 
     async def test_auxiliary_call_is_isolated_and_context_restored(self):
         original = current_composition.get()
@@ -184,7 +222,7 @@ class PromptApiTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response.status_code, 200)
                 loaded = await client.get("/api/prompt-processing")
                 self.assertFalse(loaded.json()["settings"]["general"][0]["enabled"])
-                settings["general"][1]["content"] = "ILLEGAL"
+                next(item for item in settings["general"] if item["id"] == "selectedPrompt")["content"] = "ILLEGAL"
                 self.assertEqual((await client.put("/api/prompt-processing", json=settings)).status_code, 422)
         self.assertEqual(es.index.await_count, 1)
 

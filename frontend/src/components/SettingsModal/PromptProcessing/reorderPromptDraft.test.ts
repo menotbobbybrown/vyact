@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import {excludeAllPrompts, normalizeSelectedPrompts} from './promptProcessingDraft';
 import {reorderPromptDraft} from './reorderPromptDraft';
 
 const draft = [{id: 'a', enabled: true}, {id: 'b', enabled: true}, {id: 'c', enabled: true}, {id: 'd', enabled: false}];
@@ -18,5 +19,17 @@ describe('prompt drag ordering', () => {
     it('appends to an empty excluded list and leaves self-drops unchanged', () => {
         expect(reorderPromptDraft(draft.slice(0, 3), 'a', false)[0]).toEqual({id: 'a', enabled: false});
         expect(reorderPromptDraft(draft, 'a', true, 'a')).toBe(draft);
+    });
+});
+
+describe('request-selected prompts', () => {
+    const selected = ['selectedPrompt', 'external', 'toolContext', 'mcp'].map(id => ({id, enabled: true}));
+    it('keeps selections included on bulk exclusion and restores legacy exclusions', () => {
+        expect(excludeAllPrompts([...selected, ...draft]).filter(item => item.enabled)).toEqual(selected);
+        expect(normalizeSelectedPrompts(selected.map(item => ({...item, enabled: false})))).toEqual(selected);
+    });
+    it('blocks dragging selections out while allowing reordering', () => {
+        expect(reorderPromptDraft(selected, 'selectedPrompt', false)).toBe(selected);
+        expect(reorderPromptDraft(selected, 'selectedPrompt', true, 'external')[1].id).toBe('selectedPrompt');
     });
 });

@@ -3,7 +3,7 @@ import {useTranslation} from 'react-i18next';
 import {ArrowDown, ArrowUp, ArrowLeft, ArrowRight, ChevronDown, LockKeyhole, RotateCcw, Plus, Sparkles, UserRound, Trash2, Folder, MessageSquare, GripVertical, ScanSearch} from 'lucide-react';
 import ModalTabs from '../../common/ModalTabs/ModalTabs';
 import ConfirmModal from '../../common/ConfirmModal/ConfirmModal';
-import {createDefaultPromptDraft, sortExcludedPrompts, getPromptDefinition, loadPromptDraft, type PromptDraft, type PromptScope} from './promptProcessingDraft';
+import {canExcludePrompt, excludeAllPrompts, normalizeSelectedPrompts, createDefaultPromptDraft, sortExcludedPrompts, getPromptDefinition, loadPromptDraft, type PromptDraft, type PromptScope} from './promptProcessingDraft';
 import '../../common/ModalOverlay/ModalActions.css';
 import './PromptProcessingSection.css';
 import {fetchPromptSettings, persistPromptSettings} from './promptProcessingApi';
@@ -35,7 +35,7 @@ export default function PromptProcessingSection() {
     const excluded = sortExcludedPrompts(draft);
     const titleFor = (item: PromptDraft) => item.title ?? (item.source === 'user' ? t('promptProcessing.customTitle') : t(`promptProcessing.items.${item.id}.title`));
     const updateDraft = (next: PromptDraft[]) => {
-        const nextDrafts = {...drafts, [scope]: next};
+        const nextDrafts = {...drafts, [scope]: normalizeSelectedPrompts(next)};
         setDrafts(nextDrafts);
         setStorageFailed(false);
     };
@@ -95,7 +95,7 @@ export default function PromptProcessingSection() {
 
         const definition = getPromptDefinition(item.id);
         const isUser = item.source === 'user';
-        const editable = isUser || !!definition && 'content' in definition;
+        const editable = isUser || !!definition && 'editable' in definition;
         const expanded = editable && expandedId === item.id;
         const ItemContent = editable ? 'button' : 'div';
         const searchConditional = definition && 'searchConditional' in definition && definition.searchConditional;
@@ -123,10 +123,10 @@ export default function PromptProcessingSection() {
                     {editable && <ChevronDown size={14} className={expanded ? 'is-expanded' : ''}/>}
                 </ItemContent>
                 <div className="prompt-processing-actions">
-                    <button className="prompt-processing-icon"
+                    {canExcludePrompt(item.id) && <button className="prompt-processing-icon"
                         aria-label={t(item.enabled ? 'promptProcessing.exclude' : 'promptProcessing.include', {title})}
                         onClick={() => updateItem(item.id, {enabled: !item.enabled})}>
-                        {item.enabled ? <ArrowLeft size={15}/> : <ArrowRight size={15}/>}</button>
+                        {item.enabled ? <ArrowLeft size={15}/> : <ArrowRight size={15}/>}</button>}
                     {item.enabled && <>
                         <button className="prompt-processing-icon"
                             aria-label={t('promptProcessing.moveUp', {title})} disabled={index === 0} onClick={() => moveItem(index, -1)}><ArrowUp size={15}/></button>
@@ -139,7 +139,7 @@ export default function PromptProcessingSection() {
                 <>
                     <label>{t('promptProcessing.title')}<input value={title} maxLength={120}
                         onChange={event => updateItem(item.id, {title: event.target.value})}/></label>
-                    <label>{t('promptProcessing.content')}<textarea rows={9} value={item.content ?? (definition && 'content' in definition ? t(`promptProcessing.defaults.${item.id}`) : '')}
+                    <label>{t('promptProcessing.content')}<textarea rows={9} value={item.content ?? (definition && 'editable' in definition ? t(`promptProcessing.defaults.${item.id}`) : '')}
                         onChange={event => updateItem(item.id, {content: event.target.value})}/></label>
                     {!isUser && <p className="prompt-processing-hint">{t('promptProcessing.originalNotice')}</p>}
                     <div className="prompt-processing-editor-actions">
@@ -187,8 +187,8 @@ export default function PromptProcessingSection() {
                     <div className="prompt-processing-column-header">
                         <h4 id={`prompt-column-${column.id}`}>{t(`promptProcessing.${column.id}`)} <span>{column.items.length + (column.id === 'included' ? 1 : 0)}</span></h4>
                         {column.id === 'included' && <button className="modal-action-cancel prompt-processing-exclude-all"
-                            disabled={!included.length} onClick={() => {
-                                updateDraft(draft.map(item => ({...item, enabled: false})));
+                            disabled={!included.some(item => canExcludePrompt(item.id))} onClick={() => {
+                                updateDraft(excludeAllPrompts(draft));
                                 setExpandedId(null);
                                 drag.finish();
                             }}><ArrowLeft size={14}/>{t('promptProcessing.excludeAll')}</button>}

@@ -1,6 +1,0 @@
-{
-  "FORMAT_INSTRUCTION": "## Output\nUse concise Markdown, meaningful paragraphs, `###` headings, and at most two list levels. Use backticks for commands and identifiers; language-tagged code blocks with file paths for code.\n\nFor complete projects, include all key files with full contents:\n<vyproject name=\"...\">\n<file path=\"...\">complete content</file>\n</vyproject>\n\n## Follow-ups\nOnly for substantive informational answers, optionally append 2–3 concise next requests in the response language:\n<followups>\n- ...\n</followups>\nNo visible text after these tags; required hidden metadata may follow.\n",
-  "RESPONSE_LENGTH_INSTRUCTION": "[Response length]\nAnswer simple requests in 1–3 sentences; expand for complex work or requested detail.",
-  "REASONING_BUDGET_INSTRUCTION": "[Reasoning budget]\n추론은 간결히 하고 최종 답변용 토큰을 남겨두세요.",
-  "TOOL_INSTRUCTION": "[중요 — 도구 사용 규칙]\n요청에 필요한 기능이 아래 도구에 실제로 있으면 호출해 결과를 확인해라. 없는 기능·권한·결과를 추측하지 마라. 호출 전에는 대상과 다음 행동을 사용자의 언어로 1~2문장 설명하고 같은 응답에서 도구를 호출해라. 설명만 남기고 종료하지 마라."
-}

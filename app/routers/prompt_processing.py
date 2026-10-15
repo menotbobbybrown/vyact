@@ -1,7 +1,7 @@
 """Settings for ordinary and project chat prompt composition."""
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
-from services.prompt_processing import BUILTIN_IDS, EDITABLE_IDS, defaults, load_settings, save_settings
+from services.prompt_processing import BUILTIN_IDS, EDITABLE_IDS, REQUEST_SELECTED_IDS, defaults, load_settings, save_settings
 
 router = APIRouter()
 
@@ -31,6 +31,8 @@ class PromptSettings(BaseModel):
                 raise ValueError("Missing or invalid built-in prompts")
             for item in items:
                 if item.id in expected:
+                    if item.id in REQUEST_SELECTED_IDS:
+                        item.enabled = True
                     if item.source is not None or item.id not in EDITABLE_IDS and item.content is not None:
                         raise ValueError("Built-in prompt content is read-only")
                 elif item.source != "user" or not item.id.startswith("custom:"):

@@ -1,5 +1,5 @@
-import {expect, it} from 'vitest';
-import {sortExcludedPrompts, type PromptDraft} from './promptProcessingDraft';
+import {expect, it, vi} from 'vitest';
+import {loadPromptDraft, sortExcludedPrompts, type PromptDraft} from './promptProcessingDraft';
 
 it('keeps default items first and custom items in saved creation order after reordering', () => {
     const draft: PromptDraft[] = [
@@ -13,4 +13,18 @@ it('keeps default items first and custom items in saved creation order after reo
     expect(sortExcludedPrompts(draft).map(item => item.id)).toEqual(expected);
     expect(sortExcludedPrompts([...draft].reverse()).map(item => item.id)).toEqual(expected);
     expect(sortExcludedPrompts(JSON.parse(JSON.stringify(draft))).map(item => item.id)).toEqual(expected);
+});
+
+it('migrates split rules using the existing base state without losing edits', () => {
+    for (const enabled of [true, false]) {
+        vi.stubGlobal('localStorage', {getItem: () => JSON.stringify({
+            general: [{id: 'base', enabled, content: 'CUSTOM'}],
+        })});
+        try {
+            const draft = loadPromptDraft().general;
+            expect(draft.find(item => item.id === 'base')?.content).toBe('CUSTOM');
+            expect(draft.filter(item => ['projectOutput', 'followups'].includes(item.id)))
+                .toEqual([{id: 'projectOutput', enabled}, {id: 'followups', enabled}]);
+        } finally {vi.unstubAllGlobals();}
+    }
 });

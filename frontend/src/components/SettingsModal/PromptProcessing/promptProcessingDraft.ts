@@ -1,4 +1,3 @@
-import content from './defaultPromptContent.json';
 
 export interface PromptDraft {
     id: string;
@@ -9,16 +8,17 @@ export interface PromptDraft {
     createdOrder?: number;
 }
 
-// UI preview only. These snapshots never participate in request construction.
+// UI catalog metadata. Default text is localized; ES stores only explicit user overrides.
 export const PROMPT_DEFINITIONS = [
-    {id: 'base', content: content.FORMAT_INSTRUCTION},
+    {id: 'base', editable: true},
+    {id: 'projectOutput', editable: true}, {id: 'followups', editable: true},
     {id: 'selectedPrompt'},
     {id: 'project'}, {id: 'projectMemory'}, {id: 'personalMemory', searchConditional: true}, {id: 'folders'},
     {id: 'tone'}, {id: 'metadata'}, {id: 'external'},
-    {id: 'length', content: content.RESPONSE_LENGTH_INSTRUCTION},
-    {id: 'reasoning', content: content.REASONING_BUDGET_INSTRUCTION},
+    {id: 'length', editable: true},
+    {id: 'reasoning', editable: true},
     {id: 'date'}, {id: 'profile'}, {id: 'summary'}, {id: 'skills', searchConditional: true}, {id: 'language'},
-    {id: 'tools', content: content.TOOL_INSTRUCTION}, {id: 'toolContext'}, {id: 'mcp'},
+    {id: 'tools', editable: true}, {id: 'toolContext'}, {id: 'mcp'},
 ] as const;
 
 export type PromptScope = 'general' | 'project';
@@ -48,19 +48,29 @@ function normalizeDraft(saved: unknown, scope: PromptScope): PromptDraft[] {
             restored.push({id: item.id, source: 'user', title: item.title ?? '', content: item.content ?? '', enabled: item.enabled,
                 createdOrder: Number.isFinite(item.createdOrder) && item.createdOrder >= 0 ? item.createdOrder : saved.indexOf(item)});
         } else if (definition && belongsToScope(item.id, scope)) {
-            restored.push('content' in definition
+            restored.push('editable' in definition
                 ? {id: item.id, title: item.title, content: item.content, enabled: item.enabled}
                 : {id: item.id, enabled: item.enabled});
         } else continue;
         seen.add(item.id);
     }
+    const base = restored.find(item => item.id === 'base');
+    if (base) {
+        let insertion = restored.indexOf(base) + 1;
+        for (const id of ['projectOutput', 'followups']) {
+            if (!seen.has(id)) {
+                restored.splice(insertion++, 0, {id, enabled: base.enabled});
+                seen.add(id);
+            }
+        }
+    }
     if (!seen.has('selectedPrompt')) {
-        const baseIndex = restored.findIndex(item => item.id === 'base');
+        const baseIndex = restored.findIndex(item => item.id === 'followups');
         restored.splice(baseIndex < 0 ? 0 : baseIndex + 1, 0, {id: 'selectedPrompt', enabled: true});
         seen.add('selectedPrompt');
     }
-    return [...restored, ...createDefaultPromptDraft(scope).filter(item => !seen.has(item.id))
-        .map(item => ({...item, enabled: !('content' in getPromptDefinition(item.id)!)}))];
+    return normalizeSelectedPrompts([...restored, ...createDefaultPromptDraft(scope).filter(item => !seen.has(item.id))
+        .map(item => ({...item, enabled: !('editable' in getPromptDefinition(item.id)!)}))]);
 }
 
 export function loadPromptDraft(): PromptDrafts {
@@ -90,3 +100,10 @@ export function sortExcludedPrompts(draft: PromptDraft[]): PromptDraft[] {
         return difference || left.id.localeCompare(right.id);
     });
 }
+
+/** Request selections stay available; only their insertion order is configurable. */
+export const canExcludePrompt = (id: string) => !['selectedPrompt', 'external', 'toolContext', 'mcp'].includes(id);
+export const normalizeSelectedPrompts = (draft: PromptDraft[]): PromptDraft[] => draft.map(item =>
+    canExcludePrompt(item.id) ? item : {...item, enabled: true});
+export const excludeAllPrompts = (draft: PromptDraft[]): PromptDraft[] => draft.map(item =>
+    ({...item, enabled: !canExcludePrompt(item.id)}));

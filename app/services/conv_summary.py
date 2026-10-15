@@ -9,11 +9,19 @@ services/conv_summary.py – 대화방 요약(conv_summary) / 첨부파일 요�
 사용자에게 보이는 답변에서는 이 태그들을 제거하고, 파싱한 값만 rag_history 문서에 저장한다.
 SummaryModal이 GET /history/{conv_id}/summary로 조회하는 값이 바로 이거다.
 """
+
+
 from services.prompt_processing import capture, enabled
 import re
 
 from services.db import HIST_INDEX, get_es
 from logger import get_logger
+from services.prompt_defaults import (
+    CONVERSATION_METADATA_INSTRUCTION,
+    CONVERSATION_TITLE_INSTRUCTION,
+    PRIOR_SUMMARY_UPDATE_TEMPLATE,
+    ATTACHMENT_SUMMARY_INSTRUCTION,
+)
 
 logger = get_logger(__name__)
 
@@ -86,24 +94,13 @@ def build_summary_instruction(
     """
     if not enabled("metadata"):
         return capture("metadata", "")
-    parts = [
-        "\n\n## Hidden metadata\n"
-        "After the visible answer, append <conv_summary>...</conv_summary> every turn. "
-        "Summarize the conversation in at most 3–4 sentences, preserving user requirements, "
-        "decisions, progress, and next steps. These tags are hidden; do not discuss them in the answer.\n"
-    ]
+    parts = [CONVERSATION_METADATA_INSTRUCTION]
     if request_conversation_title:
-        parts.append(
-            "First response only: before <conv_summary>, add "
-            "<conv_title>Natural topic title, about 20 characters; no pasted text or UI markers</conv_title>.\n"
-        )
+        parts.append(CONVERSATION_TITLE_INSTRUCTION)
     if prior_conv_summary:
-        parts.append(f"Update this prior summary with the current turn:\n{prior_conv_summary}\n")
+        parts.append(PRIOR_SUMMARY_UPDATE_TEMPLATE.format(prior_summary=prior_conv_summary))
     if request_project_summary:
-        parts.append(
-            "After <conv_summary>, add <project_summary>Attached directory structure and key file roles. "
-            "Use 2–3 sentences for simple files; cover major modules for large projects.</project_summary>.\n"
-        )
+        parts.append(ATTACHMENT_SUMMARY_INSTRUCTION)
     if project_memory is not None:
         from services.project_memory import build_project_memory_instruction
         parts.append(build_project_memory_instruction(project_memory))

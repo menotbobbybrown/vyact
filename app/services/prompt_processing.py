@@ -1,4 +1,6 @@
 """Persisted prompt composition and request-local instruction fragments."""
+
+
 import asyncio
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -8,12 +10,32 @@ from inspect import isasyncgenfunction, signature
 
 from elasticsearch import NotFoundError
 from services.db import SETTINGS_INDEX, get_es
+from services.prompt_defaults import (
+    EDITABLE_IDS,
+    BUILTIN_IDS,
+    FORMAT_INSTRUCTION,
+)
+
+REQUEST_SELECTED_IDS = frozenset({"selectedPrompt", "external", "toolContext", "mcp"})
+
+
+def normalize_settings(settings: dict) -> dict:
+    snapshot = deepcopy(settings)
+    for items in snapshot.values():
+        base = next((item for item in items if item["id"] == "base"), None)
+        if base is not None:
+            insertion = items.index(base) + 1
+            for key in ("projectOutput", "followups"):
+                if not any(item["id"] == key for item in items):
+                    items.insert(insertion, {"id": key, "enabled": base["enabled"]})
+                    insertion += 1
+        for item in items:
+            if item["id"] in REQUEST_SELECTED_IDS:
+                item["enabled"] = True
+    return snapshot
+
 
 DOCUMENT_ID = "prompt_processing"
-BUILTIN_IDS = ("base", "selectedPrompt", "project", "projectMemory", "personalMemory", "folders", "tone",
-               "metadata", "external", "length", "reasoning", "date", "profile", "summary", "skills",
-               "language", "tools", "toolContext", "mcp")
-EDITABLE_IDS = {"base", "length", "reasoning", "tools"}
 _settings_cache: tuple[dict, bool] | None = None
 _settings_lock = asyncio.Lock()
 
@@ -43,13 +65,13 @@ async def load_settings(*, refresh: bool = False) -> tuple[dict, bool]:
             loaded = ({scope: defaults(scope) for scope in ("general", "project")}, False)
         finally:
             await es.close()
-        _settings_cache = deepcopy(loaded)
+        _settings_cache = (normalize_settings(loaded[0]), loaded[1])
         return deepcopy(_settings_cache)
 
 
 async def save_settings(settings: dict) -> None:
     global _settings_cache
-    snapshot = deepcopy(settings)
+    snapshot = normalize_settings(settings)
     async with _settings_lock:
         es = get_es()
         try:
@@ -78,7 +100,7 @@ async def begin_composition(project_id: str = "", isolated: bool = False):
 
 def enabled(key: str) -> bool:
     composition = current_composition.get()
-    return composition is None or any(item["id"] == key and item["enabled"] for item in composition.items)
+    return key in REQUEST_SELECTED_IDS or composition is None or any(item["id"] == key and item["enabled"] for item in composition.items)
 
 
 def capture(key: str, text: str) -> str:
@@ -104,7 +126,7 @@ def compose() -> str:
         return ""
     parts = []
     for item in composition.items:
-        if not item["enabled"]:
+        if not enabled(item["id"]):
             continue
         original = composition.parts.get(item["id"], "")
         # Conditional defaults (reasoning, tools, selected-prompt fallback) remain conditional.
@@ -114,6 +136,11 @@ def compose() -> str:
         if text:
             parts.append(text)
     return "\n\n".join(parts)
+
+
+def fallback_system_prompt(system_prompt: str) -> str:
+    """Managed chats select their base in the composer, never in the router."""
+    return system_prompt if current_composition.get() is not None else system_prompt or FORMAT_INSTRUCTION
 
 
 def final_system_message(legacy: str) -> str:

@@ -599,9 +599,11 @@
     "userInputDescription": "The question typed in the input box. Sent as a user message after system instructions and conversation history.",
     "drag": "Drag {{title}} to move",
     "defaults": {
-      "base": "## Output\nUse concise Markdown, meaningful paragraphs, `###` headings, and at most two list levels. Use backticks for commands and identifiers; language-tagged code blocks with file paths for code.\n\nFor complete projects, include all key files with full contents:\n<vyproject name=\"...\">\n<file path=\"...\">complete content</file>\n</vyproject>\n\n## Follow-ups\nOnly for substantive informational answers, optionally append 2–3 concise next requests in the response language:\n<followups>\n- ...\n</followups>\nNo visible text after these tags; required hidden metadata may follow.",
-      "length": "[Response length]\nAnswer simple requests in 1–3 sentences; expand for complex work or requested detail.",
-      "reasoning": "[Reasoning budget]\nKeep reasoning concise and reserve tokens for the final answer.",
+      "base": "For explanatory answers, separate topics into paragraphs and use `###` headings for multiple sections. Use at most two list levels. Wrap commands and identifiers in backticks; use language-tagged code blocks and include file paths when known, without inventing them. Explicit output-format requirements in the current request or selected prompt take precedence. For JSON-only, code-only, plain-text-only or a specified template, add no headings, prose or tags outside that format.",
+      "projectOutput": "When the user requests a complete runnable project, output the full contents of each file needed to run it using the structure below. Replace the project name and relative file path placeholders with actual values. Do not use these tags for explanations, snippets or edits to individual files. If the current request or selected prompt specifies another output format, use that format instead.\n\n<vyproject name=\"project-name\">\n<file path=\"relative/path\">…</file>\n</vyproject>",
+      "followups": "After an explanation, comparison or recommendation, add 2–3 short next requests in the response language only if at least two would help advance the same task. Use the tags below. Omit them for greetings, acknowledgements, simple fact answers, translations and rewrites; also omit them for JSON-only, code-only, a specified template or no-additional-text requests. Place no user-visible text after </followups>; only separately requested internal metadata tags may follow.\n\n<followups>\n- …\n- …\n</followups>",
+      "length": "Answer a single fact or brief explanation in 1–3 sentences. For multi-step tasks, comparisons or implementation requests, include the steps and details needed to complete the request. Follow any length explicitly requested by the user.",
+      "reasoning": "Do not repeat the same reasoning or explore unrelated alternatives. Leave enough response budget for the requested answer, code and verification results.",
       "tools": "[Important — Tool rules]\nCall offered tools when they actually support the request and verify their results. Do not invent capabilities, permissions, or results. Before calling, explain the target and next action in 1–2 sentences in the user’s language, then call the tool in the same response. Do not stop after the explanation."
     },
     "generalTab": "General",
@@ -642,79 +644,87 @@
     "items": {
       "selectedPrompt": {
         "title": "Selected user prompt",
-        "description": "Applies the prompt chosen from the prompt selector in chat."
+        "description": "Applies the saved prompt chosen in the chat prompt selector. Adds nothing when none is selected."
+      },
+      "projectOutput": {
+        "title": "Project output",
+        "description": "Outputs full file contents for complete runnable project requests. Omits project tags for snippets, individual-file edits or requests specifying another format."
+      },
+      "followups": {
+        "title": "Follow-up suggestions",
+        "description": "Suggests 2–3 next requests for the same task after explanations, comparisons or recommendations. Omitted for translations, rewrites, simple answers, JSON-only and code-only output."
       },
       "base": {
         "title": "Default output format",
-        "description": "Default output rules used when no other prompt is supplied"
+        "description": "Applies default Markdown, paragraph and code formatting alongside the selected prompt. Explicit output-format requests take precedence."
       },
       "project": {
         "title": "Project instructions",
-        "description": "Instructions from the selected project"
+        "description": "Includes the current project’s saved instructions in project chats, if present."
       },
       "projectMemory": {
         "title": "Project memory",
-        "description": "Project summary, decisions, and action items"
+        "description": "Includes the project’s saved summary, decisions and action items when available."
       },
       "personalMemory": {
         "title": "Personal memory",
-        "description": "Searches for relevant memories and includes only results meeting the score threshold."
+        "description": "In general chats, searches related memories and includes only results meeting the score threshold. Adds automatic memory guidance when memory tools are available."
       },
       "folders": {
         "title": "Registered folders",
-        "description": "Project and code folder paths and identifiers"
+        "description": "Includes folder paths, identifiers and usage guidance when a code folder is assigned to the chat or project."
       },
       "tone": {
         "title": "Response tone",
-        "description": "Tone selected in general settings"
+        "description": "Applies the response tone selected in General settings, if set."
       },
       "metadata": {
         "title": "Internal metadata",
-        "description": "Instructions for summaries, titles, attachment summaries, and project memory updates"
+        "description": "Includes conversation-summary instructions. Adds title instructions when a title is requested, attachment-summary instructions for file attachments, and memory-update instructions when project memory is loaded."
       },
       "external": {
-        "title": "External data instructions",
-        "description": "Guidance for selected external records"
+        "title": "Search source instructions",
+        "description": "Includes individual instructions from knowledge collections chosen in Search sources and interpretation rules for selected external data. Omits collection instructions if none are set."
       },
       "length": {
         "title": "Response length",
-        "description": "Brief answers for simple requests; detail as needed for complex work"
+        "description": "Requests 1–3 sentences for a single fact or brief explanation, and the steps and details needed for multi-step tasks, comparisons and implementations. Explicit length requests take precedence."
       },
       "reasoning": {
         "title": "Reasoning budget",
-        "description": "Reserve tokens for the final answer when reasoning is enabled"
+        "description": "Only with reasoning enabled, asks for concise reasoning that leaves tokens for the final answer."
       },
       "date": {
         "title": "Current date",
-        "description": "Automatically insert the date of the request"
+        "description": "When included, supplies the date at the time of the request."
       },
       "profile": {
         "title": "User profile",
-        "description": "User information from existing profile settings"
+        "description": "Includes the saved user profile when present. Omitted for requests using custom external-data instructions."
       },
       "summary": {
         "title": "Earlier conversation summary",
-        "description": "Compressed context when older messages are dropped"
+        "description": "Includes the current conversation’s saved prior summary when available, separately from past messages."
       },
       "skills": {
         "title": "Skill instructions",
-        "description": "Instructions from skills matched to the question"
+        "description": "Includes only enabled skill instructions whose query match meets the score threshold."
       },
       "language": {
         "title": "Response language",
-        "description": "Use the UI language unless another language is requested"
+        "description": "Requests replies in the configured UI language, giving priority to an explicit language request."
       },
       "tools": {
         "title": "Shared tool rules",
-        "description": "Default instructions for tool calls and explanations before actions"
+        "description": "When tools are available to the request, applies shared rules for calling them, checking results and explaining actions beforehand."
       },
       "toolContext": {
         "title": "Automatic tool context",
-        "description": "Selected tool, GitHub, code, browser, execution, and recipient checks"
+        "description": "Adds GitHub, code, browser and recipient-verification guidance for available tools, including usage instructions for tools specified with @."
       },
       "mcp": {
         "title": "MCP prompts",
-        "description": "Existing custom instructions for MCP tools actually exposed"
+        "description": "Includes prompts for enabled or @-selected MCP servers whose tools are available to the request. Uses server defaults when no custom text is set."
       }
     }
   }

@@ -1,18 +1,18 @@
 import {useState, useRef, type DragEvent} from 'react';
 import {reorderPromptDraft} from './reorderPromptDraft';
-import {type PromptDraft} from './promptProcessingDraft';
+import {canExcludePrompt, type PromptDraft} from './promptProcessingDraft';
 
 export function usePromptDrag(draft: PromptDraft[], onChange: (next: PromptDraft[]) => void) {
     const draggedRef = useRef<string | null>(null);
     const [draggedId, setDraggedId] = useState<string | null>(null);
     const [targetId, setTargetId] = useState<string | null>(null);
     const finish = () => {draggedRef.current = null; setDraggedId(null); setTargetId(null);};
-    const canDrop = () => draft.some(item => item.id === draggedRef.current);
+    const canDrop = (enabled = true) => draft.some(item => item.id === draggedRef.current && (enabled || canExcludePrompt(item.id)));
     const drop = (event: DragEvent, enabled: boolean, targetRowId?: string) => {
         event.preventDefault();
         event.stopPropagation();
         const item = draft.find(item => item.id === draggedRef.current);
-        if (!item || !canDrop() || targetRowId === item.id) {finish(); return;}
+        if (!item || !canDrop(enabled) || targetRowId === item.id) {finish(); return;}
         onChange(reorderPromptDraft(draft, item.id, enabled, targetRowId));
         finish();
     };
@@ -30,7 +30,7 @@ export function usePromptDrag(draft: PromptDraft[], onChange: (next: PromptDraft
             }
         },
         over: (event: DragEvent, enabled: boolean, id?: string) => {
-            if (!canDrop()) return;
+            if (!canDrop(enabled)) return;
             event.preventDefault(); event.stopPropagation();
             event.dataTransfer.dropEffect = 'move';
             setTargetId(id ?? (enabled ? 'included' : 'excluded'));
