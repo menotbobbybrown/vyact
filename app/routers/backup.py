@@ -1,3 +1,4 @@
+from services.prompt_processing import load_settings as reload_prompt_processing_settings
 """
 routers/backup.py – ES 전체 인덱스 백업 / 복원
 - include_files=True 시 원본 문서 파일도 zip에 포함
@@ -554,6 +555,11 @@ async def import_backup(
             logger.info("[restore] 시스템 프롬프트 캐시 재동기화 완료")
         except Exception as e:
             logger.warning("[restore] 시스템 프롬프트 캐시 재동기화 실패: %s", e)
+        try:
+            await reload_prompt_processing_settings(refresh=True)
+        except Exception as e:
+            logger.warning("[restore] 프롬프트 구성 캐시 재동기화 실패: %s", e)
+
 
     plugin_reconciliation = []
     if backup_plugins:

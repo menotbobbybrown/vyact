@@ -4,6 +4,7 @@ prompts/system.py – 시스템 메시지 조합 로직
 format_instruction_override / system_prompt 조합 규칙과
 오늘 날짜 prefix 주입을 담당합니다.
 """
+from services.prompt_processing import current_composition, capture, compose, enabled
 from datetime import datetime
 
 from .format import FORMAT_INSTRUCTION
@@ -55,6 +56,23 @@ def build_system_message(
             system_prompt,
             response_language_instruction if include_response_language else "",
         ) if part)
+
+    composition = current_composition.get()
+    if composition is not None:
+        # Stored prompt replaces the fallback format, as in the legacy request path.
+        selected = composition.parts.get("selectedPrompt", "") if enabled("selectedPrompt") else ""
+        capture("base", "" if selected else FORMAT_INSTRUCTION)
+        if format_instruction_override:
+            capture("base", format_instruction_override)
+        capture("length", RESPONSE_LENGTH_INSTRUCTION)
+        reasoning_enabled = reasoning is True or (isinstance(reasoning, str) and reasoning.lower() not in {"none", "off"})
+        capture("reasoning", REASONING_BUDGET_INSTRUCTION if reasoning_enabled else "")
+        capture("date", f"Current date: {datetime.now().strftime('%Y-%m-%d')}")
+        capture("profile", f"[User profile]\n{user_profile}" if user_profile else "")
+        capture("summary", "[Earlier conversation summary]\nThis is compressed context from older messages. Prefer recent messages if they conflict.\n" + conversation_summary if conversation_summary else "")
+        capture("skills", f"[Skill instructions]\n{skill_context}" if skill_context else "")
+        capture("language", response_language_instruction if include_response_language else "")
+        return compose()
 
     if format_instruction_override is not None:
         if format_instruction_override == "":

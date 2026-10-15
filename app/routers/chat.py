@@ -1,6 +1,7 @@
 """
 routers/chat.py – 채팅 / 검색 / 인덱스
 """
+from services.prompt_processing import append_part, enabled, begin_composition, current_composition
 import uuid
 import re
 import asyncio
@@ -105,6 +106,8 @@ as needing confirmation. Answer in the user's language.
 
 async def _with_response_style(system_prompt: str) -> str:
     """AI 프로필 포함 여부와 무관하게 채팅 응답 말투를 적용한다."""
+    if not enabled("tone"):
+        return system_prompt
     try:
         style_instruction = await get_response_style_instruction()
     except Exception as exc:
@@ -113,7 +116,7 @@ async def _with_response_style(system_prompt: str) -> str:
     if not style_instruction:
         return system_prompt
     style_context = f"[Response style and tone]\n{style_instruction}"
-    return f"{system_prompt}\n\n{style_context}" if system_prompt else style_context
+    return append_part(system_prompt, "tone", style_context)
 
 
 async def _get_selected_external_context(question: str, resource_ids: list[str], document_selections: list[dict] | None = None) -> tuple[list[dict], str, bool, dict]:
@@ -534,7 +537,9 @@ async def _query_serialized(req: QueryRequest):
     ))
     scope_token = None
     memory_token = None
+    prompt_token = None
     try:
+        prompt_token = await begin_composition(req.project_id, req.minimal_prompt or req.voice_mode)
         memory_token = memory_enabled_for_turn.set(
             await capture_memory_enabled_for_turn() if not req.project_id and not req.minimal_prompt and not req.personal_memory_disabled else False
         )
@@ -542,10 +547,12 @@ async def _query_serialized(req: QueryRequest):
             scope_token = await mcp_manager.enable_request_scope(
                 req.selected_mcp_ids or req.client_tool_ids or [],
                 client_scope=req.client_tool_ids is not None, explicit=bool(req.selected_mcp_ids),
-                allow_memory_tools=req.personal_memory,
+                allow_memory_tools=req.personal_memory and enabled("personalMemory"),
             )
         return await _query_response(req)
     finally:
+        if prompt_token is not None:
+            current_composition.reset(prompt_token)
         if memory_token is not None:
             memory_enabled_for_turn.reset(memory_token)
         current_approval_context.reset(token)
@@ -567,29 +574,29 @@ async def _query_response(req: QueryRequest):
 
     # 2) 설정/시스템 프롬프트 로드
     cfg, current_model, system_prompt = await load_system_prompt(req.system_prompt)
-    project_prompt = await _get_project_prompt(req.project_id)
+    project_prompt = await _get_project_prompt(req.project_id) if enabled("project") else ""
     if project_prompt:
-        system_prompt = f"{system_prompt}\n\n[Project instructions]\n{project_prompt}" if system_prompt else project_prompt
+        system_prompt = append_part(system_prompt, "project", f"[Project instructions]\n{project_prompt}")
     from services.project_memory import get_project_memory, project_memory_prompt_view
-    project_memory = await get_project_memory(req.project_id) if req.project_id else None
+    project_memory = await get_project_memory(req.project_id) if req.project_id and enabled("projectMemory") else None
     if project_memory and any(project_memory.get(key) for key in ("summary", "decisions", "action_items")):
         memory_context = json.dumps(project_memory_prompt_view(project_memory), ensure_ascii=False)
-        system_prompt = f"{system_prompt}\n\n[Project memory]\n{memory_context}" if system_prompt else f"[Project memory]\n{memory_context}"
-    if (not req.project_id and not req.minimal_prompt and not req.personal_memory_disabled
+        system_prompt = append_part(system_prompt, "projectMemory", f"[Project memory]\n{memory_context}")
+    if (not req.project_id and not req.minimal_prompt and not req.personal_memory_disabled and enabled("personalMemory")
             and cfg.get("model_type") not in ("image_gen", "image_edit")
             and current_model not in IMAGE_MODEL_IDS):
         from services.user_memory import memory_context as build_user_memory_context
         personal_memory = await build_user_memory_context(clean_question)
         if personal_memory:
-            system_prompt = f"{system_prompt}\n\n{personal_memory}" if system_prompt else personal_memory
+            system_prompt = append_part(system_prompt, "personalMemory", personal_memory)
         if req.use_tools:
             from services.user_memory_tools import AUTO_MEMORY_INSTRUCTION, user_memory_tools_available
             if await user_memory_tools_available():
-                system_prompt = f"{system_prompt}\n\n{AUTO_MEMORY_INSTRUCTION}" if system_prompt else AUTO_MEMORY_INSTRUCTION
+                system_prompt = append_part(system_prompt, "personalMemory", AUTO_MEMORY_INSTRUCTION, extend=True)
     request_folder_paths = await _get_request_folder_paths(req.folder_path, req.project_id)
-    project_folder_context = await _build_project_folder_context(request_folder_paths)
+    project_folder_context = await _build_project_folder_context(request_folder_paths) if enabled("folders") else ""
     if project_folder_context:
-        system_prompt = f"{system_prompt}\n\n{project_folder_context}" if system_prompt else project_folder_context
+        system_prompt = append_part(system_prompt, "folders", project_folder_context)
 
     # 이미지 생성 모델이면 위임
     if cfg.get("model_type") in ("image_gen", "image_edit") or current_model in IMAGE_MODEL_IDS:
@@ -644,7 +651,7 @@ async def _query_response(req: QueryRequest):
             "", False, project_memory, request_conversation_title,
         )
         if external_instruction:
-            response_system_prompt = f"{response_system_prompt}\n\n{external_instruction}"
+            response_system_prompt = append_part(response_system_prompt, "external", external_instruction)
         direct_docs, file_chunks = await search_file_id_chunks(req.question, articles)
         context_docs = await limit_direct_document_contexts(file_context_docs + direct_docs + file_chunks + external_docs)
         raw_answer = await query_llm(req.question, context_docs, response_system_prompt, media_attachments,
@@ -684,7 +691,7 @@ async def _query_response(req: QueryRequest):
                 "", False, project_memory, request_conversation_title,
             )
             if external_instruction:
-                response_system_prompt = f"{response_system_prompt}\n\n{external_instruction}"
+                response_system_prompt = append_part(response_system_prompt, "external", external_instruction)
             rag_result = await rag_query(req.question, response_system_prompt, media_attachments, req.messages,
                                          extra_context=await limit_direct_document_contexts(external_docs),
                                          skip_rag=external_selected and not knowledge_collection_ids,
@@ -709,7 +716,7 @@ async def _query_response(req: QueryRequest):
                 "", _has_file_att, project_memory, request_conversation_title,
             )
             if external_instruction:
-                _summary_system_prompt = f"{_summary_system_prompt}\n\n{external_instruction}"
+                _summary_system_prompt = append_part(_summary_system_prompt, "external", external_instruction)
             result = await rag_query(req.question, _summary_system_prompt, media_attachments, req.messages,
                                      extra_context=await limit_direct_document_contexts(file_context_docs + external_docs),
                                      skip_rag=_has_file_att or (external_selected and not knowledge_collection_ids),
@@ -908,12 +915,14 @@ async def query_stream(req: QueryRequest):
         mcp_scope_token = None
         approval_context_token = None
         memory_token = None
+        prompt_token = None
         _saved = False
         conv_id = req.conv_id or str(uuid.uuid4())
         user_ts = req.user_timestamp or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         original_question = req.question
         articles = req.articles or []
         try:
+            prompt_token = await begin_composition(req.project_id, req.minimal_prompt or req.voice_mode)
             approval_context_token = current_approval_context.set(ApprovalContext(
                 mode=req.approval_mode, conversation_id=req.conv_id, project_id=req.project_id,
                 interactive=True,
@@ -925,7 +934,7 @@ async def query_stream(req: QueryRequest):
                 selected_ids = req.selected_mcp_ids or req.client_tool_ids or []
                 mcp_scope_token = await mcp_manager.enable_request_scope(
                     selected_ids, client_scope=req.client_tool_ids is not None,
-                    explicit=bool(req.selected_mcp_ids), allow_memory_tools=req.personal_memory,
+                    explicit=bool(req.selected_mcp_ids), allow_memory_tools=req.personal_memory and enabled("personalMemory"),
                 )
             # 1) 붙여넣기 UI 마커 제거 (본문은 사용자 질문으로 유지)
             clean_question = unwrap_pasted_text(req.question)
@@ -940,29 +949,29 @@ async def query_stream(req: QueryRequest):
             project_memory = None
             request_folder_paths: list[str] = []
             if not req.minimal_prompt:
-                project_prompt = await _get_project_prompt(req.project_id)
+                project_prompt = await _get_project_prompt(req.project_id) if enabled("project") else ""
                 if project_prompt:
-                    system_prompt = f"{system_prompt}\n\n[Project instructions]\n{project_prompt}" if system_prompt else project_prompt
+                    system_prompt = append_part(system_prompt, "project", f"[Project instructions]\n{project_prompt}")
                 from services.project_memory import get_project_memory, project_memory_prompt_view
-                project_memory = await get_project_memory(req.project_id) if req.project_id else None
+                project_memory = await get_project_memory(req.project_id) if req.project_id and enabled("projectMemory") else None
                 if project_memory and any(project_memory.get(key) for key in ("summary", "decisions", "action_items")):
                     memory_context = json.dumps(project_memory_prompt_view(project_memory), ensure_ascii=False)
-                    system_prompt = f"{system_prompt}\n\n[Project memory]\n{memory_context}" if system_prompt else f"[Project memory]\n{memory_context}"
-                if (not req.project_id and not req.minimal_prompt and not req.personal_memory_disabled
+                    system_prompt = append_part(system_prompt, "projectMemory", f"[Project memory]\n{memory_context}")
+                if (not req.project_id and not req.minimal_prompt and not req.personal_memory_disabled and enabled("personalMemory")
                         and cfg.get("model_type") not in ("image_gen", "image_edit")
                         and current_model not in IMAGE_MODEL_IDS):
                     from services.user_memory import memory_context as build_user_memory_context
                     personal_memory = await build_user_memory_context(clean_question)
                     if personal_memory:
-                        system_prompt = f"{system_prompt}\n\n{personal_memory}" if system_prompt else personal_memory
+                        system_prompt = append_part(system_prompt, "personalMemory", personal_memory)
                     if req.use_tools:
                         from services.user_memory_tools import AUTO_MEMORY_INSTRUCTION, user_memory_tools_available
                         if await user_memory_tools_available():
-                            system_prompt = f"{system_prompt}\n\n{AUTO_MEMORY_INSTRUCTION}" if system_prompt else AUTO_MEMORY_INSTRUCTION
+                            system_prompt = append_part(system_prompt, "personalMemory", AUTO_MEMORY_INSTRUCTION, extend=True)
                 request_folder_paths = await _get_request_folder_paths(req.folder_path, req.project_id)
-                project_folder_context = await _build_project_folder_context(request_folder_paths)
+                project_folder_context = await _build_project_folder_context(request_folder_paths) if enabled("folders") else ""
                 if project_folder_context:
-                    system_prompt = f"{system_prompt}\n\n{project_folder_context}" if system_prompt else project_folder_context
+                    system_prompt = append_part(system_prompt, "folders", project_folder_context)
                 system_prompt = await _with_response_style(system_prompt)
 
             # 3) 첨부파일 분류
@@ -970,7 +979,7 @@ async def query_stream(req: QueryRequest):
             media_attachments = [a for a in req.attachments if a.get("type") in {"image", "audio"}]
 
             from services.conv_summary import get_prior_conv_summary
-            conversation_summary = "" if req.minimal_prompt else await get_prior_conv_summary(conv_id)
+            conversation_summary = "" if req.minimal_prompt or not enabled("summary") else await get_prior_conv_summary(conv_id)
             request_conversation_title = not req.messages and not conversation_summary
 
             # 첨부파일 임베딩 인덱싱은 LLM 호출 '전에' 끝까지 마친다. (예전엔 LLM 호출과
@@ -1051,7 +1060,7 @@ async def query_stream(req: QueryRequest):
                     # 그대로 남으므로, 컨텍스트 없이 일반 채팅 경로로 LLM에 전달된다.
                     url_system_prompt = system_prompt
                     if external_instruction:
-                        url_system_prompt = f"{url_system_prompt}\n\n{external_instruction}"
+                        url_system_prompt = append_part(url_system_prompt, "external", external_instruction)
                     rag_result = await rag_query(clean_question, url_system_prompt, media_attachments, req.messages,
                                                  extra_context=await limit_direct_document_contexts(external_docs),
                                                  skip_rag=external_selected and not knowledge_collection_ids,
@@ -1100,7 +1109,7 @@ async def query_stream(req: QueryRequest):
                     )
                     _fmt_override = None
                 if external_instruction:
-                    _summary_system_prompt = f"{_summary_system_prompt}\n\n{external_instruction}"
+                    _summary_system_prompt = append_part(_summary_system_prompt, "external", external_instruction)
 
                 # 모든 등록 폴더를 ID로 노출한다. 코드 도구는 매 호출마다 folder_id를 요구한다.
                 if request_folder_paths:
@@ -1343,7 +1352,7 @@ async def query_stream(req: QueryRequest):
                     "", False, project_memory, request_conversation_title,
                 )
             if selected_external_instruction:
-                selected_docs_system_prompt = f"{selected_docs_system_prompt}\n\n{selected_external_instruction}"
+                selected_docs_system_prompt = append_part(selected_docs_system_prompt, "external", selected_external_instruction)
             # 선택된 문서/기사/URL 기반 질의 — 답은 이 context 안에서 나오므로 tool 판정 불필요
             async for ev in chat_stream_with_tools(
                     clean_question, docs_for_llm, selected_docs_system_prompt, media_attachments, req.messages,
@@ -1427,6 +1436,8 @@ async def query_stream(req: QueryRequest):
             logger.info("[query_stream] 클라이언트 연결 종료 — 스트림 중단")
         finally:
             end_chat_activity()
+            if prompt_token is not None:
+                current_composition.reset(prompt_token)
             if memory_token is not None:
                 memory_enabled_for_turn.reset(memory_token)
             if approval_context_token is not None:

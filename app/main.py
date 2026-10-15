@@ -586,6 +586,7 @@ from routers.files import router as files_router
 trace_startup("import:routers.files", "end")
 trace_startup("import:routers.system", "begin")
 from routers.system import router as system_router
+from routers.prompt_processing import router as prompt_processing_router
 trace_startup("import:routers.system", "end")
 trace_startup("import:routers.mcp", "begin")
 from routers.mcp import router as mcp_router
@@ -641,6 +642,7 @@ app.include_router(memo_router, prefix="/api")
 app.include_router(quicknote_router, prefix="/api")
 app.include_router(project_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
+app.include_router(prompt_processing_router, prefix="/api")
 app.include_router(system_router, prefix="/api")
 app.include_router(mcp_router, prefix="/api")
 app.include_router(google_workspace_browser_router, prefix="/api")

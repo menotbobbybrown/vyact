@@ -38,6 +38,7 @@
 },
   "title": "Paramètres",
   "tabs": {
+    "promptProcessing": "Prompts",
     "general": "Général",
     "runtime": "Paramètres RAG",
     "apiServer": "Serveur API",
@@ -574,5 +575,132 @@
   "googleSetupLinks": {
     "apiLibrary": "Bibliothèque d’API",
     "audience": "Audience"
+  },
+  "promptProcessing": {
+    "loadFailed": "Impossible de charger les paramètres. Rouvrez cette vue dans un instant.",
+    "excludeAll": "Tout exclure",
+    "searchConditional": "Inclus si la recherche ou la correspondance produit des résultats",
+    "userInputTitle": "Prompt saisi par l’utilisateur",
+    "userInputDescription": "La question saisie dans le champ de discussion. Envoyée comme message user après les instructions système et l’historique.",
+    "drag": "Glisser {{title}} pour déplacer",
+    "defaults": {
+      "base": "## Sortie\nUtilisez un Markdown concis, des paragraphes pertinents, des titres `###` et des listes de deux niveaux maximum. Entourez commandes et identifiants d’accents graves ; utilisez des blocs de code indiquant le langage et le chemin du fichier.\n\nPour un projet complet, incluez le contenu intégral de tous les fichiers clés :\n<vyproject name=\"...\">\n<file path=\"...\">contenu intégral</file>\n</vyproject>\n\n## Demandes suivantes\nUniquement pour les réponses informatives substantielles, ajoutez éventuellement 2 à 3 demandes suivantes concises dans la langue de réponse :\n<followups>\n- ...\n</followups>\nAucun texte visible après ces balises ; les métadonnées cachées nécessaires peuvent suivre.",
+      "length": "[Longueur de réponse]\nRépondez aux demandes simples en 1 à 3 phrases ; développez pour les tâches complexes ou sur demande.",
+      "reasoning": "[Budget de raisonnement]\nGardez le raisonnement concis et réservez des jetons pour la réponse finale.",
+      "tools": "[Important — Règles des outils]\nAppelez les outils proposés lorsqu’ils répondent réellement à la demande et vérifiez leurs résultats. N’inventez ni fonctions, ni permissions, ni résultats. Avant l’appel, expliquez la cible et l’action suivante en 1 à 2 phrases dans la langue de l’utilisateur, puis appelez l’outil dans la même réponse. Ne terminez pas après l’explication."
+    },
+    "generalTab": "Général",
+    "projectTab": "Projet",
+    "generalHint": "Gérez les prompts des conversations générales.",
+    "projectHint": "Gérez la composition commune des conversations de projet. Les instructions individuelles proviennent des paramètres du projet.",
+    "addCustom": "Ajouter un prompt",
+    "customTitle": "Nouveau prompt",
+    "customDescription": "Ouvrez le titre pour rédiger vos instructions.",
+    "userSource": "Utilisateur",
+    "vyactSource": "Vyact",
+    "deleteCustom": "Supprimer le prompt",
+    "deleteCustomConfirm": "Supprimer ce prompt personnalisé de cet onglet. La réinitialisation ne le récupérera pas.",
+    "restoreScopeConfirm": "Rétablit les instructions Vyact et leur ordre dans cet onglet. Les prompts personnalisés conservent leur contenu et passent dans la liste des éléments non inclus.",
+    "includedEmpty": "Aucun élément inclus. Ajoutez-en un depuis la gauche.",
+    "excludedEmpty": "Aucun élément exclu. Excluez un élément à droite pour le déplacer ici.",
+    "exclude": "Exclure {{title}}",
+    "include": "Inclure {{title}}",
+    "included": "Inclus · Ordre",
+    "excluded": "Non inclus",
+    "previewNotice": "Ceci est un aperçu. Enregistrer sauvegarde les modifications des onglets Général et Projet sur cet appareil. Les requêtes au LLM ne sont pas encore modifiées.",
+    "orderHint": "Glissez les poignées pour réordonner ou changer de liste. Les flèches restent disponibles. Le contenu automatique ne peut pas être modifié.",
+    "restoreAll": "Tout réinitialiser",
+    "restoreItem": "Réinitialiser cet élément",
+    "title": "Titre",
+    "content": "Contenu du prompt",
+    "automatic": "Automatique · Lecture seule",
+    "enabled": "Activer {{title}}",
+    "moveUp": "Monter {{title}}",
+    "moveDown": "Descendre {{title}}",
+    "remove": "Supprimer",
+    "cancel": "Annuler",
+    "restoreConfirm": "Réinitialiser les modifications et l’ordre, et restaurer les éléments par défaut supprimés.",
+    "removeConfirm": "Déplacer vers la liste de gauche. Le contenu est conservé et peut être inclus à nouveau.",
+    "readOnlyNotice": "Cet élément provient des paramètres existants ou de la conversation à l’exécution. Il ne peut être ni modifié, ni supprimé, ni désactivé ici.",
+    "originalNotice": "Instructions par défaut dans la langue actuelle. Vos modifications sont conservées lors du changement de langue.",
+    "storageFailed": "Impossible d’enregistrer les paramètres. Vos modifications sont conservées. Réessayez.",
+    "items": {
+      "selectedPrompt": {
+        "title": "Prompt utilisateur sélectionné",
+        "description": "Applique le prompt choisi dans le sélecteur de prompts du chat."
+      },
+      "base": {
+        "title": "Format de sortie par défaut",
+        "description": "Règles de sortie utilisées sans autre prompt"
+      },
+      "project": {
+        "title": "Instructions du projet",
+        "description": "Instructions du projet sélectionné"
+      },
+      "projectMemory": {
+        "title": "Mémoire du projet",
+        "description": "Résumé, décisions et tâches du projet"
+      },
+      "personalMemory": {
+        "title": "Mémoire personnelle",
+        "description": "Recherche les souvenirs pertinents et inclut uniquement les résultats atteignant le seuil de score."
+      },
+      "folders": {
+        "title": "Dossiers enregistrés",
+        "description": "Chemins et identifiants des dossiers de projet et de code"
+      },
+      "tone": {
+        "title": "Ton des réponses",
+        "description": "Ton choisi dans les paramètres généraux"
+      },
+      "metadata": {
+        "title": "Métadonnées internes",
+        "description": "Instructions pour les résumés, titres, pièces jointes et mises à jour de mémoire du projet"
+      },
+      "external": {
+        "title": "Instructions des données externes",
+        "description": "Consignes pour les données externes sélectionnées"
+      },
+      "length": {
+        "title": "Longueur de réponse",
+        "description": "Réponses brèves aux demandes simples, détaillées selon la complexité"
+      },
+      "reasoning": {
+        "title": "Budget de raisonnement",
+        "description": "Réserver des jetons pour la réponse finale lorsque le raisonnement est activé"
+      },
+      "date": {
+        "title": "Date actuelle",
+        "description": "Insérer automatiquement la date de la requête"
+      },
+      "profile": {
+        "title": "Profil utilisateur",
+        "description": "Informations issues des paramètres de profil existants"
+      },
+      "summary": {
+        "title": "Résumé de conversation antérieure",
+        "description": "Contexte condensé lorsque les anciens messages sont écartés"
+      },
+      "skills": {
+        "title": "Instructions des compétences",
+        "description": "Instructions des compétences correspondant à la question"
+      },
+      "language": {
+        "title": "Langue de réponse",
+        "description": "Utiliser la langue de l’interface sauf demande contraire"
+      },
+      "tools": {
+        "title": "Règles communes des outils",
+        "description": "Instructions par défaut pour les appels et les explications avant action"
+      },
+      "toolContext": {
+        "title": "Contexte automatique des outils",
+        "description": "Outil sélectionné, GitHub, code, navigateur et vérifications d’exécution et de destinataires"
+      },
+      "mcp": {
+        "title": "Prompts MCP",
+        "description": "Instructions personnalisées existantes des outils MCP réellement disponibles"
+      }
+    }
   }
 }

@@ -38,6 +38,7 @@
 },
   "title": "设置",
   "tabs": {
+    "promptProcessing": "提示词",
     "general": "通用",
     "runtime": "RAG 设置",
     "apiServer": "API 服务器",
@@ -574,5 +575,132 @@
   "googleSetupLinks": {
     "apiLibrary": "API 库",
     "audience": "受众"
+  },
+  "promptProcessing": {
+    "loadFailed": "无法加载提示词设置。请稍后重新打开。",
+    "excludeAll": "全部排除",
+    "searchConditional": "有搜索或匹配结果时包含",
+    "userInputTitle": "用户输入提示词",
+    "userInputDescription": "输入框中填写的问题。在系统指令和对话历史之后作为 user 消息发送。",
+    "drag": "拖动{{title}}移动",
+    "defaults": {
+      "base": "## 输出\n使用简洁的 Markdown、有意义的段落、`###` 标题和最多两级列表。命令和标识符使用反引号；代码使用标明语言和文件路径的代码块。\n\n提供完整项目时，请包含所有关键文件的完整内容：\n<vyproject name=\"...\">\n<file path=\"...\">完整内容</file>\n</vyproject>\n\n## 后续请求\n仅在实质性信息回答后，可选择使用回复语言添加 2–3 条简洁的后续请求：\n<followups>\n- ...\n</followups>\n这些标签后不要添加可见文本；必要的隐藏元数据可以随后添加。",
+      "length": "[回复长度]\n简单请求用 1–3 句话回答；复杂任务或要求详细说明时适当展开。",
+      "reasoning": "[推理预算]\n保持推理简洁，为最终回答预留令牌。",
+      "tools": "[重要 — 工具规则]\n提供的工具确实支持请求时，调用并核验结果。不要编造功能、权限或结果。调用前，用用户语言以 1–2 句话说明目标和下一步操作，并在同一回复中调用工具。不要仅解释后就结束。"
+    },
+    "generalTab": "常规",
+    "projectTab": "项目",
+    "generalHint": "管理普通聊天的提示词组合。",
+    "projectHint": "管理项目聊天的通用组合。各项目指令来自现有项目设置。",
+    "addCustom": "添加提示词",
+    "customTitle": "新提示词",
+    "customDescription": "点击标题，编写自己的指令。",
+    "userSource": "用户",
+    "vyactSource": "Vyact",
+    "deleteCustom": "删除提示词",
+    "deleteCustomConfirm": "从此标签页删除自定义提示词。恢复默认值无法找回。",
+    "restoreScopeConfirm": "恢复此标签页的 Vyact 指令和顺序。自定义提示词保留内容并移至未包含列表。",
+    "includedEmpty": "没有已包含项。请从左侧添加。",
+    "excludedEmpty": "没有未包含项。从右侧排除项目后会移至此处。",
+    "exclude": "排除{{title}}",
+    "include": "包含{{title}}",
+    "included": "已包含 · 应用顺序",
+    "excluded": "未包含",
+    "previewNotice": "这是界面预览。点击保存后，常规和项目两个标签页的更改会保存到此设备，尚不影响 LLM 请求。",
+    "orderHint": "拖动手柄调整顺序或在左右列表间移动，也可使用箭头。自动项内容不可编辑。",
+    "restoreAll": "全部恢复默认",
+    "restoreItem": "恢复此项默认值",
+    "title": "标题",
+    "content": "提示词内容",
+    "automatic": "自动 · 只读",
+    "enabled": "启用{{title}}",
+    "moveUp": "上移{{title}}",
+    "moveDown": "下移{{title}}",
+    "remove": "移除",
+    "cancel": "取消",
+    "restoreConfirm": "重置编辑内容和顺序，并恢复已移除的默认项。",
+    "removeConfirm": "从已包含列表移至左侧。内容会保留，可再次包含。",
+    "readOnlyNotice": "此项在运行时从现有设置或对话中获取。在此界面无法编辑、移除或关闭。",
+    "originalNotice": "当前语言的默认指令。手动编辑的内容在切换语言后保留。",
+    "storageFailed": "无法保存设置。编辑内容已保留，请重试。",
+    "items": {
+      "selectedPrompt": {
+        "title": "所选用户提示词",
+        "description": "应用在聊天的提示词选择器中选中的提示词。"
+      },
+      "base": {
+        "title": "默认输出格式",
+        "description": "未提供其他提示词时使用的默认输出规则"
+      },
+      "project": {
+        "title": "项目指令",
+        "description": "所选项目的指令"
+      },
+      "projectMemory": {
+        "title": "项目记忆",
+        "description": "项目摘要、决策和待办事项"
+      },
+      "personalMemory": {
+        "title": "个人记忆",
+        "description": "搜索与问题相关的记忆，仅包含达到评分阈值的结果。"
+      },
+      "folders": {
+        "title": "已注册文件夹",
+        "description": "项目与代码文件夹路径及标识"
+      },
+      "tone": {
+        "title": "回复语气",
+        "description": "在常规设置中选择的语气"
+      },
+      "metadata": {
+        "title": "内部元数据",
+        "description": "对话摘要、标题、附件摘要及项目记忆更新指令"
+      },
+      "external": {
+        "title": "外部数据指令",
+        "description": "解读所选外部资料的指引"
+      },
+      "length": {
+        "title": "回复长度",
+        "description": "简单请求简短回答，复杂任务按需展开"
+      },
+      "reasoning": {
+        "title": "推理预算",
+        "description": "开启推理时为最终回答预留令牌"
+      },
+      "date": {
+        "title": "当前日期",
+        "description": "自动插入请求时的日期"
+      },
+      "profile": {
+        "title": "用户资料",
+        "description": "现有资料设置中的用户信息"
+      },
+      "summary": {
+        "title": "先前对话摘要",
+        "description": "旧消息被截断时插入压缩摘要"
+      },
+      "skills": {
+        "title": "技能指令",
+        "description": "与问题匹配的技能指令"
+      },
+      "language": {
+        "title": "回复语言",
+        "description": "默认使用界面语言，优先遵循明确的语言要求"
+      },
+      "tools": {
+        "title": "通用工具规则",
+        "description": "工具调用和操作前说明的默认指令"
+      },
+      "toolContext": {
+        "title": "工具自动指令",
+        "description": "所选工具、GitHub、代码、浏览器、执行及收件人核验"
+      },
+      "mcp": {
+        "title": "MCP 提示词",
+        "description": "实际提供的 MCP 工具的现有自定义指令"
+      }
+    }
   }
 }

@@ -6,7 +6,7 @@ import {microsoftRequest} from '../../services/microsoftWorkspace';
 import MicrosoftWorkspaceSection from './MicrosoftWorkspaceSection';
 import React, {useCallback, useEffect, useId, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Cloud, Server, Volume2, Square, Pencil} from 'lucide-react';
+import {Cloud, Server, Volume2, Square, Pencil, SlidersHorizontal} from 'lucide-react';
 import {api, LLM_LOGGING_CHANGED} from '../../services/api';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import {fetchTtsSettings, updateTtsCache, DEFAULT_TTS_SETTINGS, loadTtsSettings, TTS_SETTINGS_CHANGED, TTS_RATE_OPTIONS} from '../../services/tts/ttsSettings';
@@ -21,6 +21,7 @@ import './SettingsModal.css';
 import '../RememberModal/RememberModal.css';
 import McpServersSection from './McpServersSection';
 import SkillsSection from './SkillsSection';
+import PromptProcessingSection from './PromptProcessing/PromptProcessingSection';
 import PluginsSection from './PluginsSection';
 import ExternalDataSection from './ExternalDataSection';
 import ApiServerSection from './ApiServerSection';
@@ -85,7 +86,7 @@ interface SettingsModalProps {
     initialMcpServerId?: string;
 }
 
-type Tab = 'backup' | 'general' | 'runtime' | 'apiServer' | 'google' | 'microsoft' | 'api' | 'externalData' | 'plugins' | 'skills' | 'profile' | 'memory';
+type Tab = 'backup' | 'general' | 'runtime' | 'apiServer' | 'google' | 'microsoft' | 'api' | 'externalData' | 'plugins' | 'skills' | 'profile' | 'memory' | 'promptProcessing';
 
 type RuntimeSettings = Record<string, number | null>;
 const DEFAULT_SETTINGS_TAB: Tab = 'general';
@@ -946,7 +947,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
     return (
         <ModalOverlay className="settings-overlay">
             <div
-                className={`settings-modal${isBackupExporting ? ' settings-modal--backup-exporting' : ''}`}
+                className={`settings-modal${tab === 'promptProcessing' ? ' settings-modal--prompt-processing' : ''}${isBackupExporting ? ' settings-modal--backup-exporting' : ''}`}
                 onClick={e => e.stopPropagation()}
                 onDoubleClick={handlePluginTabUnlock}
             >
@@ -1001,6 +1002,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                             {key: 'memory' as Tab, icon: '🗃️', label: t('tabs.memory')},
                             {key: 'runtime' as Tab, icon: '🧠', label: t('tabs.runtime')},
                             {key: 'api' as Tab, icon: '🔑', label: t('tabs.api')},
+                            {key: 'promptProcessing' as Tab, icon: <SlidersHorizontal size={16} strokeWidth={1.8} aria-hidden="true"/>, label: t('tabs.promptProcessing')},
                             {key: 'skills' as Tab, icon: '🧩', label: t('tabs.skills')},
                             ...(isPluginTabVisible
                                 ? [{key: 'plugins' as Tab, icon: '🔌', label: t('tabs.plugins')}]
@@ -1025,9 +1027,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                         ))}
                     </nav>
 
-                    <div className={`settings-body${tab === 'backup' ? ' settings-body--backup' : ''}`}>
+                    <div className={`settings-body${tab === 'promptProcessing' ? ' settings-body--prompt-processing' : ''}${tab === 'backup' ? ' settings-body--backup' : ''}`}>
 
                         {tab === 'apiServer' && <ApiServerSection/>}
+                        {tab === 'promptProcessing' && <PromptProcessingSection/>}
 
                         {tab === 'backup' && (
                             <div className={`settings-general settings-backup${isBackupExporting ? ' settings-backup--exporting' : ''}`} aria-busy={isBackupExporting}>

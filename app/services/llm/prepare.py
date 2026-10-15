@@ -4,6 +4,7 @@ services/llm/prepare.py — provider 공통 준비 로직
 api_key 로딩, 히스토리 구성, system/user 메시지 조합을 한 곳에서 처리한다.
 query_llm / chat_stream_with_tools가 공유한다.
 """
+from services.prompt_processing import enabled
 from prompts import build_system_message, build_user_prompt
 from services.runtime_settings import get_runtime_settings, DEFAULT_RUNTIME_SETTINGS
 from .config import logger
@@ -43,14 +44,14 @@ async def prepare_request(
         pass
 
     user_profile = ""
-    if inject_user_profile:
+    if inject_user_profile and enabled("profile"):
         try:
             from services.user_profile import get_profile_text
             user_profile = await get_profile_text()
         except Exception as e:
             logger.warning("user_profile 조회 실패 (무시): %s", e)
     skill_context = ""
-    if include_skills:
+    if include_skills and enabled("skills"):
         try:
             from routers.skills import match_skills
             matched = await match_skills(question)

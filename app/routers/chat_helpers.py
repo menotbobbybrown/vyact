@@ -4,6 +4,7 @@ routers/chat_helpers.py – chat.py의 query/query_stream에서 공통으로 쓰
 query/query_stream 안에서 "어떤 흐름으로 동작하는지" 한눈에 보이도록
 세부 구현을 여기로 분리한다.
 """
+from services.prompt_processing import capture, enabled
 import asyncio
 import re
 from datetime import datetime, timezone
@@ -45,6 +46,8 @@ async def load_system_prompt(explicit_prompt: str) -> tuple[dict, str, str]:
     """
     cfg = await load_config_async()
     current_model = cfg.get("model", "")
+    if not enabled("selectedPrompt"):
+        return cfg, current_model, ""
     system_prompt = explicit_prompt
     if not system_prompt:
         prompt_id = cfg.get("selected_prompt_id")
@@ -52,7 +55,7 @@ async def load_system_prompt(explicit_prompt: str) -> tuple[dict, str, str]:
             prompt = get_prompt_by_id(prompt_id)
             if prompt:
                 system_prompt = prompt["content"]
-    return cfg, current_model, system_prompt
+    return cfg, current_model, capture("selectedPrompt", system_prompt)
 
 
 # ── 이전 assistant의 article_sources에서 file_id 승계 ────────────────────

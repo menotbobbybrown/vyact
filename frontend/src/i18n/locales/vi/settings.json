@@ -38,6 +38,7 @@
 },
   "title": "Cài đặt",
   "tabs": {
+    "promptProcessing": "Lời nhắc",
     "general": "Chung",
     "runtime": "Cài đặt RAG",
     "apiServer": "Máy chủ API",
@@ -574,5 +575,132 @@
   "googleSetupLinks": {
     "apiLibrary": "Thư viện API",
     "audience": "Đối tượng"
+  },
+  "promptProcessing": {
+    "loadFailed": "Không tải được cài đặt lời nhắc. Vui lòng mở lại sau ít phút.",
+    "excludeAll": "Loại tất cả",
+    "searchConditional": "Được đưa vào khi có kết quả tìm kiếm hoặc đối sánh",
+    "userInputTitle": "Lời nhắc nhập của người dùng",
+    "userInputDescription": "Câu hỏi nhập trong ô trò chuyện. Được gửi dưới dạng tin nhắn user sau hướng dẫn hệ thống và lịch sử hội thoại.",
+    "drag": "Kéo {{title}} để di chuyển",
+    "defaults": {
+      "base": "## Đầu ra\nDùng Markdown ngắn gọn, đoạn văn có ý nghĩa, tiêu đề `###` và danh sách tối đa hai cấp. Dùng dấu huyền ngược cho lệnh và định danh; khối mã có ngôn ngữ và đường dẫn tệp.\n\nVới dự án hoàn chỉnh, đưa vào toàn bộ nội dung các tệp chính:\n<vyproject name=\"...\">\n<file path=\"...\">nội dung đầy đủ</file>\n</vyproject>\n\n## Yêu cầu tiếp theo\nChỉ với câu trả lời có thông tin đáng kể, có thể thêm 2–3 yêu cầu tiếp theo ngắn gọn bằng ngôn ngữ trả lời:\n<followups>\n- ...\n</followups>\nKhông thêm văn bản hiển thị sau các thẻ này; siêu dữ liệu ẩn cần thiết có thể theo sau.",
+      "length": "[Độ dài trả lời]\nTrả lời yêu cầu đơn giản trong 1–3 câu; mở rộng cho việc phức tạp hoặc khi được yêu cầu chi tiết.",
+      "reasoning": "[Ngân sách suy luận]\nSuy luận ngắn gọn và dành token cho câu trả lời cuối.",
+      "tools": "[Quan trọng — Quy tắc công cụ]\nGọi công cụ được cung cấp khi thực sự hỗ trợ yêu cầu và xác minh kết quả. Không bịa chức năng, quyền hay kết quả. Trước khi gọi, giải thích đối tượng và hành động tiếp theo bằng 1–2 câu theo ngôn ngữ người dùng, rồi gọi trong cùng phản hồi. Không kết thúc chỉ với giải thích."
+    },
+    "generalTab": "Chung",
+    "projectTab": "Dự án",
+    "generalHint": "Quản lý cấu trúc lời nhắc cho trò chuyện thường.",
+    "projectHint": "Quản lý cấu trúc chung cho trò chuyện dự án. Hướng dẫn riêng được lấy từ cài đặt dự án hiện có.",
+    "addCustom": "Thêm lời nhắc",
+    "customTitle": "Lời nhắc mới",
+    "customDescription": "Mở tiêu đề để viết hướng dẫn của bạn.",
+    "userSource": "Người dùng",
+    "vyactSource": "Vyact",
+    "deleteCustom": "Xóa lời nhắc",
+    "deleteCustomConfirm": "Xóa lời nhắc tùy chỉnh khỏi thẻ này. Khôi phục mặc định sẽ không khôi phục mục này.",
+    "restoreScopeConfirm": "Khôi phục hướng dẫn và thứ tự Vyact trong thẻ này. Lời nhắc tùy chỉnh giữ nguyên nội dung và chuyển sang danh sách chưa bao gồm.",
+    "includedEmpty": "Chưa có mục được bao gồm. Thêm từ bên trái.",
+    "excludedEmpty": "Không có mục bị loại. Loại một mục bên phải để chuyển đến đây.",
+    "exclude": "Loại {{title}}",
+    "include": "Bao gồm {{title}}",
+    "included": "Đã bao gồm · Thứ tự",
+    "excluded": "Chưa bao gồm",
+    "previewNotice": "Đây là bản xem trước. Nhấn Lưu để lưu thay đổi của cả thẻ Chung và Dự án trên thiết bị này. Yêu cầu LLM chưa bị ảnh hưởng.",
+    "orderHint": "Kéo tay nắm để sắp xếp hoặc chuyển giữa hai danh sách. Cũng có thể dùng mũi tên. Không thể sửa nội dung tự động.",
+    "restoreAll": "Khôi phục tất cả mặc định",
+    "restoreItem": "Khôi phục mặc định mục",
+    "title": "Tiêu đề",
+    "content": "Nội dung lời nhắc",
+    "automatic": "Tự động · Chỉ đọc",
+    "enabled": "Bật {{title}}",
+    "moveUp": "Chuyển {{title}} lên",
+    "moveDown": "Chuyển {{title}} xuống",
+    "remove": "Xóa",
+    "cancel": "Hủy",
+    "restoreConfirm": "Đặt lại nội dung chỉnh sửa và thứ tự, đồng thời khôi phục các mục mặc định đã xóa.",
+    "removeConfirm": "Chuyển sang danh sách bên trái. Nội dung được giữ lại và có thể thêm lại.",
+    "readOnlyNotice": "Mục này được lấy từ cài đặt hoặc hội thoại hiện có khi chạy. Không thể sửa, xóa hoặc tắt tại đây.",
+    "originalNotice": "Hướng dẫn mặc định bằng ngôn ngữ hiện tại. Nội dung tự sửa được giữ khi đổi ngôn ngữ.",
+    "storageFailed": "Không lưu được cài đặt. Chỉnh sửa vẫn được giữ. Vui lòng thử lại.",
+    "items": {
+      "selectedPrompt": {
+        "title": "Lời nhắc người dùng đã chọn",
+        "description": "Áp dụng lời nhắc đã chọn trong bộ chọn lời nhắc của cuộc trò chuyện."
+      },
+      "base": {
+        "title": "Định dạng đầu ra mặc định",
+        "description": "Quy tắc đầu ra khi không có lời nhắc khác"
+      },
+      "project": {
+        "title": "Hướng dẫn dự án",
+        "description": "Hướng dẫn từ dự án đã chọn"
+      },
+      "projectMemory": {
+        "title": "Bộ nhớ dự án",
+        "description": "Tóm tắt, quyết định và việc cần làm của dự án"
+      },
+      "personalMemory": {
+        "title": "Bộ nhớ cá nhân",
+        "description": "Tìm ký ức liên quan và chỉ đưa vào kết quả đạt ngưỡng điểm."
+      },
+      "folders": {
+        "title": "Thư mục đã đăng ký",
+        "description": "Đường dẫn và mã định danh thư mục dự án và mã nguồn"
+      },
+      "tone": {
+        "title": "Giọng điệu trả lời",
+        "description": "Giọng điệu đã chọn trong cài đặt chung"
+      },
+      "metadata": {
+        "title": "Siêu dữ liệu nội bộ",
+        "description": "Hướng dẫn tóm tắt, tiêu đề, tệp đính kèm và cập nhật bộ nhớ dự án"
+      },
+      "external": {
+        "title": "Hướng dẫn dữ liệu ngoài",
+        "description": "Hướng dẫn diễn giải dữ liệu ngoài đã chọn"
+      },
+      "length": {
+        "title": "Độ dài trả lời",
+        "description": "Trả lời ngắn cho yêu cầu đơn giản; chi tiết khi cần cho việc phức tạp"
+      },
+      "reasoning": {
+        "title": "Ngân sách suy luận",
+        "description": "Dành token cho câu trả lời cuối khi bật suy luận"
+      },
+      "date": {
+        "title": "Ngày hiện tại",
+        "description": "Tự động chèn ngày của yêu cầu"
+      },
+      "profile": {
+        "title": "Hồ sơ người dùng",
+        "description": "Thông tin từ cài đặt hồ sơ hiện có"
+      },
+      "summary": {
+        "title": "Tóm tắt hội thoại trước",
+        "description": "Ngữ cảnh nén khi tin nhắn cũ bị loại bỏ"
+      },
+      "skills": {
+        "title": "Hướng dẫn kỹ năng",
+        "description": "Hướng dẫn của kỹ năng khớp với câu hỏi"
+      },
+      "language": {
+        "title": "Ngôn ngữ trả lời",
+        "description": "Dùng ngôn ngữ giao diện trừ khi có yêu cầu ngôn ngữ khác"
+      },
+      "tools": {
+        "title": "Quy tắc công cụ chung",
+        "description": "Hướng dẫn mặc định về gọi công cụ và giải thích trước thao tác"
+      },
+      "toolContext": {
+        "title": "Ngữ cảnh công cụ tự động",
+        "description": "Công cụ đã chọn, GitHub, mã nguồn, trình duyệt và xác minh thực thi, người nhận"
+      },
+      "mcp": {
+        "title": "Lời nhắc MCP",
+        "description": "Hướng dẫn tùy chỉnh hiện có của công cụ MCP thực sự được cung cấp"
+      }
+    }
   }
 }

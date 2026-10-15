@@ -38,6 +38,7 @@
 },
   "title": "設定",
   "tabs": {
+    "promptProcessing": "プロンプト",
     "general": "一般",
     "runtime": "RAG設定",
     "apiServer": "APIサーバー",
@@ -574,5 +575,132 @@
   "googleSetupLinks": {
     "apiLibrary": "API ライブラリ",
     "audience": "対象"
+  },
+  "promptProcessing": {
+    "loadFailed": "プロンプト設定を読み込めませんでした。しばらくしてから開き直してください。",
+    "excludeAll": "すべて除外",
+    "searchConditional": "検索・マッチング結果がある場合に含む",
+    "userInputTitle": "ユーザー入力プロンプト",
+    "userInputDescription": "入力欄に書いた質問です。システム指示と会話履歴の後にuserメッセージとして送信されます。",
+    "drag": "{{title}}をドラッグして移動",
+    "defaults": {
+      "base": "## 出力\n簡潔なMarkdown、意味のある段落、`###`見出しを使い、リストは最大2階層にしてください。コマンドと識別子はバッククォートで囲み、コードは言語とファイルパスを示したコードブロックで記述してください。\n\n完全なプロジェクトでは主要ファイルの全内容を含めてください:\n<vyproject name=\"...\">\n<file path=\"...\">全内容</file>\n</vyproject>\n\n## 次の依頼\n実質的な情報を含む回答に限り、回答言語で簡潔な次の依頼を任意で2～3件追加してください:\n<followups>\n- ...\n</followups>\nこれらのタグの後に可視テキストを追加しないでください。必要な非表示メタデータは続けられます。",
+      "length": "[回答の長さ]\n簡単な依頼は1～3文で回答し、複雑な作業や詳細を求められた場合は適宜詳しくしてください。",
+      "reasoning": "[推論予算]\n推論を簡潔にし、最終回答用のトークンを残してください。",
+      "tools": "[重要 — ツール規則]\n提供されたツールが依頼に対応する場合は呼び出して結果を確認してください。機能・権限・結果を推測しないでください。呼び出す前に対象と次の操作をユーザーの言語で1～2文説明し、同じ応答でツールを呼び出してください。説明だけで終了しないでください。"
+    },
+    "generalTab": "一般",
+    "projectTab": "プロジェクト",
+    "generalHint": "通常チャットのプロンプト構成を管理します。",
+    "projectHint": "プロジェクトチャット共通の構成を管理します。個別の指示は既存のプロジェクト設定から取得します。",
+    "addCustom": "プロンプト追加",
+    "customTitle": "新しいプロンプト",
+    "customDescription": "タイトルを開いて独自の指示を入力してください。",
+    "userSource": "ユーザー",
+    "vyactSource": "Vyact",
+    "deleteCustom": "プロンプト削除",
+    "deleteCustomConfirm": "このタブからカスタムプロンプトを削除します。初期値の復元では戻せません。",
+    "restoreScopeConfirm": "このタブのVyact指示と順序を初期化します。カスタムプロンプトは内容を保持して未使用の一覧へ移動します。",
+    "includedEmpty": "使用中の項目はありません。左側から追加してください。",
+    "excludedEmpty": "未使用の項目はありません。右側で除外するとここに移動します。",
+    "exclude": "{{title}}を除外",
+    "include": "{{title}}を含める",
+    "included": "使用中・適用順",
+    "excluded": "未使用",
+    "previewNotice": "画面プレビューです。保存すると一般・プロジェクト両タブの変更をこの端末に保存します。LLMリクエストにはまだ適用されません。",
+    "orderHint": "ハンドルをドラッグして順序や左右のリストを変更できます。矢印も使用できます。自動項目の内容は編集できません。",
+    "restoreAll": "すべて初期値に戻す",
+    "restoreItem": "項目を初期値に戻す",
+    "title": "タイトル",
+    "content": "プロンプト内容",
+    "automatic": "自動・読み取り専用",
+    "enabled": "{{title}}を有効にする",
+    "moveUp": "{{title}}を上へ",
+    "moveDown": "{{title}}を下へ",
+    "remove": "削除",
+    "cancel": "キャンセル",
+    "restoreConfirm": "編集内容と順序をリセットし、削除した既定項目も復元します。",
+    "removeConfirm": "使用中の一覧から除外して左側に移動します。内容は保持され、再び追加できます。",
+    "readOnlyNotice": "実行時に既存の設定や会話から取得する項目です。この画面では編集・削除・無効化できません。",
+    "originalNotice": "現在の言語の既定指示です。編集した内容は言語を変更しても保持されます。",
+    "storageFailed": "設定を保存できませんでした。編集内容は保持されています。再試行してください。",
+    "items": {
+      "selectedPrompt": {
+        "title": "選択したユーザープロンプト",
+        "description": "チャットのプロンプト選択で選んだプロンプトを適用します。"
+      },
+      "base": {
+        "title": "既定の出力形式",
+        "description": "別のプロンプトがない場合の既定出力規則"
+      },
+      "project": {
+        "title": "プロジェクト指示",
+        "description": "選択したプロジェクトの指示"
+      },
+      "projectMemory": {
+        "title": "プロジェクトメモリ",
+        "description": "プロジェクトの要約・決定・タスク"
+      },
+      "personalMemory": {
+        "title": "個人メモリ",
+        "description": "質問に関連する記憶を検索し、スコア基準を満たす結果のみ含めます。"
+      },
+      "folders": {
+        "title": "登録フォルダー",
+        "description": "プロジェクト・コードのパスと識別情報"
+      },
+      "tone": {
+        "title": "応答の口調",
+        "description": "一般設定で選択した口調"
+      },
+      "metadata": {
+        "title": "内部メタデータ",
+        "description": "会話要約・タイトル・添付要約・プロジェクト記憶更新の指示"
+      },
+      "external": {
+        "title": "外部データ指示",
+        "description": "選択した外部資料の解釈指示"
+      },
+      "length": {
+        "title": "応答の長さ",
+        "description": "簡単な依頼は短く、複雑な依頼は必要な詳しさで回答"
+      },
+      "reasoning": {
+        "title": "推論予算",
+        "description": "推論有効時に最終回答のトークンを確保"
+      },
+      "date": {
+        "title": "現在の日付",
+        "description": "リクエスト時の日付を自動挿入"
+      },
+      "profile": {
+        "title": "ユーザープロフィール",
+        "description": "既存のプロフィール設定のユーザー情報"
+      },
+      "summary": {
+        "title": "以前の会話要約",
+        "description": "古い会話が省略された場合の圧縮要約"
+      },
+      "skills": {
+        "title": "スキル指示",
+        "description": "質問に一致したスキルの指示"
+      },
+      "language": {
+        "title": "応答言語",
+        "description": "別の指定がなければUI言語で回答"
+      },
+      "tools": {
+        "title": "共通ツール規則",
+        "description": "ツール呼び出しと実行前の説明に関する既定指示"
+      },
+      "toolContext": {
+        "title": "ツール別の自動指示",
+        "description": "選択ツール・GitHub・コード・ブラウザー・実行・宛先確認"
+      },
+      "mcp": {
+        "title": "MCPプロンプト",
+        "description": "実際に提供されたMCPツールの既存カスタム指示"
+      }
+    }
   }
 }

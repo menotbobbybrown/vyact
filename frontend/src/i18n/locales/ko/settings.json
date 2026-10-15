@@ -38,6 +38,7 @@
 },
   "title": "설정",
   "tabs": {
+    "promptProcessing": "프롬프트",
     "general": "일반",
     "runtime": "RAG 설정",
     "apiServer": "API 서버",
@@ -618,5 +619,132 @@
   "googleSetupLinks": {
     "apiLibrary": "API 라이브러리",
     "audience": "대상"
+  },
+  "promptProcessing": {
+    "loadFailed": "프롬프트 설정을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.",
+    "excludeAll": "전체 제외",
+    "searchConditional": "검색·매칭 결과가 있을 때 포함",
+    "userInputTitle": "사용자 입력 프롬프트",
+    "userInputDescription": "입력창에서 작성한 질문입니다. 시스템 지침과 이전 대화 뒤에 user 메시지로 전달됩니다.",
+    "drag": "{{title}} 드래그하여 이동",
+    "defaults": {
+      "base": "## 출력\n간결한 Markdown과 의미 있는 문단, `###` 제목을 사용하고 목록은 최대 두 단계로 작성하세요. 명령어와 식별자는 백틱으로 감싸고, 코드는 언어와 파일 경로를 명시한 코드 블록으로 작성하세요.\n\n완전한 프로젝트를 제공할 때는 주요 파일의 전체 내용을 포함하세요:\n<vyproject name=\"...\">\n<file path=\"...\">전체 내용</file>\n</vyproject>\n\n## 후속 질문\n실질적인 정보 답변에만 선택적으로 응답 언어로 간결한 후속 요청 2~3개를 덧붙이세요:\n<followups>\n- ...\n</followups>\n이 태그 뒤에는 보이는 텍스트를 추가하지 마세요. 필요한 숨김 메타데이터는 뒤에 올 수 있습니다.",
+      "length": "[응답 길이]\n간단한 요청은 1~3문장으로 답하고, 복잡한 작업이나 상세 설명 요청에는 필요한 만큼 확장하세요.",
+      "reasoning": "[추론 예산]\n추론은 간결히 하고 최종 답변용 토큰을 남겨두세요.",
+      "tools": "[중요 — 도구 사용 규칙]\n요청에 필요한 기능이 제공된 도구에 실제로 있으면 호출해 결과를 확인하세요. 없는 기능·권한·결과를 추측하지 마세요. 호출 전에는 대상과 다음 행동을 사용자의 언어로 1~2문장 설명하고 같은 응답에서 도구를 호출하세요. 설명만 남기고 종료하지 마세요."
+    },
+    "generalTab": "일반",
+    "projectTab": "프로젝트",
+    "generalHint": "일반 채팅의 프롬프트 구성을 관리합니다.",
+    "projectHint": "프로젝트 채팅의 공통 구성을 관리합니다. 개별 프로젝트 지침은 기존 프로젝트 설정에서 가져옵니다.",
+    "addCustom": "프롬프트 추가",
+    "customTitle": "새 프롬프트",
+    "customDescription": "제목을 누르고 나만의 지침을 작성하세요.",
+    "userSource": "사용자",
+    "vyactSource": "Vyact",
+    "deleteCustom": "프롬프트 삭제",
+    "deleteCustomConfirm": "이 탭에서 사용자 프롬프트를 삭제합니다. 기본값 복원으로 복구되지 않습니다.",
+    "restoreScopeConfirm": "현재 탭의 Vyact 지침과 순서를 기본값으로 복원합니다. 사용자 프롬프트는 내용을 유지한 채 미포함 목록으로 이동합니다.",
+    "includedEmpty": "포함된 항목이 없습니다. 왼쪽에서 항목을 추가하세요.",
+    "excludedEmpty": "미포함 항목이 없습니다. 오른쪽 항목을 제외하면 이곳으로 이동합니다.",
+    "exclude": "{{title}} 제외",
+    "include": "{{title}} 포함",
+    "included": "포함 · 적용 순서",
+    "excluded": "미포함",
+    "previewNotice": "화면 미리보기입니다. 저장을 누르면 일반·프로젝트 탭의 변경 사항이 이 기기에 저장됩니다. 실제 LLM 요청에는 아직 적용되지 않습니다.",
+    "orderHint": "핸들을 드래그해 순서를 바꾸거나 좌우 목록으로 이동하세요. 화살표로도 이동할 수 있습니다. 자동 항목의 내용은 수정할 수 없습니다.",
+    "restoreAll": "전체 기본값 복원",
+    "restoreItem": "항목 기본값 복원",
+    "title": "제목",
+    "content": "프롬프트 내용",
+    "automatic": "자동 · 읽기 전용",
+    "enabled": "{{title}} 사용",
+    "moveUp": "{{title}} 위로 이동",
+    "moveDown": "{{title}} 아래로 이동",
+    "remove": "제거",
+    "cancel": "취소",
+    "restoreConfirm": "편집 내용과 순서를 초기화하고 제거한 기본 항목도 복원합니다.",
+    "removeConfirm": "포함 목록에서 제외하고 왼쪽으로 이동합니다. 내용은 유지되며 다시 포함할 수 있습니다.",
+    "readOnlyNotice": "실행 시 기존 설정이나 대화에서 가져오는 항목입니다. 이 화면에서는 내용 수정·제거·끄기를 할 수 없습니다.",
+    "originalNotice": "현재 언어의 기본 지침입니다. 직접 수정한 내용은 언어를 바꿔도 유지됩니다.",
+    "storageFailed": "설정을 저장하지 못했습니다. 변경 내용은 유지됩니다. 다시 시도해 주세요.",
+    "items": {
+      "selectedPrompt": {
+        "title": "선택한 사용자 프롬프트",
+        "description": "채팅의 ‘프롬프트 선택’에서 고른 프롬프트를 적용합니다."
+      },
+      "base": {
+        "title": "기본 출력 형식",
+        "description": "별도 프롬프트가 없을 때 사용하는 기본 출력 규칙"
+      },
+      "project": {
+        "title": "프로젝트 지침",
+        "description": "선택한 프로젝트의 지침"
+      },
+      "projectMemory": {
+        "title": "프로젝트 메모리",
+        "description": "프로젝트의 요약·결정·할 일"
+      },
+      "personalMemory": {
+        "title": "개인 메모리",
+        "description": "질문과 관련된 기억을 검색해 점수 기준을 충족한 결과만 포함합니다."
+      },
+      "folders": {
+        "title": "등록 폴더 정보",
+        "description": "프로젝트·코드 폴더 경로와 식별 정보"
+      },
+      "tone": {
+        "title": "응답 말투",
+        "description": "일반 설정에서 선택한 말투를 적용"
+      },
+      "metadata": {
+        "title": "내부 메타데이터",
+        "description": "대화 요약·제목·첨부 요약·프로젝트 기억 갱신 지침"
+      },
+      "external": {
+        "title": "외부 데이터 지침",
+        "description": "선택한 외부 자료를 해석하는 지침"
+      },
+      "length": {
+        "title": "응답 길이",
+        "description": "간단한 요청은 짧게, 복잡한 요청은 필요한 만큼 답변"
+      },
+      "reasoning": {
+        "title": "추론 예산",
+        "description": "추론 활성화 시 최종 답변용 토큰 확보"
+      },
+      "date": {
+        "title": "현재 날짜",
+        "description": "요청 시점의 날짜를 자동 삽입"
+      },
+      "profile": {
+        "title": "사용자 프로필",
+        "description": "기존 프로필 설정에서 가져오는 사용자 정보"
+      },
+      "summary": {
+        "title": "이전 대화 요약",
+        "description": "오래된 대화가 잘린 경우 압축 요약 삽입"
+      },
+      "skills": {
+        "title": "스킬 지침",
+        "description": "질문에 매칭된 스킬의 지침"
+      },
+      "language": {
+        "title": "응답 언어",
+        "description": "UI 언어로 답하되 명시적인 언어 요청 우선"
+      },
+      "tools": {
+        "title": "공통 도구 사용 규칙",
+        "description": "제공된 도구 호출과 실행 전 설명에 관한 기본 지침"
+      },
+      "toolContext": {
+        "title": "도구별 자동 지침",
+        "description": "선택 도구·GitHub·코드·브라우저 규칙과 실행·수신자 확인"
+      },
+      "mcp": {
+        "title": "MCP 프롬프트",
+        "description": "실제로 제공된 MCP 도구의 기존 사용자 지정 지침"
+      }
+    }
   }
 }

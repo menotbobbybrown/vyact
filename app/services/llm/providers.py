@@ -9,6 +9,7 @@ OpenAI 호환 경로는 첫 SSE에서 tool_call과 일반 답변을 함께 처�
 tool 진행 이벤트는 on_event 콜백(coroutine)으로 알린다:
   {"phase":"start","name":...,"args":...}  /  {"phase":"end","name":...}
 """
+from services.prompt_processing import final_system_message
 from services.cloud_reasoning import apply_cloud_reasoning
 
 import base64
@@ -433,7 +434,7 @@ async def openai_stream(client, model, api_key, system_message, user_prompt,
     allowed_tool_names = frozenset(tool["function"]["name"] for tool in unified)
     sys_content = system_message
     if names:
-        sys_content = system_message + await build_tool_directive(names)
+        sys_content = final_system_message(system_message + await build_tool_directive(names))
 
     messages = [{"role": "system", "content": sys_content},
                 *history_for_openai(history_messages, valid_slice), user_msg]
@@ -752,7 +753,7 @@ async def gemini_stream(client, model, api_key, system_message, user_prompt,
     allowed_tool_names = frozenset(tool["function"]["name"] for tool in unified)
     sys_text = system_message
     if names:
-        sys_text = system_message + await build_tool_directive(names)
+        sys_text = final_system_message(system_message + await build_tool_directive(names))
 
     # systemInstruction을 별도 필드로 유지해야 정적 시스템 규칙이 히스토리보다
     # 항상 앞에 오며 provider의 prefix cache를 재사용할 수 있다.
@@ -954,7 +955,7 @@ async def claude_stream(client, model, api_key, system_message, user_prompt,
     allowed_tool_names = frozenset(tool["function"]["name"] for tool in unified)
     system_text = system_message
     if names:
-        system_text = system_message + await build_tool_directive(names)
+        system_text = final_system_message(system_message + await build_tool_directive(names))
 
     messages = [*history_for_claude(history_messages, valid_slice),
                 {"role": "user", "content": blocks}]

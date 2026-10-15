@@ -9,6 +9,7 @@ mcp_manager.get_tools()가 반환하는 통일 형식
 - Gemini : tools=[{functionDeclarations:[{name,description,parameters}]}]
 - Claude : tools=[{name,description,input_schema}]
 """
+from services.prompt_processing import capture, enabled
 import json
 
 from .config import logger
@@ -77,6 +78,7 @@ async def build_tool_directive(tool_names: list[str]) -> str:
         "1~2문장 설명하고 같은 응답에서 도구를 호출해라. 설명만 남기고 종료하지 마라.\n"
         f"사용 가능한 도구: {', '.join(tool_names)}"
     )
+    directive = capture("tools", directive)
     # @로 특정 MCP를 고른 것은 사용자가 해당 MCP를 이번 요청의 실행 수단으로
     # 명시한 것이므로, 모델이 자체 지식으로 바로 답하지 못하게 강하게 유도한다.
     selected_server_ids = None
@@ -162,9 +164,9 @@ async def build_tool_directive(tool_names: list[str]) -> str:
 
     try:
         from services.mcp_config import get_active_mcp_prompt
-        extra = await get_active_mcp_prompt(selected_server_ids, available_tool_names=tool_names)
+        extra = await get_active_mcp_prompt(selected_server_ids, available_tool_names=tool_names) if enabled("mcp") else ""
         if extra:
-            directive += f"\n\n{extra}"
+            directive += capture("mcp", f"\n\n{extra}")
     except Exception as _pe:
         logger.debug("[tools] MCP 프롬프트 재주입 실패: %s", _pe)
 
@@ -181,7 +183,7 @@ async def build_tool_directive(tool_names: list[str]) -> str:
     if RECIPIENT_ACTION_TOOLS.intersection(tool_names):
         directive += RECIPIENT_VERIFICATION_INSTRUCTION
 
-    return directive
+    return capture("toolContext", directive)
 
 
 def to_openai_tools(unified: list[dict]) -> list[dict]:

@@ -1038,7 +1038,7 @@ const MemoModal: React.FC<MemoModalProps> = ({ onClose, initialMemoId }) => {
                         </div>
                     </div>
                 )}
-                {pendingNavigation && <ConfirmModal className="memo-unsaved-dialog" actionLayout="horizontal" title={t('googleWorkspace.unsavedSettings')} description={t('googleWorkspace.unsavedSettingsDescription')} options={[
+                {pendingNavigation && <ConfirmModal className="unsaved-changes-dialog" actionLayout="horizontal" title={t('googleWorkspace.unsavedSettings')} description={t('googleWorkspace.unsavedSettingsDescription')} options={[
                     {label: t('googleWorkspace.keepEditing'), value: 'stay'},
                     {label: t('googleWorkspace.discardAndLeave'), value: 'discard'},
                     {label: t('googleWorkspace.saveAndLeave'), value: 'save', variant: 'primary'},

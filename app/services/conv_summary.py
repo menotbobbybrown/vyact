@@ -9,6 +9,7 @@ services/conv_summary.py – 대화방 요약(conv_summary) / 첨부파일 요�
 사용자에게 보이는 답변에서는 이 태그들을 제거하고, 파싱한 값만 rag_history 문서에 저장한다.
 SummaryModal이 GET /history/{conv_id}/summary로 조회하는 값이 바로 이거다.
 """
+from services.prompt_processing import capture, enabled
 import re
 
 from services.db import HIST_INDEX, get_es
@@ -83,6 +84,8 @@ def build_summary_instruction(
     conv_summary는 짧게 제한하고 project_summary는 첨부 규모에 맞춰 작성하게 한다.
     필수 형식과 사용자에게 숨겨지는 메타데이터라는 점만 명확하게 전달한다.
     """
+    if not enabled("metadata"):
+        return capture("metadata", "")
     parts = [
         "\n\n## Hidden metadata\n"
         "After the visible answer, append <conv_summary>...</conv_summary> every turn. "
@@ -104,7 +107,7 @@ def build_summary_instruction(
     if project_memory is not None:
         from services.project_memory import build_project_memory_instruction
         parts.append(build_project_memory_instruction(project_memory))
-    return "".join(parts)
+    return capture("metadata", "".join(parts))
 
 
 def extract_summary_tags(answer: str) -> tuple[str, str | None, str | None, str | None]:

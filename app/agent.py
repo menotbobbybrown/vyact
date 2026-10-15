@@ -1,3 +1,4 @@
+from services.prompt_processing import append_part
 """
 agent.py – RAG 진입점 + services 모듈 re-export
 
@@ -313,7 +314,7 @@ async def rag_query(
         collection_docs, collection_instruction = await _search_knowledge_collections(knowledge_collection_ids, question)
         docs = list(extra_context) + collection_docs
         if collection_instruction:
-            system_prompt = f"{system_prompt}\n\n[지식 컬렉션 지침]\n{collection_instruction}" if system_prompt else collection_instruction
+            system_prompt = append_part(system_prompt, "external", f"[지식 컬렉션 지침]\n{collection_instruction}", extend=True)
     else:
         docs = await _gather_docs(question, extra_context, skip_rag=skip_rag, conv_id=conv_id)
     answer = await query_llm(question, docs, system_prompt, [*attachments, *_knowledge_inline_image_attachments(docs)], conversation_history,
@@ -451,7 +452,7 @@ async def rag_query_stream(
         return docs_found
 
     if collection_instruction:
-        system_prompt = f"{system_prompt}\n\n[지식 컬렉션 지침]\n{collection_instruction}" if system_prompt else collection_instruction
+        system_prompt = append_part(system_prompt, "external", f"[지식 컬렉션 지침]\n{collection_instruction}", extend=True)
 
     response_model = await get_model_display_name()
     async for ev in chat_stream_with_tools(

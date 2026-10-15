@@ -1,3 +1,4 @@
+from services.prompt_processing import chat_composition_only, current_composition
 """
 services/llm/core.py — 최상위 진입점
 
@@ -50,12 +51,18 @@ async def _route_chat_decision(question, docs, attachments, reason, *, allow_dir
         settings = resolve_decision_settings(await load_config_async())
     except ValueError:
         return None
-    answer = await decide_chat(question, settings,
-                             allow_direct=allow_direct and not (docs or attachments),
-                             **({"warnings": warnings} if warnings is not None else {}))
+    composition = current_composition.get()
+    token = current_composition.set(None)
+    try:
+        answer = await decide_chat(question, settings,
+                                 allow_direct=allow_direct and composition is None and not (docs or attachments),
+                                 **({"warnings": warnings} if warnings is not None else {}))
+    finally:
+        current_composition.reset(token)
     return (answer, settings.get("model_path", "").split("/")[-1]) if answer is not None else None
 
 
+@chat_composition_only
 async def chat_stream_with_tools(
         question: str,
         context_docs: list[dict],
@@ -325,6 +332,7 @@ async def collect_llm_stream(
     return "".join(parts).strip(), stats
 
 
+@chat_composition_only
 async def query_llm(
         question: str,
         context_docs: list[dict],

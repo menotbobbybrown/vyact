@@ -1742,3 +1742,11 @@
 
 button.settings-api-server-copy--copied { color: var(--success); }
 button.settings-api-server-copy--copied:hover:not(:disabled) { background: color-mix(in srgb, var(--success) 9%, transparent); }
+
+/* Two prompt lists own their scrolling; the modal and panel headings stay fixed. */
+.settings-modal.settings-modal--prompt-processing { width: 96%; max-width: 1320px; height: 86vh; max-height: 86vh; }
+.settings-body.settings-body--prompt-processing { overflow: hidden; min-height: 0; }
+@media (max-width: 800px) {
+    .settings-modal--prompt-processing .settings-sidebar { width: 150px; }
+    .settings-body.settings-body--prompt-processing { padding: 12px; }
+}

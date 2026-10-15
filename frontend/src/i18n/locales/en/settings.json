@@ -38,6 +38,7 @@
 },
   "title": "Settings",
   "tabs": {
+    "promptProcessing": "Prompts",
     "general": "General",
     "runtime": "RAG settings",
     "apiServer": "API Server",
@@ -589,5 +590,132 @@
   "googleSetupLinks": {
     "apiLibrary": "API Library",
     "audience": "Audience"
+  },
+  "promptProcessing": {
+    "loadFailed": "Could not load prompt settings. Please reopen this view shortly.",
+    "excludeAll": "Exclude all",
+    "searchConditional": "Included when search or matching returns results",
+    "userInputTitle": "User input prompt",
+    "userInputDescription": "The question typed in the input box. Sent as a user message after system instructions and conversation history.",
+    "drag": "Drag {{title}} to move",
+    "defaults": {
+      "base": "## Output\nUse concise Markdown, meaningful paragraphs, `###` headings, and at most two list levels. Use backticks for commands and identifiers; language-tagged code blocks with file paths for code.\n\nFor complete projects, include all key files with full contents:\n<vyproject name=\"...\">\n<file path=\"...\">complete content</file>\n</vyproject>\n\n## Follow-ups\nOnly for substantive informational answers, optionally append 2–3 concise next requests in the response language:\n<followups>\n- ...\n</followups>\nNo visible text after these tags; required hidden metadata may follow.",
+      "length": "[Response length]\nAnswer simple requests in 1–3 sentences; expand for complex work or requested detail.",
+      "reasoning": "[Reasoning budget]\nKeep reasoning concise and reserve tokens for the final answer.",
+      "tools": "[Important — Tool rules]\nCall offered tools when they actually support the request and verify their results. Do not invent capabilities, permissions, or results. Before calling, explain the target and next action in 1–2 sentences in the user’s language, then call the tool in the same response. Do not stop after the explanation."
+    },
+    "generalTab": "General",
+    "projectTab": "Project",
+    "generalHint": "Manage prompt composition for general chats.",
+    "projectHint": "Manage shared composition for project chats. Individual project instructions come from existing project settings.",
+    "addCustom": "Add prompt",
+    "customTitle": "New prompt",
+    "customDescription": "Open the title to write your own instructions.",
+    "userSource": "User",
+    "vyactSource": "Vyact",
+    "deleteCustom": "Delete prompt",
+    "deleteCustomConfirm": "Delete this custom prompt from this tab. Restoring defaults will not recover it.",
+    "restoreScopeConfirm": "Restore Vyact instructions and order in this tab. Custom prompts keep their content and move to the excluded list.",
+    "includedEmpty": "No included items. Add an item from the left.",
+    "excludedEmpty": "No excluded items. Exclude an item on the right to move it here.",
+    "exclude": "Exclude {{title}}",
+    "include": "Include {{title}}",
+    "included": "Included · Order",
+    "excluded": "Not included",
+    "previewNotice": "This is a UI preview. Save stores changes from both General and Project tabs on this device. LLM requests are not yet affected.",
+    "orderHint": "Drag handles to reorder or move between lists. Arrows also work. Automatic content cannot be edited.",
+    "restoreAll": "Restore all defaults",
+    "restoreItem": "Restore item default",
+    "title": "Title",
+    "content": "Prompt content",
+    "automatic": "Automatic · Read only",
+    "enabled": "Enable {{title}}",
+    "moveUp": "Move {{title}} up",
+    "moveDown": "Move {{title}} down",
+    "remove": "Remove",
+    "cancel": "Cancel",
+    "restoreConfirm": "Reset edits and order, and restore removed default items.",
+    "removeConfirm": "Move to the excluded list on the left. Content is preserved and can be included again.",
+    "readOnlyNotice": "This item comes from existing settings or conversation context at runtime. Its content cannot be edited, removed, or disabled here.",
+    "originalNotice": "Default instructions in the current language. Your edits are kept when you change languages.",
+    "storageFailed": "Could not save settings. Your edits are kept. Please try again.",
+    "items": {
+      "selectedPrompt": {
+        "title": "Selected user prompt",
+        "description": "Applies the prompt chosen from the prompt selector in chat."
+      },
+      "base": {
+        "title": "Default output format",
+        "description": "Default output rules used when no other prompt is supplied"
+      },
+      "project": {
+        "title": "Project instructions",
+        "description": "Instructions from the selected project"
+      },
+      "projectMemory": {
+        "title": "Project memory",
+        "description": "Project summary, decisions, and action items"
+      },
+      "personalMemory": {
+        "title": "Personal memory",
+        "description": "Searches for relevant memories and includes only results meeting the score threshold."
+      },
+      "folders": {
+        "title": "Registered folders",
+        "description": "Project and code folder paths and identifiers"
+      },
+      "tone": {
+        "title": "Response tone",
+        "description": "Tone selected in general settings"
+      },
+      "metadata": {
+        "title": "Internal metadata",
+        "description": "Instructions for summaries, titles, attachment summaries, and project memory updates"
+      },
+      "external": {
+        "title": "External data instructions",
+        "description": "Guidance for selected external records"
+      },
+      "length": {
+        "title": "Response length",
+        "description": "Brief answers for simple requests; detail as needed for complex work"
+      },
+      "reasoning": {
+        "title": "Reasoning budget",
+        "description": "Reserve tokens for the final answer when reasoning is enabled"
+      },
+      "date": {
+        "title": "Current date",
+        "description": "Automatically insert the date of the request"
+      },
+      "profile": {
+        "title": "User profile",
+        "description": "User information from existing profile settings"
+      },
+      "summary": {
+        "title": "Earlier conversation summary",
+        "description": "Compressed context when older messages are dropped"
+      },
+      "skills": {
+        "title": "Skill instructions",
+        "description": "Instructions from skills matched to the question"
+      },
+      "language": {
+        "title": "Response language",
+        "description": "Use the UI language unless another language is requested"
+      },
+      "tools": {
+        "title": "Shared tool rules",
+        "description": "Default instructions for tool calls and explanations before actions"
+      },
+      "toolContext": {
+        "title": "Automatic tool context",
+        "description": "Selected tool, GitHub, code, browser, execution, and recipient checks"
+      },
+      "mcp": {
+        "title": "MCP prompts",
+        "description": "Existing custom instructions for MCP tools actually exposed"
+      }
+    }
   }
 }
