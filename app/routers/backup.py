@@ -555,6 +555,7 @@ async def import_backup(
             logger.info("[restore] 시스템 프롬프트 캐시 재동기화 완료")
         except Exception as e:
             logger.warning("[restore] 시스템 프롬프트 캐시 재동기화 실패: %s", e)
+    if SETTINGS_INDEX in backup["indices"]:
         try:
             await reload_prompt_processing_settings(refresh=True)
         except Exception as e:
