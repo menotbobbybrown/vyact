@@ -4,7 +4,7 @@ export async function fetchPromptSettings(): Promise<{drafts: PromptDrafts; save
     const response = await fetch('/api/prompt-processing');
     if (!response.ok) throw new Error('Prompt settings load failed');
     const result = await response.json();
-    const saved = {general: normalizeSelectedPrompts(result.settings.general), project: normalizeSelectedPrompts(result.settings.project)};
+    const saved = {general: normalizeSelectedPrompts(result.settings.general.filter((item: {id: string}) => !['folders', 'metadata'].includes(item.id))), project: normalizeSelectedPrompts(result.settings.project.filter((item: {id: string}) => item.id !== 'metadata'))};
     const drafts = result.configured ? saved : loadPromptDraft();
     // Loading or migrating existing settings is not a user edit.
     return {drafts, saved: structuredClone(drafts)};

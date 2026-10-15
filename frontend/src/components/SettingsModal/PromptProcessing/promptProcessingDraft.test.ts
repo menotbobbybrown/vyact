@@ -1,5 +1,5 @@
 import {expect, it, vi} from 'vitest';
-import {loadPromptDraft, sortExcludedPrompts, type PromptDraft} from './promptProcessingDraft';
+import {createDefaultPromptDraft, loadPromptDraft, sortExcludedPrompts, type PromptDraft} from './promptProcessingDraft';
 
 it('keeps default items first and custom items in saved creation order after reordering', () => {
     const draft: PromptDraft[] = [
@@ -27,4 +27,9 @@ it('migrates split rules using the existing base state without losing edits', ()
                 .toEqual([{id: 'projectOutput', enabled}, {id: 'followups', enabled}]);
         } finally {vi.unstubAllGlobals();}
     }
+});
+
+it('only shows source folders in project settings', () => {
+    expect(createDefaultPromptDraft('general').some(item => item.id === 'folders')).toBe(false);
+    expect(createDefaultPromptDraft('project').find(item => item.id === 'folders')?.enabled).toBe(true);
 });

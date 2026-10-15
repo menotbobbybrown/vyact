@@ -12,13 +12,13 @@ export interface PromptDraft {
 export const PROMPT_DEFINITIONS = [
     {id: 'base', editable: true},
     {id: 'projectOutput', editable: true}, {id: 'followups', editable: true},
-    {id: 'selectedPrompt'},
-    {id: 'project'}, {id: 'projectMemory'}, {id: 'personalMemory', searchConditional: true}, {id: 'folders'},
-    {id: 'tone'}, {id: 'metadata'}, {id: 'external'},
+    {id: 'selectedPrompt', selectionConditional: true},
+    {id: 'project'}, {id: 'projectMemory'}, {id: 'personalMemory', searchConditional: true}, {id: 'folders', selectionConditional: true},
+    {id: 'tone'}, {id: 'external', selectionConditional: true},
     {id: 'length', editable: true},
     {id: 'reasoning', editable: true},
     {id: 'date'}, {id: 'profile'}, {id: 'summary'}, {id: 'skills', searchConditional: true}, {id: 'language'},
-    {id: 'tools', editable: true}, {id: 'toolContext'}, {id: 'mcp'},
+    {id: 'tools', editable: true}, {id: 'toolContext', selectionConditional: true}, {id: 'mcp', selectionConditional: true},
 ] as const;
 
 export type PromptScope = 'general' | 'project';
@@ -27,7 +27,7 @@ const DRAFT_STORAGE_KEY = 'vyact-prompt-processing-preview-v2';
 const LEGACY_STORAGE_KEY = 'vyact-prompt-processing-preview-v1';
 export const getPromptDefinition = (id: string) => PROMPT_DEFINITIONS.find(item => item.id === id);
 const belongsToScope = (id: string, scope: PromptScope) => scope === 'general'
-    ? !['project', 'projectMemory'].includes(id) : id !== 'personalMemory';
+    ? !['project', 'projectMemory', 'folders'].includes(id) : id !== 'personalMemory';
 
 export function createDefaultPromptDraft(scope: PromptScope): PromptDraft[] {
     return PROMPT_DEFINITIONS.filter(item => belongsToScope(item.id, scope))
@@ -102,7 +102,7 @@ export function sortExcludedPrompts(draft: PromptDraft[]): PromptDraft[] {
 }
 
 /** Request selections stay available; only their insertion order is configurable. */
-export const canExcludePrompt = (id: string) => !['selectedPrompt', 'external', 'toolContext', 'mcp'].includes(id);
+export const canExcludePrompt = (id: string) => !['selectedPrompt', 'external', 'toolContext', 'mcp', 'folders'].includes(id);
 export const normalizeSelectedPrompts = (draft: PromptDraft[]): PromptDraft[] => draft.map(item =>
     canExcludePrompt(item.id) ? item : {...item, enabled: true});
 export const excludeAllPrompts = (draft: PromptDraft[]): PromptDraft[] => draft.map(item =>

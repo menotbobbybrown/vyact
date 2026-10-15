@@ -579,6 +579,7 @@
   "promptProcessing": {
     "loadFailed": "No se pudieron cargar los ajustes. Vuelve a abrir esta vista en breve.",
     "excludeAll": "Excluir todo",
+    "selectionConditional": "Se aplica según las selecciones del chat o las herramientas activadas",
     "searchConditional": "Se incluye cuando hay resultados de búsqueda o coincidencias",
     "userInputTitle": "Prompt de entrada del usuario",
     "userInputDescription": "La pregunta escrita en el campo de entrada. Se envía como mensaje user después de las instrucciones del sistema y el historial.",
@@ -652,20 +653,16 @@
         "description": "Incluye el resumen, las decisiones y las tareas guardadas del proyecto cuando existen."
       },
       "personalMemory": {
-        "title": "Memoria personal",
+        "title": "Memoria",
         "description": "En chats generales, busca recuerdos relacionados e incluye solo los que superan el umbral de puntuación. Añade instrucciones de memoria automática si hay herramientas de memoria disponibles."
       },
       "folders": {
-        "title": "Carpetas registradas",
-        "description": "Incluye rutas, identificadores e instrucciones de uso cuando el chat o proyecto tiene una carpeta de código asignada."
+        "title": "Información de carpetas fuente",
+        "description": "Incluye rutas, identificadores, estructura de archivos e instrucciones de herramientas de las carpetas fuente añadidas en el editor del proyecto. No añade nada si no hay carpetas fuente."
       },
       "tone": {
         "title": "Tono de respuesta",
         "description": "Aplica el tono de respuesta elegido en los ajustes generales, si se ha definido."
-      },
-      "metadata": {
-        "title": "Metadatos internos",
-        "description": "Incluye instrucciones para resumir la conversación. Añade las de título cuando se solicita, las de resumen de adjuntos al adjuntar archivos y las de actualización de memoria al cargar memoria del proyecto."
       },
       "external": {
         "title": "Instrucciones de fuentes de búsqueda",

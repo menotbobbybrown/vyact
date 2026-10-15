@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {ArrowDown, ArrowUp, ArrowLeft, ArrowRight, ChevronDown, LockKeyhole, RotateCcw, Plus, Sparkles, UserRound, Trash2, Folder, MessageSquare, GripVertical, ScanSearch} from 'lucide-react';
+import {ArrowDown, ArrowUp, ArrowLeft, ArrowRight, ChevronDown, LockKeyhole, RotateCcw, Plus, Sparkles, UserRound, Trash2, Folder, MessageSquare, GripVertical, ScanSearch, MousePointer2} from 'lucide-react';
 import ModalTabs from '../../common/ModalTabs/ModalTabs';
 import ConfirmModal from '../../common/ConfirmModal/ConfirmModal';
 import {canExcludePrompt, excludeAllPrompts, normalizeSelectedPrompts, createDefaultPromptDraft, sortExcludedPrompts, getPromptDefinition, loadPromptDraft, type PromptDraft, type PromptScope} from './promptProcessingDraft';
@@ -8,14 +8,20 @@ import '../../common/ModalOverlay/ModalActions.css';
 import './PromptProcessingSection.css';
 import {fetchPromptSettings, persistPromptSettings} from './promptProcessingApi';
 import {usePromptDrag} from './usePromptDrag';
+import {reorderPromptDraft} from './reorderPromptDraft';
 
-export default function PromptProcessingSection() {
+export type PromptNavigationGuard = (proceed: () => void) => void;
+interface PromptProcessingSectionProps {
+    registerNavigationGuard?: (guard: PromptNavigationGuard | null) => void;
+}
+
+export default function PromptProcessingSection({registerNavigationGuard}: PromptProcessingSectionProps) {
     const {t} = useTranslation('settings');
     const [drafts, setDrafts] = useState(loadPromptDraft);
     const [savedDrafts, setSavedDrafts] = useState(drafts);
     const hasChanges = JSON.stringify(drafts) !== JSON.stringify(savedDrafts);
     const [scope, setScope] = useState<PromptScope>('general');
-    const [pendingScope, setPendingScope] = useState<PromptScope | null>(null);
+    const [pendingNavigation, setPendingNavigation] = useState<{proceed: () => void} | null>(null);
     const draft = drafts[scope];
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [confirm, setConfirm] = useState<string | null>(null);
@@ -31,6 +37,14 @@ export default function PromptProcessingSection() {
             .finally(() => {if (active) setLoading(false);});
         return () => {active = false;};
     }, []);
+    useEffect(() => {
+        registerNavigationGuard?.(proceed => {
+            if (saving || pendingNavigation) return;
+            if (hasChanges) setPendingNavigation({proceed});
+            else proceed();
+        });
+        return () => registerNavigationGuard?.(null);
+    }, [registerNavigationGuard, hasChanges, saving, pendingNavigation]);
     const included = draft.filter(item => item.enabled);
     const excluded = sortExcludedPrompts(draft);
     const titleFor = (item: PromptDraft) => item.title ?? (item.source === 'user' ? t('promptProcessing.customTitle') : t(`promptProcessing.items.${item.id}.title`));
@@ -64,13 +78,13 @@ export default function PromptProcessingSection() {
         setScope(next);
         setExpandedId(null);
         setConfirm(null);
-        setPendingScope(null);
+        setPendingNavigation(null);
         setStorageFailed(false);
         drag.finish();
     };
     const requestScopeChange = (next: PromptScope) => {
         if (next === scope) return;
-        if (hasChanges) setPendingScope(next);
+        if (hasChanges) setPendingNavigation({proceed: () => changeScope(next)});
         else changeScope(next);
     };
     const updateItem = (id: string, change: Partial<PromptDraft>) => {
@@ -99,6 +113,7 @@ export default function PromptProcessingSection() {
         const expanded = editable && expandedId === item.id;
         const ItemContent = editable ? 'button' : 'div';
         const searchConditional = definition && 'searchConditional' in definition && definition.searchConditional;
+        const selectionConditional = definition && 'selectionConditional' in definition && definition.selectionConditional;
         const title = titleFor(item);
         return <li key={item.id} className={`prompt-processing-item${item.enabled ? '' : ' is-disabled'}${isUser ? ' is-user' : ''}${drag.draggedId === item.id ? ' dragging' : ''}${drag.targetId === item.id ? ' drag-over' : ''}`}
             onDragOver={event => drag.over(event, item.enabled, item.id)}
@@ -117,6 +132,7 @@ export default function PromptProcessingSection() {
                         </span>
                         <strong>{title}</strong>
                         {!editable && <span className="prompt-processing-lock" role="img" aria-label={t('promptProcessing.automatic')}><LockKeyhole size={12}/></span>}
+                        {selectionConditional && <span className="prompt-processing-conditional" role="img" aria-label={t('promptProcessing.selectionConditional')}><MousePointer2 size={12} strokeWidth={1.8}/></span>}
                         {searchConditional && <span className="prompt-processing-conditional" role="img" aria-label={t('promptProcessing.searchConditional')}><ScanSearch size={12} strokeWidth={1.8}/></span>}
                     </span>
                     <span className="prompt-processing-description">{isUser ? (item.content?.trim() || t('promptProcessing.customDescription')) : t(`promptProcessing.items.${item.id}.description`)}</span>
@@ -125,7 +141,7 @@ export default function PromptProcessingSection() {
                 <div className="prompt-processing-actions">
                     {canExcludePrompt(item.id) && <button className="prompt-processing-icon"
                         aria-label={t(item.enabled ? 'promptProcessing.exclude' : 'promptProcessing.include', {title})}
-                        onClick={() => updateItem(item.id, {enabled: !item.enabled})}>
+                        onClick={() => updateDraft(reorderPromptDraft(draft, item.id, !item.enabled))}>
                         {item.enabled ? <ArrowLeft size={15}/> : <ArrowRight size={15}/>}</button>}
                     {item.enabled && <>
                         <button className="prompt-processing-icon"
@@ -209,7 +225,7 @@ export default function PromptProcessingSection() {
                     </div>}
                 </section>)}
         </div>
-        {pendingScope && <ConfirmModal className="unsaved-changes-dialog" actionLayout="horizontal"
+        {pendingNavigation && <ConfirmModal className="unsaved-changes-dialog" actionLayout="horizontal"
             title={t('main:googleWorkspace.unsavedSettings')}
             description={storageFailed ? t('promptProcessing.storageFailed') : t('main:googleWorkspace.unsavedSettingsDescription')}
             options={[
@@ -217,13 +233,15 @@ export default function PromptProcessingSection() {
                 {label: t('main:googleWorkspace.discardAndLeave'), value: 'discard'},
                 {label: t('main:googleWorkspace.saveAndLeave'), value: 'save', variant: 'primary'},
             ]}
-            onClose={() => setPendingScope(null)}
+            onClose={() => setPendingNavigation(null)}
             loading={saving} loadingValue="save"
             onSelect={async value => {
-                if (value === 'stay') {setPendingScope(null); return;}
+                if (value === 'stay') {setPendingNavigation(null); return;}
                 if (value === 'save' && !await handleSave()) return;
                 if (value === 'discard') handleCancel();
-                changeScope(pendingScope);
+                const proceed = pendingNavigation.proceed;
+                setPendingNavigation(null);
+                proceed();
             }}/>}
         {confirm && <ConfirmModal title={t(confirm === 'all' ? 'promptProcessing.restoreAll' : draft.find(item => item.id === confirm)?.source === 'user' ? 'promptProcessing.deleteCustom' : 'promptProcessing.remove')}
             description={t(confirm === 'all' ? 'promptProcessing.restoreScopeConfirm' : draft.find(item => item.id === confirm)?.source === 'user' ? 'promptProcessing.deleteCustomConfirm' : 'promptProcessing.removeConfirm')}

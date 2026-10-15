@@ -23,7 +23,7 @@ describe('prompt drag ordering', () => {
 });
 
 describe('request-selected prompts', () => {
-    const selected = ['selectedPrompt', 'external', 'toolContext', 'mcp'].map(id => ({id, enabled: true}));
+    const selected = ['selectedPrompt', 'external', 'toolContext', 'mcp', 'folders'].map(id => ({id, enabled: true}));
     it('keeps selections included on bulk exclusion and restores legacy exclusions', () => {
         expect(excludeAllPrompts([...selected, ...draft]).filter(item => item.enabled)).toEqual(selected);
         expect(normalizeSelectedPrompts(selected.map(item => ({...item, enabled: false})))).toEqual(selected);
@@ -32,4 +32,19 @@ describe('request-selected prompts', () => {
         expect(reorderPromptDraft(selected, 'selectedPrompt', false)).toBe(selected);
         expect(reorderPromptDraft(selected, 'selectedPrompt', true, 'external')[1].id).toBe('selectedPrompt');
     });
+});
+
+it('appends arrow-included items after all included items regardless of their old position', () => {
+    const items = [
+        {id: 'selectedPrompt', enabled: true},
+        {id: 'date', enabled: false},
+        {id: 'external', enabled: true},
+        {id: 'toolContext', enabled: true},
+        {id: 'mcp', enabled: true},
+    ];
+    const result = reorderPromptDraft(items, 'date', true);
+    expect(result.filter(item => item.enabled).map(item => item.id))
+        .toEqual(['selectedPrompt', 'external', 'toolContext', 'mcp', 'date']);
+    expect(reorderPromptDraft(items, 'date', true, 'toolContext').map(item => item.id))
+        .toEqual(['selectedPrompt', 'external', 'date', 'toolContext', 'mcp']);
 });

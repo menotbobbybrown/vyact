@@ -265,7 +265,7 @@ as needing confirmation. Answer in the user's language.
 """.strip()
 
 BUILTIN_IDS = ("base", "projectOutput", "followups", "selectedPrompt", "project", "projectMemory", "personalMemory", "folders", "tone",
-               "metadata", "external", "length", "reasoning", "date", "profile", "summary", "skills",
+               "external", "length", "reasoning", "date", "profile", "summary", "skills",
                "language", "tools", "toolContext", "mcp")
 
 EDITABLE_IDS = {"base", "projectOutput", "followups", "length", "reasoning", "tools"}

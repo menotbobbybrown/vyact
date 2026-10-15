@@ -594,6 +594,7 @@
   "promptProcessing": {
     "loadFailed": "Could not load prompt settings. Please reopen this view shortly.",
     "excludeAll": "Exclude all",
+    "selectionConditional": "Applied according to chat selections or enabled tools",
     "searchConditional": "Included when search or matching returns results",
     "userInputTitle": "User input prompt",
     "userInputDescription": "The question typed in the input box. Sent as a user message after system instructions and conversation history.",
@@ -667,20 +668,16 @@
         "description": "Includes the project’s saved summary, decisions and action items when available."
       },
       "personalMemory": {
-        "title": "Personal memory",
+        "title": "Long-term memory",
         "description": "In general chats, searches related memories and includes only results meeting the score threshold. Adds automatic memory guidance when memory tools are available."
       },
       "folders": {
-        "title": "Registered folders",
-        "description": "Includes folder paths, identifiers and usage guidance when a code folder is assigned to the chat or project."
+        "title": "Source folder information",
+        "description": "Includes paths, identifiers, file structure and tool instructions for source folders added in the project editor. Adds nothing if no source folders are configured."
       },
       "tone": {
         "title": "Response tone",
         "description": "Applies the response tone selected in General settings, if set."
-      },
-      "metadata": {
-        "title": "Internal metadata",
-        "description": "Includes conversation-summary instructions. Adds title instructions when a title is requested, attachment-summary instructions for file attachments, and memory-update instructions when project memory is loaded."
       },
       "external": {
         "title": "Search source instructions",

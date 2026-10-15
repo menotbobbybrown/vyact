@@ -11,7 +11,7 @@ SummaryModal이 GET /history/{conv_id}/summary로 조회하는 값이 바로 이
 """
 
 
-from services.prompt_processing import capture, enabled
+from services.prompt_processing import capture
 import re
 
 from services.db import HIST_INDEX, get_es
@@ -92,8 +92,6 @@ def build_summary_instruction(
     conv_summary는 짧게 제한하고 project_summary는 첨부 규모에 맞춰 작성하게 한다.
     필수 형식과 사용자에게 숨겨지는 메타데이터라는 점만 명확하게 전달한다.
     """
-    if not enabled("metadata"):
-        return capture("metadata", "")
     parts = [CONVERSATION_METADATA_INSTRUCTION]
     if request_conversation_title:
         parts.append(CONVERSATION_TITLE_INSTRUCTION)

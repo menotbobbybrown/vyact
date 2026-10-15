@@ -579,6 +579,7 @@
   "promptProcessing": {
     "loadFailed": "Không tải được cài đặt lời nhắc. Vui lòng mở lại sau ít phút.",
     "excludeAll": "Loại tất cả",
+    "selectionConditional": "Áp dụng theo lựa chọn trong trò chuyện hoặc công cụ đã bật",
     "searchConditional": "Được đưa vào khi có kết quả tìm kiếm hoặc đối sánh",
     "userInputTitle": "Lời nhắc nhập của người dùng",
     "userInputDescription": "Câu hỏi nhập trong ô trò chuyện. Được gửi dưới dạng tin nhắn user sau hướng dẫn hệ thống và lịch sử hội thoại.",
@@ -652,20 +653,16 @@
         "description": "Thêm tóm tắt, quyết định và việc cần làm đã lưu của dự án nếu có."
       },
       "personalMemory": {
-        "title": "Bộ nhớ cá nhân",
+        "title": "Bộ nhớ dài hạn",
         "description": "Trong trò chuyện thông thường, tìm ký ức liên quan và chỉ thêm kết quả đạt ngưỡng điểm. Thêm chỉ dẫn ghi nhớ tự động khi có công cụ bộ nhớ."
       },
       "folders": {
-        "title": "Thư mục đã đăng ký",
-        "description": "Thêm đường dẫn, mã định danh và chỉ dẫn sử dụng khi cuộc trò chuyện hoặc dự án được gán thư mục mã nguồn."
+        "title": "Thông tin thư mục nguồn",
+        "description": "Thêm đường dẫn, mã định danh, cấu trúc tệp và chỉ dẫn công cụ cho thư mục nguồn đã thêm trong trình chỉnh sửa dự án. Không thêm nếu chưa có thư mục nguồn."
       },
       "tone": {
         "title": "Giọng điệu trả lời",
         "description": "Áp dụng giọng trả lời đã chọn trong cài đặt chung nếu đã thiết lập."
-      },
-      "metadata": {
-        "title": "Siêu dữ liệu nội bộ",
-        "description": "Thêm chỉ dẫn tóm tắt cuộc trò chuyện. Thêm chỉ dẫn tiêu đề khi yêu cầu tạo tiêu đề, tóm tắt tệp khi có tệp đính kèm và cập nhật ký ức khi tải bộ nhớ dự án."
       },
       "external": {
         "title": "Chỉ dẫn nguồn tìm kiếm",

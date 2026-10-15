@@ -579,6 +579,7 @@
   "promptProcessing": {
     "loadFailed": "无法加载提示词设置。请稍后重新打开。",
     "excludeAll": "全部排除",
+    "selectionConditional": "根据聊天选择或启用的工具应用",
     "searchConditional": "有搜索或匹配结果时包含",
     "userInputTitle": "用户输入提示词",
     "userInputDescription": "输入框中填写的问题。在系统指令和对话历史之后作为 user 消息发送。",
@@ -652,20 +653,16 @@
         "description": "包含项目已保存的摘要、决策和待办事项（如有）。"
       },
       "personalMemory": {
-        "title": "个人记忆",
+        "title": "长期记忆",
         "description": "在普通聊天中搜索相关记忆，仅包含达到评分阈值的结果。记忆工具可用时，还会添加自动记忆指令。"
       },
       "folders": {
-        "title": "已注册文件夹",
-        "description": "为聊天或项目指定代码文件夹后，包含文件夹路径、标识符和使用指令。"
+        "title": "源文件夹信息",
+        "description": "包含在项目编辑中添加的源文件夹的路径、标识符、文件结构和工具使用指令。未配置源文件夹时不添加。"
       },
       "tone": {
         "title": "回复语气",
         "description": "在常规设置中选择回复语气后应用。"
-      },
-      "metadata": {
-        "title": "内部元数据",
-        "description": "包含对话摘要生成指令。要求生成标题时添加标题指令，附加文件时添加附件摘要指令，加载项目记忆时添加记忆更新指令。"
       },
       "external": {
         "title": "搜索来源指令",

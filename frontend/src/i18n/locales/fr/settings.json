@@ -579,6 +579,7 @@
   "promptProcessing": {
     "loadFailed": "Impossible de charger les paramètres. Rouvrez cette vue dans un instant.",
     "excludeAll": "Tout exclure",
+    "selectionConditional": "Appliqué selon les sélections du chat ou les outils activés",
     "searchConditional": "Inclus si la recherche ou la correspondance produit des résultats",
     "userInputTitle": "Prompt saisi par l’utilisateur",
     "userInputDescription": "La question saisie dans le champ de discussion. Envoyée comme message user après les instructions système et l’historique.",
@@ -652,20 +653,16 @@
         "description": "Inclut le résumé, les décisions et les tâches enregistrés du projet lorsqu’ils existent."
       },
       "personalMemory": {
-        "title": "Mémoire personnelle",
+        "title": "Mémoire",
         "description": "Dans les chats généraux, recherche les souvenirs liés à la question et n’inclut que ceux atteignant le seuil de score. Ajoute les consignes de mémorisation automatique si les outils de mémoire sont disponibles."
       },
       "folders": {
-        "title": "Dossiers enregistrés",
-        "description": "Inclut les chemins, identifiants et consignes d’utilisation lorsqu’un dossier de code est associé au chat ou au projet."
+        "title": "Informations des dossiers sources",
+        "description": "Inclut les chemins, identifiants, structure de fichiers et consignes des outils des dossiers sources ajoutés dans l’éditeur du projet. N’ajoute rien sans dossier source."
       },
       "tone": {
         "title": "Ton des réponses",
         "description": "Applique le ton de réponse choisi dans les paramètres généraux, s’il est défini."
-      },
-      "metadata": {
-        "title": "Métadonnées internes",
-        "description": "Inclut les consignes de résumé de conversation. Ajoute celles du titre si sa génération est demandée, du résumé des pièces jointes pour les fichiers joints et de mise à jour de mémoire si la mémoire du projet est chargée."
       },
       "external": {
         "title": "Consignes des sources de recherche",

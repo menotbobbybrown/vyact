@@ -21,7 +21,7 @@ import './SettingsModal.css';
 import '../RememberModal/RememberModal.css';
 import McpServersSection from './McpServersSection';
 import SkillsSection from './SkillsSection';
-import PromptProcessingSection from './PromptProcessing/PromptProcessingSection';
+import PromptProcessingSection, {type PromptNavigationGuard} from './PromptProcessing/PromptProcessingSection';
 import PluginsSection from './PluginsSection';
 import ExternalDataSection from './ExternalDataSection';
 import ApiServerSection from './ApiServerSection';
@@ -202,11 +202,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
         if (!isKoreanLanguage && tab === 'externalData') setTab(DEFAULT_SETTINGS_TAB);
     }, [isKoreanLanguage, tab]);
 
+    const promptNavigationGuard = useRef<PromptNavigationGuard | null>(null);
+    const registerPromptNavigationGuard = useCallback((guard: PromptNavigationGuard | null) => {
+        promptNavigationGuard.current = guard;
+    }, []);
+    const requestNavigation = useCallback((proceed: () => void) => {
+        if (promptNavigationGuard.current) promptNavigationGuard.current(proceed);
+        else proceed();
+    }, []);
+
     const handleClose = useCallback(() => {
-        setTab(DEFAULT_SETTINGS_TAB);
-        setIsPluginTabVisible(false);
-        onClose();
-    }, [onClose]);
+        requestNavigation(() => {
+            setTab(DEFAULT_SETTINGS_TAB);
+            setIsPluginTabVisible(false);
+            onClose();
+        });
+    }, [onClose, requestNavigation]);
 
     // initialTab이 바뀌면 탭 동기화, 없으면 일반으로 리셋
     useEffect(() => {
@@ -1018,7 +1029,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                             <button
                                 key={item.key}
                                 className={`settings-sidebar-item${tab === item.key ? ' active' : ''}`}
-                                onClick={() => setTab(item.key)}
+                                onClick={() => {if (item.key !== tab) requestNavigation(() => setTab(item.key));}}
                                 disabled={isBackupExporting}
                             >
                                 <span className="settings-sidebar-icon">{item.icon}</span>
@@ -1030,7 +1041,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                     <div className={`settings-body${tab === 'promptProcessing' ? ' settings-body--prompt-processing' : ''}${tab === 'backup' ? ' settings-body--backup' : ''}`}>
 
                         {tab === 'apiServer' && <ApiServerSection/>}
-                        {tab === 'promptProcessing' && <PromptProcessingSection/>}
+                        {tab === 'promptProcessing' && <PromptProcessingSection registerNavigationGuard={registerPromptNavigationGuard}/>}
 
                         {tab === 'backup' && (
                             <div className={`settings-general settings-backup${isBackupExporting ? ' settings-backup--exporting' : ''}`} aria-busy={isBackupExporting}>

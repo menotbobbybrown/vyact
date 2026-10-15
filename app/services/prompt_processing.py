@@ -16,12 +16,15 @@ from services.prompt_defaults import (
     FORMAT_INSTRUCTION,
 )
 
-REQUEST_SELECTED_IDS = frozenset({"selectedPrompt", "external", "toolContext", "mcp"})
+REQUEST_SELECTED_IDS = frozenset({"selectedPrompt", "external", "toolContext", "mcp", "folders"})
 
 
 def normalize_settings(settings: dict) -> dict:
     snapshot = deepcopy(settings)
-    for items in snapshot.values():
+    for scope, items in snapshot.items():
+        items[:] = [item for item in items if item["id"] != "metadata"]
+        if scope == "general":
+            items[:] = [item for item in items if item["id"] != "folders"]
         base = next((item for item in items if item["id"] == "base"), None)
         if base is not None:
             insertion = items.index(base) + 1
@@ -41,7 +44,7 @@ _settings_lock = asyncio.Lock()
 
 
 def defaults(scope: str) -> list[dict]:
-    excluded = {"project", "projectMemory"} if scope == "general" else {"personalMemory"}
+    excluded = {"project", "projectMemory", "folders"} if scope == "general" else {"personalMemory"}
     return [{"id": key, "enabled": True} for key in BUILTIN_IDS if key not in excluded]
 
 
@@ -135,6 +138,10 @@ def compose() -> str:
         text = (item.get("content", original) or "").strip()
         if text:
             parts.append(text)
+    # App-owned bookkeeping always follows configurable instructions.
+    metadata = composition.parts.get("metadata", "").strip()
+    if metadata:
+        parts.append(metadata)
     return "\n\n".join(parts)
 
 

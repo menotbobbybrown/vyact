@@ -6,6 +6,7 @@ from routers.prompt_processing import router
 from services.llm.providers import openai_stream, gemini_stream, claude_stream
 from unittest.mock import AsyncMock, patch
 
+from services.conv_summary import build_summary_instruction
 from prompts import build_system_message
 from services.prompt_processing import (
     PromptComposition, current_composition, defaults, capture, compose, enabled,
@@ -30,7 +31,7 @@ class PromptCompositionTests(unittest.TestCase):
         capture("selectedPrompt", "SELECTED")
         capture("metadata", "HIDDEN")
         result = build_system_message("LEGACY FALLBACK", None, "PROFILE", "SKILL", "SUMMARY", "ko", reasoning=True)
-        self.assertEqual(result, "SELECTED")
+        self.assertEqual(result, "SELECTED\n\nHIDDEN")
 
     def test_order_edits_and_custom_instructions_follow_stored_order(self):
         current_composition.get().items = [
@@ -93,6 +94,30 @@ class PromptCompositionTests(unittest.TestCase):
         current_composition.get().items = [{"id": "reasoning", "enabled": True, "content": "THINK"}]
         self.assertEqual(build_system_message("", None, reasoning=False), "")
         self.assertEqual(build_system_message("", None, reasoning=True), "THINK")
+
+    def test_source_folders_are_project_only_and_cannot_be_disabled(self):
+        self.assertNotIn("folders", [item["id"] for item in defaults("general")])
+        settings = {scope: defaults(scope) for scope in ("general", "project")}
+        settings["general"].append({"id": "folders", "enabled": False})
+        next(item for item in settings["project"] if item["id"] == "folders")["enabled"] = False
+        migrated = normalize_settings(settings)
+        self.assertNotIn("folders", [item["id"] for item in migrated["general"]])
+        self.assertTrue(next(item for item in migrated["project"] if item["id"] == "folders")["enabled"])
+        model = PromptSettings.model_validate(migrated)
+        next(item for item in model.project if item.id == "folders").enabled = False
+        self.assertTrue(next(item for item in PromptSettings.model_validate(model.model_dump()).project
+                             if item.id == "folders").enabled)
+
+    def test_metadata_is_app_owned_and_follows_configurable_instructions(self):
+        self.assertNotIn("metadata", [item["id"] for item in defaults("general")])
+        legacy = {"general": [{"id": "metadata", "enabled": False}]}
+        self.assertEqual(normalize_settings(legacy)["general"], [])
+        current_composition.get().items = [{"id": "custom:x", "source": "user", "enabled": True, "content": "CUSTOM"}]
+        self.assertEqual(build_summary_instruction("", False, request_conversation_title=True), "")
+        result = compose()
+        self.assertTrue(result.startswith("CUSTOM\n\n"))
+        self.assertIn("<conv_title>", result)
+        self.assertIn("<conv_summary>", result)
 
     def test_scopes_and_validation(self):
         self.assertNotIn("personalMemory", [item["id"] for item in defaults("project")])
