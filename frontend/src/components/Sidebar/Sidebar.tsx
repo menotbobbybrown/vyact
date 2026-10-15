@@ -731,11 +731,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                                                     className="favorite-conversation-source favorite-conversation-source--project"
                                                     title={projectNameById.get(conversation.project_id)}
                                                 >
-                                                    <Folder size={14}/>
+                                                    <Folder size={15}/>
                                                 </span>
                                             ) : (
                                                 <span className="favorite-conversation-source favorite-conversation-source--general" aria-hidden="true">
-                                                    <MessageCircle size={14}/>
+                                                    <MessageCircle size={15}/>
                                                 </span>
                                             )}
                                             <span className="favorite-conversation-title">{conversation.title}</span>
@@ -754,7 +754,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                                 onClick={event => {
                                                     event.stopPropagation();
                                                     void onConversationFavoriteChange(conversation, false);
-                                                }}><PinOff size={14}/></button>
+                                                }}><PinOff size={12}/></button>
                                         <SidebarOverflowMenu
                                             isOpen={menuOpenId === `favorite:${conversation.conv_id}`}
                                             onOpenChange={isOpen => setMenuOpenId(isOpen ? `favorite:${conversation.conv_id}` : null)}
