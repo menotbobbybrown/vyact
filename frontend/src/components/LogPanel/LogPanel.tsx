@@ -29,7 +29,7 @@ export default function LogPanel({model, style}: {model: string; style: CSSPrope
     const contentRef = useRef<HTMLDivElement>(null);
     const followTail = useRef(true);
     const latestFiles = useRef<LogFile[]>([]);
-    const [paused, setPaused] = useState(false);
+    const [hasPendingLogs, setHasPendingLogs] = useState(false);
     const hasLogs = files.some(file => file.content.length > 0);
 
     useEffect(() => {
@@ -54,16 +54,21 @@ export default function LogPanel({model, style}: {model: string; style: CSSPrope
         setSelectedPath('');
         setFailed(false);
         followTail.current = true;
-        setPaused(false);
+        setHasPendingLogs(false);
         return subscribeLogs(kind, model, updates => {
-            latestFiles.current = applyLogUpdates(latestFiles.current, updates);
+            const previous = latestFiles.current;
+            latestFiles.current = applyLogUpdates(previous, updates);
             if (followTail.current) setFiles(latestFiles.current);
+            else if (latestFiles.current.some((file, index) =>
+                file.path !== previous[index]?.path || file.content !== previous[index]?.content)) {
+                setHasPendingLogs(true);
+            }
         }, setFailed, filename, snapshot => {
             setAvailable(snapshot.available);
             setSelectedPath(snapshot.selected);
             if (snapshot.replace) {
                 followTail.current = true;
-                setPaused(false);
+                setHasPendingLogs(false);
                 latestFiles.current = [];
                 setFiles([]);
             }
@@ -76,7 +81,7 @@ export default function LogPanel({model, style}: {model: string; style: CSSPrope
 
     const resumeTail = () => {
         followTail.current = true;
-        setPaused(false);
+        setHasPendingLogs(false);
         setFiles([...latestFiles.current]);
     };
 
@@ -111,15 +116,15 @@ export default function LogPanel({model, style}: {model: string; style: CSSPrope
             const element = event.currentTarget;
             const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 24;
             if (atBottom && !followTail.current) resumeTail();
-            else if (!atBottom) {followTail.current = false; setPaused(true);}
+            else if (!atBottom) {followTail.current = false;}
         }}>
             {files.map(file => <section key={file.path}>
                 {kind === 'llm' && file.content
-                    ? <RequestLogEntries content={file.content} onInspect={() => {followTail.current = false; setPaused(true);}}/>
+                    ? <RequestLogEntries content={file.content} onInspect={() => {followTail.current = false;}}/>
                     : file.content ? <TextLogEntries content={file.content}/> : null}
             </section>)}
             {!hasLogs && <div className="log-panel-empty-state"><FileText size={28} strokeWidth={1.5} aria-hidden="true"/><span>{t('logViewer.empty')}</span></div>}
         </div>
-        {paused && <button type="button" className="log-panel-resume" onClick={resumeTail}><ArrowDown size={14}/>{t('logViewer.latest')}</button>}
+        {hasPendingLogs && <button type="button" className="log-panel-resume" onClick={resumeTail}><ArrowDown size={14}/>{t('logViewer.latest')}</button>}
     </aside>;
 }
