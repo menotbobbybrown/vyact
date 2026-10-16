@@ -172,6 +172,8 @@ DMG_FILES=("$DIST_DIR"/*.dmg)
 MAC_ZIP_FILES=("$DIST_DIR"/*.zip)
 MAC_UPDATE_FILES=("$DIST_DIR"/latest-mac.yml)
 EXE_FILES=("$DIST_DIR"/*.exe)
+WINDOWS_UPDATE_FILES=("$DIST_DIR"/latest.yml)
+WINDOWS_BLOCKMAP_FILES=("$DIST_DIR"/*.exe.blockmap)
 APPIMAGE_FILES=("$DIST_DIR"/*.AppImage)
 DEB_FILES=("$DIST_DIR"/*.deb)
 LINUX_UPDATE_FILES=("$DIST_DIR"/latest-linux.yml)
@@ -181,6 +183,8 @@ if [ "${#DMG_FILES[@]}" -eq 0 ] || \
    [ "${#MAC_ZIP_FILES[@]}" -eq 0 ] || \
    [ "${#MAC_UPDATE_FILES[@]}" -eq 0 ] || \
    [ "${#EXE_FILES[@]}" -eq 0 ] || \
+   [ "${#WINDOWS_UPDATE_FILES[@]}" -eq 0 ] || \
+   [ "${#WINDOWS_BLOCKMAP_FILES[@]}" -eq 0 ] || \
    [ "${#APPIMAGE_FILES[@]}" -eq 0 ] || \
    [ "${#DEB_FILES[@]}" -eq 0 ] || \
    [ "${#LINUX_UPDATE_FILES[@]}" -eq 0 ]; then

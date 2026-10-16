@@ -34,8 +34,7 @@ const AUTO_START_DELAY_SECONDS = 15;
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/vyact/vyact/releases/latest";
 const GITHUB_RELEASES_URL = "https://github.com/vyact/vyact/releases";
 const APP_UPDATE_SUPPORTED = app.isPackaged
-    && !platform.isWindows
-    && (platform.isMac || Boolean(process.env.APPIMAGE));
+    && (platform.isMac || platform.isWindows || Boolean(process.env.APPIMAGE));
 
 let mainWindow = null;
 // The initial setup app is rendered in a child view.  Keeping loading.html in

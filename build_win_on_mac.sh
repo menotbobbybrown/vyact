@@ -97,7 +97,9 @@ echo "[OK] Electron build 완료"
 echo ""
 echo "[5/5] Collecting artifacts..."
 mkdir -p dist
-cp electron/dist/*.exe dist/ 2>/dev/null || true
+cp electron/dist/*.exe dist/
+cp electron/dist/latest.yml dist/
+cp electron/dist/*.exe.blockmap dist/
 
 # trap이 EXIT에서 restore 자동 호출
 

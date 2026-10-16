@@ -35,6 +35,11 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Vyact"
     },
+    "publish": {
+      "provider": "github",
+      "owner": "vyact",
+      "repo": "vyact"
+    },
     "files": [
       "main.js",
       "youtube-playback-quality.js",
