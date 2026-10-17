@@ -3,6 +3,7 @@ import {Camera} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import './TitleBar.css';
 import NotificationCenter from './NotificationCenter';
+import QuickMenu from './QuickMenu';
 import CustomSelect from '../CustomSelect/CustomSelect';
 
 interface TitleBarProps {
@@ -100,6 +101,7 @@ const TitleBar: React.FC<TitleBarProps> = ({sidebarCollapsed, onToggleSidebar, o
                 <button className="titlebar-btn" onClick={onScreenshot} aria-label={t('screenshot.captureCurrent')}>
                     <Camera size={15} />
                 </button>
+                <QuickMenu onOpen={() => onNotificationCenterOpenChange(false)}/>
                 <NotificationCenter open={notificationCenterOpen} onOpenChange={onNotificationCenterOpenChange}/>
             </div>
 

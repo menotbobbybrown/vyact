@@ -1,3 +1,4 @@
+import {WEALTH_LAB_CHAT_DRAFT_EVENT} from '../CalcStudio/chatExport';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import React, {KeyboardEvent, useEffect, useRef, useState} from 'react';
 import ImageViewer from '../ImageViewer/ImageViewer';
@@ -269,6 +270,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
         const selectedItem = slashSuggestionsRef.current?.children[slash.selectedSuggestion] as HTMLElement | undefined;
         selectedItem?.scrollIntoView({block: 'nearest'});
     }, [slash.selectedSuggestion]);
+
+    useEffect(() => {
+        const appendWealthLabDraft = (event: Event) => {
+            const text = (event as CustomEvent<{text: string}>).detail?.text;
+            if (typeof text !== 'string' || !text.trim()) return;
+            setValue(previous => previous.trim() ? `${previous}\n\n${text}\n\n` : `${text}\n\n`);
+            textareaRef.current?.focus();
+        };
+        window.addEventListener(WEALTH_LAB_CHAT_DRAFT_EVENT, appendWealthLabDraft);
+        return () => window.removeEventListener(WEALTH_LAB_CHAT_DRAFT_EVENT, appendWealthLabDraft);
+    }, []);
 
     // focusTrigger
     useEffect(() => {
