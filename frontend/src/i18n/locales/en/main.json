@@ -1463,6 +1463,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "defaultQuestion": "Analyze the attached Wealth Lab results. Explain whether funds last through the plan, when and by how much they fall short, and suggest adjustments to contributions, withdrawals, or duration.",
     "ageAndYear": "Age {{age}} · {{year}}",
     "plannedWithdrawal": "Planned withdrawal",
     "actualWithdrawal": "Actual withdrawal",

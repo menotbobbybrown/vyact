@@ -18,8 +18,8 @@ describe('Wealth Lab chat export', () => {
         expect(text).toContain(en.calcStudio.timing);
         expect(text).toContain('Final balance: 1452');
         expect(text).toContain('Total contributions: 1100');
-        expect(text).toContain('| 1 | 2026 | 1000 | 0 | 100 | 0 | 0 | 1100 |');
-        expect(text).toContain('| 3 | 2028 | 1320 | 0 | 132 | 0 | 0 | 1452 |');
+        expect(text).toContain('| 1 | 2026 | 1000 | 0 | 100 | 0 | 1100 |');
+        expect(text).toContain('| 3 | 2028 | 1320 | 0 | 132 | 0 | 1452 |');
         expect(inputs.initialAmount).toBe('1000');
     });
 });

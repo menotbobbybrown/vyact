@@ -4,7 +4,6 @@ export const resultColumns = [
     {key: 'invested', label: 'invested'},
     {key: 'contribution', label: 'contribution'},
     {key: 'interest', label: 'yearlyInterest'},
-    {key: 'plannedWithdrawal', label: 'plannedWithdrawal'},
     {key: 'withdrawal', label: 'actualWithdrawal'},
     {key: 'shortfall', label: 'yearlyShortfall'},
     {key: 'balance', label: 'yearEndBalance'},

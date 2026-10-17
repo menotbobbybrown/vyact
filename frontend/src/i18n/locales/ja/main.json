@@ -1464,6 +1464,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "defaultQuestion": "添付のWealth Lab結果を分析してください。計画終了まで資金が足りるか、不足する場合は時期と金額を説明し、積立額・引出額・期間の調整案を提案してください。",
     "ageAndYear": "{{age}}歳 · {{year}}年",
     "plannedWithdrawal": "引出予定額",
     "actualWithdrawal": "実際の引出額",

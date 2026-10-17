@@ -1463,6 +1463,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "defaultQuestion": "Analiza los resultados adjuntos de Wealth Lab. Explica si los fondos alcanzan hasta el final, cuándo y cuánto falta, y sugiere ajustes de aportaciones, retiros o duración.",
     "ageAndYear": "{{age}} años · {{year}}",
     "plannedWithdrawal": "Retiro previsto",
     "actualWithdrawal": "Retiro real",

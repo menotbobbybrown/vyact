@@ -129,7 +129,6 @@
 .calc-studio-table td.calc-studio-value-negative { color: var(--danger); }
 .calc-studio-table td.calc-studio-value-zero { color: var(--muted); }
 .calc-studio-table tbody tr:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
-.calc-studio-table .calc-studio-column-plannedWithdrawal { color: var(--text-secondary); }
 .calc-studio-table .calc-studio-column-shortfall { color: var(--danger); font-weight: 600; }
 .calc-studio-funding-status { margin: 10px 0 0; padding: 9px 12px; border-radius: 8px; background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--success); font-size: 12px; line-height: 1.5; flex-shrink: 0; }
 .calc-studio-funding-status--depleted { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }

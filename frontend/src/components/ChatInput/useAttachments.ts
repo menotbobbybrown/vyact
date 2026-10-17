@@ -32,6 +32,11 @@ export function useAttachments(
     const [fileAttachments, setFileAttachments] = useState<FileAttachment[]>([]);
     const [pastedTexts, setPastedTexts] = useState<PastedText[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const addPastedText = useCallback((text: string, customLabel?: string) => {
+        const firstLine = text.split('\n').find(line => line.trim()) || text;
+        const label = customLabel || firstLine.trim().slice(0, 80) + (firstLine.length > 80 ? '...' : '');
+        setPastedTexts(previous => [...previous, {id: `paste-${crypto.randomUUID()}`, label, content: text}]);
+    }, []);
 
     const isMediaSupported = useCallback((file: File) => {
         if (file.type.startsWith('image/') && !supportsImageInput) return false;
@@ -113,10 +118,7 @@ export function useAttachments(
         const text = e.clipboardData.getData('text');
         if (text && (text.length >= PASTE_MIN_CHARS || text.split('\n').length >= PASTE_MIN_LINES)) {
             e.preventDefault();
-            const firstLine = text.split('\n').find(l => l.trim()) || text;
-            const label = firstLine.trim().slice(0, 80) + (firstLine.length > 80 ? '...' : '');
-            const id = `paste-${Date.now()}`;
-            setPastedTexts(prev => [...prev, { id, label, content: text }]);
+            addPastedText(text);
         }
     };
 
@@ -135,7 +137,7 @@ export function useAttachments(
 
     return {
         validateAttachments,
-        images, fileAttachments, pastedTexts, fileInputRef,
+        images, fileAttachments, pastedTexts, fileInputRef, addPastedText,
         handleFileSelect, handlePaste,
         removeImage, removeFileAttachment, removePastedText, clearAll,
         setImages, setFileAttachments, setPastedTexts,

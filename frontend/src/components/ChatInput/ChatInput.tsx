@@ -1,6 +1,6 @@
 import {WEALTH_LAB_CHAT_DRAFT_EVENT} from '../CalcStudio/chatExport';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
-import React, {KeyboardEvent, useEffect, useRef, useState} from 'react';
+import React, {KeyboardEvent, useEffect, useLayoutEffect, useCallback, useRef, useState} from 'react';
 import ImageViewer from '../ImageViewer/ImageViewer';
 import type {ArticleAttachment, KnowledgeCollection} from '../../types';
 import {api} from '../../services/api';
@@ -275,12 +275,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
         const appendWealthLabDraft = (event: Event) => {
             const text = (event as CustomEvent<{text: string}>).detail?.text;
             if (typeof text !== 'string' || !text.trim()) return;
-            setValue(previous => previous.trim() ? `${previous}\n\n${text}\n\n` : `${text}\n\n`);
+            attach.addPastedText(text, t('calcStudio.title'));
+            setValue(previous => previous.trim() ? previous : t('calcStudio.defaultQuestion'));
             textareaRef.current?.focus();
         };
         window.addEventListener(WEALTH_LAB_CHAT_DRAFT_EVENT, appendWealthLabDraft);
         return () => window.removeEventListener(WEALTH_LAB_CHAT_DRAFT_EVENT, appendWealthLabDraft);
-    }, []);
+    }, [attach.addPastedText, t]);
 
     // focusTrigger
     useEffect(() => {
@@ -335,7 +336,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         return () => window.removeEventListener('keydown', handleGoogleWorkspaceShortcut);
     }, [googleWorkspaceOpen, onToggleGoogleWorkspace]);
 
-    const autoResize = () => {
+    const autoResize = useCallback(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             const newH = Math.min(textareaRef.current.scrollHeight, TEXTAREA_MAX_HEIGHT);
@@ -343,7 +344,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
             textareaRef.current.style.overflowY = textareaRef.current.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
             textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
         }
-    };
+    }, []);
+
+    useLayoutEffect(() => { autoResize(); }, [value, autoResize]);
 
     const insertCommand = (cmd: string) => {
         setShowCommandModal(false);

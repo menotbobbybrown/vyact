@@ -1464,6 +1464,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "defaultQuestion": "Analysez les résultats Wealth Lab joints. Les fonds suffisent-ils jusqu’à la fin du plan ? Précisez quand et de combien ils manquent, puis proposez des ajustements des versements, retraits ou de la durée.",
     "ageAndYear": "{{age}} ans · {{year}}",
     "plannedWithdrawal": "Retrait prévu",
     "actualWithdrawal": "Retrait réel",

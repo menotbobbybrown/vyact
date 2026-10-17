@@ -1464,6 +1464,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "defaultQuestion": "วิเคราะห์ผล Wealth Lab ที่แนบ อธิบายว่าเงินพอจนสิ้นสุดแผนหรือไม่ หากไม่พอจะเริ่มขาดเมื่อใดและเท่าไร พร้อมเสนอการปรับเงินสมทบ ยอดถอน หรือระยะเวลา",
     "ageAndYear": "อายุ {{age}} ปี · ค.ศ. {{year}}",
     "plannedWithdrawal": "ยอดถอนตามแผน",
     "actualWithdrawal": "ยอดถอนจริง",

@@ -1464,6 +1464,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "defaultQuestion": "Phân tích kết quả Wealth Lab đính kèm. Cho biết vốn có đủ đến hết kế hoạch không, khi nào thiếu và bao nhiêu, rồi đề xuất điều chỉnh đóng góp, rút tiền hoặc thời gian.",
     "ageAndYear": "{{age}} tuổi · {{year}}",
     "plannedWithdrawal": "Dự kiến rút",
     "actualWithdrawal": "Thực tế rút",
