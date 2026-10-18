@@ -70,7 +70,8 @@ export default function HouseholdLedger({onClose, style}: {onClose: () => void; 
     };
     const exportToChat = () => {
         if (loading || error || !data || !visibleEntries.length || editing !== undefined) return;
-        const title = t('vyvowLedger.title');
+        const viewLabel = filter.kind === 'tag' ? t('vyvowLedger.tagOnly') : t(`vyvowLedger.${period}`);
+        const title = `${t('vyvowLedger.title')} (${viewLabel})`;
         const snapshot = {
             month, period, filter, excludeTagged, currency,
             totals: totals.missing ? null : {income: totals.income, expense: totals.expense, balance: totals.balance},

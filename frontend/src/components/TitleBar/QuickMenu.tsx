@@ -70,15 +70,13 @@ export default function QuickMenu({onOpen}: {onOpen: () => void}) {
             <button ref={itemRef} className="quick-menu-item" onClick={() => {setOpen(false); triggerRef.current?.focus(); panels.open(WEALTH_LAB_PANEL_ID);}}>
                 <ChartNoAxesCombined size={18} aria-hidden="true"/><span>{t('calcStudio.title')}<small>{t('quickMenu.calculatorDescription')}</small></span>
             </button>
-            {hasVyvowToken && <button className="quick-menu-item" onClick={() => {
-                setOpen(false); triggerRef.current?.focus(); panels.open(HOUSEHOLD_LEDGER_PANEL_ID);
-            }}>
-                <PiggyBank size={20} aria-hidden="true"/><span>{t('vyvowLedger.title')}<small>{t('vyvowLedger.description')}</small></span>
-            </button>}
-            {[{id: RETURN_CALCULATOR_PANEL_ID, icon: Percent, title: 'returnTitle', description: 'returnDescription'},
-                {id: TRAVEL_CALCULATOR_PANEL_ID, icon: CalendarDays, title: 'travelTitle', description: 'travelDescription'}].map(({id, icon: Icon, title, description}) => <button key={id} className="quick-menu-item" onClick={() => {
-                    setOpen(false); triggerRef.current?.focus(); panels.open(id);
-                }}><Icon size={20} aria-hidden="true"/><span>{t(`quickCalculators.${title}`)}<small>{t(`quickCalculators.${description}`)}</small></span></button>)}
+            {[
+                {id: RETURN_CALCULATOR_PANEL_ID, icon: Percent, title: 'quickCalculators.returnTitle', description: 'quickCalculators.returnDescription'},
+                ...(hasVyvowToken ? [{id: HOUSEHOLD_LEDGER_PANEL_ID, icon: PiggyBank, title: 'vyvowLedger.title', description: 'vyvowLedger.description'}] : []),
+                {id: TRAVEL_CALCULATOR_PANEL_ID, icon: CalendarDays, title: 'quickCalculators.travelTitle', description: 'quickCalculators.travelDescription'},
+            ].map(({id, icon: Icon, title, description}) => <button key={id} className="quick-menu-item" onClick={() => {
+                setOpen(false); triggerRef.current?.focus(); panels.open(id);
+            }}><Icon size={20} aria-hidden="true"/><span>{t(title)}<small>{t(description)}</small></span></button>)}
         </div>}
     </div>;
 }
