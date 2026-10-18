@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "Période",
+    "tagOnly": "Afficher par étiquette",
+    "fromDate": "Date de début",
+    "toDate": "Date de fin",
+    "applyFilter": "Appliquer",
+    "clearFilter": "Effacer les filtres",
+    "rangeLimit": "Sélectionnez une période d’un an maximum.",
+    "edit": "Modifier l’opération",
+    "balance": "Revenus − dépenses",
+    "excludeTagged": "Exclure les étiquettes",
+    "transactionCount": "{{count}} opérations",
+    "expandAll": "Tout développer",
+    "collapseAll": "Tout réduire",
     "title": "Budget",
     "empty": "Aucune opération. Ajoutez-en une.",
     "daily": "Jour",

@@ -5,7 +5,7 @@ from typing import Literal
 
 import httpx
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from logger import get_logger
 from services.vyvow_credentials import read_token
@@ -19,6 +19,17 @@ INCOME_CATEGORIES = (7, 8, 9, 10, 11)
 
 class LedgerQuery(BaseModel):
     fromDate: date
+    init: bool = True
+    toDate: date | None = None
+    tag: str = Field(default="", max_length=25)
+
+    @model_validator(mode="after")
+    def validate_filters(self):
+        if self.toDate is not None:
+            if self.toDate < self.fromDate or (self.toDate - self.fromDate).days > 365:
+                raise ValueError("Invalid ledger date range")
+        return self
+
     period: Literal["daily", "weekly", "monthly"] = "daily"
     tempTargetCurrency: str = Field(default="KRW", pattern=r"^[A-Z]{3}$")
 
@@ -61,8 +72,8 @@ async def request_api(method: str, endpoint: str, **kwargs) -> dict:
 
 
 async def search_ledger(query: LedgerQuery) -> dict:
-    params = {**query.model_dump(mode="json"), "init": True, "customPeriod": False}
-    if query.period == "weekly":
+    params = {**query.model_dump(mode="json"), "customPeriod": query.toDate is not None, "requiredLedger": False}
+    if query.period == "weekly" and query.toDate is None:
         first = query.fromDate.replace(day=1)
         last = first.replace(day=calendar.monthrange(first.year, first.month)[1])
         params.update(customPeriod=True,
@@ -71,7 +82,10 @@ async def search_ledger(query: LedgerQuery) -> dict:
     payload = await request_api("POST", "searchHouseholdLedger", json=params)
     result = payload.get("result") or {}
     # Lombok serializes HLedger fields as hledgers/hledgerTags in production.
-    return {"entries": result.get("hledgers", result.get("hLedgers", [])) or [],
+    entries = result.get("hledgers", result.get("hLedgers", [])) or []
+    if query.tag:
+        entries = [entry for entry in entries if entry.get("tag") == query.tag]
+    return {"entries": entries,
             "currencies": result.get("exchangeRates") or [],
             "tags": result.get("hledgerTags", result.get("hLedgerTags", [])) or []}
 

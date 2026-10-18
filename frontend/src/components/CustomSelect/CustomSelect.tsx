@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {createPortal} from 'react-dom';
 import {Search, X} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
@@ -77,6 +77,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const resolvedClearLabel = clearLabel ?? t('clearSelection');
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const [activeIndex, setActiveIndex] = useState(-1);
+    const listId = useId();
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const [dropdownPlacement, setDropdownPlacement] = useState<'up' | 'down'>('down');
     const [portalPosition, setPortalPosition] = useState<React.CSSProperties>({});
     const wrapRef = useRef<HTMLDivElement>(null);
@@ -88,8 +91,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         : optionValue === value;
     const showClearButton = clearable && Boolean(onClear) && Boolean(selectedValues?.length || value);
     const filtered = searchable && search
-        ? options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+        ? options.filter(o => `${o.label} ${o.description || ''}`.toLowerCase().includes(search.toLowerCase()))
         : options;
+
+    const optionKey = filtered.map(option => `${option.value}:${!!option.disabled}`).join('|');
+    useEffect(() => {
+        if (!open) return;
+        const selectedIndex = search ? -1 : filtered.findIndex(option => option.value === value && !option.disabled);
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : filtered.findIndex(option => !option.disabled));
+    }, [open, search, optionKey, value]);
+
+    useEffect(() => {
+        if (open && activeIndex >= 0) dropdownRef.current?.querySelector<HTMLElement>(`[data-option-index="${activeIndex}"]`)?.scrollIntoView({block: 'nearest'});
+    }, [open, activeIndex]);
 
     useEffect(() => {
         const handler = (e: PointerEvent) => {
@@ -156,6 +170,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         if (closeOnSelect) {
             setOpen(false);
             setSearch('');
+            triggerRef.current?.focus();
         }
     };
     const closeDropdown = () => {
@@ -163,9 +178,36 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         setSearch('');
     };
 
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.nativeEvent.isComposing) return;
+        if (!open) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault(); event.stopPropagation();
+                onOpen?.(); setOpen(true);
+            }
+            return;
+        }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault(); event.stopPropagation();
+            const direction = event.key === 'ArrowDown' ? 1 : -1;
+            let next = activeIndex;
+            for (let step = 0; step < filtered.length; step++) {
+                next = (next + direction + filtered.length) % filtered.length;
+                if (!filtered[next].disabled) {setActiveIndex(next); break;}
+            }
+        } else if (event.key === 'Enter' && (event.target === searchRef.current || event.target === triggerRef.current)) {
+            event.preventDefault(); event.stopPropagation();
+            const option = filtered[activeIndex];
+            if (option && !option.disabled) handleSelect(option.value);
+        } else if (event.key === 'Escape') {
+            event.preventDefault(); event.stopPropagation(); closeDropdown(); triggerRef.current?.focus();
+        } else if (event.key === 'Tab') closeDropdown();
+    };
+
     const dropdown = open ? (
         <div
             ref={dropdownRef}
+            onKeyDown={handleKeyDown}
             className={`custom-select-dropdown ${dropdownPlacement === 'up' ? 'drop-up' : 'drop-down'}${portal ? ' portal' : ''}${dropdownClassName ? ` ${dropdownClassName}` : ''}`}
             style={{
                 ...portalPosition,
@@ -182,6 +224,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             type="text"
                             placeholder={t('search')}
                             aria-label={searchPlaceholder || t('search')}
+                            role="combobox"
+                            aria-expanded={open}
+                            aria-controls={listId}
+                            aria-activedescendant={activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onClick={e => e.stopPropagation()}
@@ -199,12 +245,17 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             )}
             {afterSearch}
 
-            <div className="custom-select-list">
+            <div className="custom-select-list" id={listId} role="listbox" aria-multiselectable={selectedValues ? true : undefined}>
                 {filtered.length > 0 ? (
                     filtered.map((opt, index) => (
                         <div
                             key={opt.value}
-                            className={`custom-select-item${index > 0 && opt.group !== filtered[index - 1].group ? ' group-start' : ''}${isSelected(opt.value) ? ' selected' : ''}${opt.disabled ? ' disabled' : ''}`}
+                            id={`${listId}-${index}`}
+                            role="option"
+                            aria-selected={isSelected(opt.value)}
+                            data-option-index={index}
+                            onMouseMove={() => {if (!opt.disabled) setActiveIndex(index);}}
+                            className={`custom-select-item${index > 0 && opt.group !== filtered[index - 1].group ? ' group-start' : ''}${isSelected(opt.value) ? ' selected' : ''}${opt.disabled ? ' disabled' : ''}${index === activeIndex && !opt.disabled ? ' keyboard-active' : ''}`}
                             aria-disabled={opt.disabled || undefined}
                             onClick={event => {
                                 event.stopPropagation();
@@ -242,6 +293,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             className={`custom-select-wrap${alignRight ? ' align-right' : ''}${disabled ? ' disabled' : ''} ${className}`.trim()}
         >
             <button
+                ref={triggerRef}
+                onKeyDown={handleKeyDown}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls={open ? listId : undefined}
                 className={`custom-select-trigger${open ? ' open' : ''}${showClearButton ? ' has-clear' : ''}`}
                 aria-label={ariaLabel}
                 onClick={event => {

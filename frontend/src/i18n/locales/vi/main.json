@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "Khoảng ngày",
+    "tagOnly": "Xem theo thẻ",
+    "fromDate": "Ngày bắt đầu",
+    "toDate": "Ngày kết thúc",
+    "applyFilter": "Áp dụng",
+    "clearFilter": "Xóa bộ lọc",
+    "rangeLimit": "Chọn khoảng thời gian tối đa một năm.",
+    "edit": "Sửa giao dịch",
+    "balance": "Thu nhập − chi tiêu",
+    "excludeTagged": "Ẩn mục có thẻ",
+    "transactionCount": "{{count}} giao dịch",
+    "expandAll": "Mở tất cả",
+    "collapseAll": "Thu gọn tất cả",
     "title": "Sổ chi tiêu gia đình",
     "empty": "Không có mục nào. Thêm mục mới!",
     "daily": "Hàng ngày",

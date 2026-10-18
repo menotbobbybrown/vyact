@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "Periodo",
+    "tagOnly": "Ver por etiqueta",
+    "fromDate": "Fecha inicial",
+    "toDate": "Fecha final",
+    "applyFilter": "Aplicar",
+    "clearFilter": "Quitar filtros",
+    "rangeLimit": "Selecciona un periodo de hasta un año.",
+    "edit": "Editar transacción",
+    "balance": "Ingresos − gastos",
+    "excludeTagged": "Excluir etiquetas",
+    "transactionCount": "{{count}} transacciones",
+    "expandAll": "Expandir todo",
+    "collapseAll": "Contraer todo",
     "title": "Libro de cuentas",
     "empty": "No hay transacciones. Añade una.",
     "daily": "Diario",

@@ -24,3 +24,31 @@ export function groupEntries(entries: LedgerEntry[], period: LedgerPeriod) {
     }
     return [...groups.entries()];
 }
+
+export function ledgerTotals(entries: LedgerEntry[], currency: string) {
+    let income = 0, expense = 0, missing = false;
+    for (const entry of entries) {
+        const amount = convertedAmount(entry, currency);
+        if (amount === null) {missing = true; continue;}
+        if (entry.txType === 'INCOME') income += amount;
+        else expense += amount;
+    }
+    return {income, expense, balance: income - expense, missing};
+}
+
+export function categoryGroups(entries: LedgerEntry[], currency: string) {
+    const categories = new Map<number, LedgerEntry[]>();
+    for (const entry of entries) {
+        const children = categories.get(entry.houseLedgerOptionId) || [];
+        children.push(entry);
+        categories.set(entry.houseLedgerOptionId, children);
+    }
+    return [...categories.entries()].sort(([a], [b]) => a - b).map(([id, children]) => ({
+        id, entries: children, type: children[0].txType, totals: ledgerTotals(children, currency),
+    }));
+}
+
+export function ledgerBalanceClass(balance: number, missing = false): string {
+    if (missing || balance === 0) return 'ledger-balance';
+    return balance > 0 ? 'ledger-income' : 'ledger-expense';
+}

@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "期間設定",
+    "tagOnly": "タグ別表示",
+    "fromDate": "開始日",
+    "toDate": "終了日",
+    "applyFilter": "適用",
+    "clearFilter": "フィルター解除",
+    "rangeLimit": "最大1年間を指定できます。",
+    "edit": "取引を編集",
+    "balance": "収入 − 支出",
+    "excludeTagged": "タグ付き除外",
+    "transactionCount": "{{count}}件",
+    "expandAll": "すべて展開",
+    "collapseAll": "すべて折りたたむ",
     "title": "家計簿",
     "empty": "項目がありません。新しい項目を追加してください！",
     "daily": "日別",

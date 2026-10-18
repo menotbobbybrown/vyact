@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "Date range",
+    "tagOnly": "View by tag",
+    "fromDate": "Start date",
+    "toDate": "End date",
+    "applyFilter": "Apply",
+    "clearFilter": "Clear filters",
+    "rangeLimit": "Select a range of up to one year.",
+    "edit": "Edit transaction",
+    "balance": "Income − expenses",
+    "excludeTagged": "Exclude tagged",
+    "transactionCount": "{{count}} transactions",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
     "title": "Household Ledger",
     "empty": "No items available. Add a new one!",
     "daily": "Daily",

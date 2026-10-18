@@ -1,8 +1,12 @@
-import {useState} from 'react';
+import {createPortal} from 'react-dom';
+import {X} from 'lucide-react';
+import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
+import {useEffect, useId, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
+import LedgerCurrencySelect from './LedgerCurrencySelect';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
-import {deleteLedgerEntry, EXPENSE_CATEGORIES, INCOME_CATEGORIES, saveLedgerEntry, type LedgerEntry} from '../../services/vyvow';
+import {deleteLedgerEntry, EXPENSE_CATEGORIES, INCOME_CATEGORIES, saveLedgerEntry, type LedgerCurrency, type LedgerEntry} from '../../services/vyvow';
 import {localDate} from './ledgerGroups';
 import {ApiError} from '../../utils/apiError';
 
@@ -11,10 +15,17 @@ export function ledgerErrorKey(error: unknown) {
 }
 
 export default function LedgerEntryForm({entry, currency, currencies, tags, onSaved, onCancel}: {
-    entry: LedgerEntry | null; currency: string; currencies: string[]; tags: string[];
+    entry: LedgerEntry | null; currency: string; currencies: LedgerCurrency[]; tags: string[];
     onSaved: () => void; onCancel: () => void;
 }) {
     const {t} = useTranslation('main');
+    const titleId = useId();
+    const modalRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const previous = document.activeElement as HTMLElement | null;
+        modalRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+        return () => previous?.focus();
+    }, []);
     const [draft, setDraft] = useState<LedgerEntry>(() => entry || {
         id: 0, txType: 'EXPENSE', houseLedgerOptionId: EXPENSE_CATEGORIES[0], memberBoardFileId: 0,
         currency, amount: 0, memo: '', tag: '', createdAt: localDate(),
@@ -35,7 +46,19 @@ export default function LedgerEntryForm({entry, currency, currencies, tags, onSa
         } catch (cause) { setError(ledgerErrorKey(cause)); }
         finally { setBusy(false); setConfirmDelete(false); }
     };
-    return <form className="ledger-entry-form" onSubmit={event => {event.preventDefault(); void submit();}}>
+    return createPortal(<ModalOverlay className="ledger-entry-overlay" aria-labelledby={titleId}
+        onClose={busy ? undefined : onCancel} closeOnBackdrop={!busy} captureEscape>
+        <div className="ledger-entry-modal" ref={modalRef} onKeyDown={event => {
+            if (event.key !== 'Tab') return;
+            const elements = modalRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]');
+            if (!elements?.length) return;
+            const first = elements[0], last = elements[elements.length - 1];
+            if (event.shiftKey && document.activeElement === first) {event.preventDefault(); last.focus();}
+            else if (!event.shiftKey && document.activeElement === last) {event.preventDefault(); first.focus();}
+        }}>
+        <header className="ledger-entry-modal-header"><h2 id={titleId}>{t(entry ? 'vyvowLedger.edit' : 'vyvowLedger.add')}</h2>
+            <button className="titlebar-btn" type="button" onClick={onCancel} disabled={busy} aria-label={t('windowControls.close')}><X size={18}/></button></header>
+        <form className="ledger-entry-form" onSubmit={event => {event.preventDefault(); void submit();}}>
         <fieldset disabled={busy}>
             <CustomSelect ariaLabel={t('vyvowLedger.type')} value={draft.txType} options={['EXPENSE', 'INCOME'].map(value => ({value, label: t(`vyvowLedger.${value}`)}))}
                 onChange={value => setDraft(previous => ({...previous, txType: value as LedgerEntry['txType'], houseLedgerOptionId: value === 'EXPENSE' ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]}))}/>
@@ -43,7 +66,7 @@ export default function LedgerEntryForm({entry, currency, currencies, tags, onSa
                 <label>{t('vyvowLedger.date')}<input type="date" required value={draft.createdAt.slice(0, 10)} onChange={event => update('createdAt', event.target.value)}/></label>
                 <label>{t('vyvowLedger.category')}<CustomSelect value={String(draft.houseLedgerOptionId)} options={categories.map(id => ({value: String(id), label: t(`vyvowLedger.categories.op${id}`)}))} onChange={value => update('houseLedgerOptionId', Number(value))}/></label>
                 <label>{t('vyvowLedger.amount')}<input type="number" min="0" max="100000000000000" step="any" required value={amount} onChange={event => setAmount(event.target.value)}/></label>
-                <label>{t('vyvowLedger.currency')}<CustomSelect searchable value={draft.currency} options={[...new Set([...currencies, draft.currency])].map(value => ({value, label: value}))} onChange={value => update('currency', value)}/></label>
+                <label>{t('vyvowLedger.currency')}<LedgerCurrencySelect value={draft.currency} currencies={currencies} onChange={value => update('currency', value)}/></label>
             </div>
             <label>{t('vyvowLedger.memo')}<input maxLength={120} value={draft.memo || ''} onChange={event => update('memo', event.target.value)}/></label>
             <label>{t('vyvowLedger.tag')}<input list="ledger-tags" maxLength={25} value={draft.tag || ''} onChange={event => update('tag', event.target.value)}/></label>
@@ -58,5 +81,6 @@ export default function LedgerEntryForm({entry, currency, currencies, tags, onSa
         {confirmDelete && <ConfirmModal title={t('vyvowLedger.deleteConfirm')} loading={busy} loadingValue="delete" actionLayout="horizontal"
             options={[{value: 'cancel', label: t('vyvowLedger.cancel')}, {value: 'delete', label: t('vyvowLedger.delete'), variant: 'danger'}]}
             onClose={() => setConfirmDelete(false)} onSelect={value => value === 'delete' ? void submit(true) : setConfirmDelete(false)}/>}
-    </form>;
+    </form>
+    </div></ModalOverlay>, document.body);
 }

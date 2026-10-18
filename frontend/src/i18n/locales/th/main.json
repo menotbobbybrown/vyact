@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "ช่วงวันที่",
+    "tagOnly": "ดูตามแท็ก",
+    "fromDate": "วันที่เริ่ม",
+    "toDate": "วันที่สิ้นสุด",
+    "applyFilter": "ใช้",
+    "clearFilter": "ล้างตัวกรอง",
+    "rangeLimit": "เลือกช่วงเวลาได้สูงสุดหนึ่งปี",
+    "edit": "แก้ไขรายการ",
+    "balance": "รายรับ − รายจ่าย",
+    "excludeTagged": "ไม่รวมแท็ก",
+    "transactionCount": "{{count}} รายการ",
+    "expandAll": "ขยายทั้งหมด",
+    "collapseAll": "ยุบทั้งหมด",
     "title": "บัญชีครัวเรือน",
     "empty": "ไม่มีรายการ เพิ่มรายการใหม่!",
     "daily": "รายวัน",

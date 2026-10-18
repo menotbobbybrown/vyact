@@ -1,5 +1,18 @@
 {
   "vyvowLedger": {
+    "dateRange": "设置期间",
+    "tagOnly": "按标签查看",
+    "fromDate": "开始日期",
+    "toDate": "结束日期",
+    "applyFilter": "应用",
+    "clearFilter": "清除筛选",
+    "rangeLimit": "最多可选择一年。",
+    "edit": "编辑交易",
+    "balance": "收入 − 支出",
+    "excludeTagged": "排除标签",
+    "transactionCount": "{{count}}笔",
+    "expandAll": "全部展开",
+    "collapseAll": "全部折叠",
     "title": "账本",
     "empty": "暂无交易，请添加交易。",
     "daily": "按日",

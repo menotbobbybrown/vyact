@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {ChartNoAxesCombined, LayoutGrid, Wallet} from 'lucide-react';
+import {ChartNoAxesCombined, LayoutGrid, PiggyBank} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import {usePanelManager} from '../../contexts/PanelManagerContext';
 import {WEALTH_LAB_PANEL_ID} from '../CalcStudio/chatExport';
@@ -72,7 +72,7 @@ export default function QuickMenu({onOpen}: {onOpen: () => void}) {
             {hasVyvowToken && <button className="quick-menu-item" onClick={() => {
                 setOpen(false); triggerRef.current?.focus(); panels.open(HOUSEHOLD_LEDGER_PANEL_ID);
             }}>
-                <Wallet size={18} aria-hidden="true"/><span>{t('vyvowLedger.title')}<small>{t('vyvowLedger.description')}</small></span>
+                <PiggyBank size={20} aria-hidden="true"/><span>{t('vyvowLedger.title')}<small>{t('vyvowLedger.description')}</small></span>
             </button>}
         </div>}
     </div>;

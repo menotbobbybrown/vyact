@@ -332,3 +332,9 @@
 .custom-select-item.group-start {
     border-top: 1px solid var(--border);
 }
+
+.custom-select-item.keyboard-active:not(.disabled) {
+    background: color-mix(in srgb, var(--info) 12%, var(--surface2));
+    outline: 1px solid color-mix(in srgb, var(--info) 35%, transparent);
+    outline-offset: -1px;
+}

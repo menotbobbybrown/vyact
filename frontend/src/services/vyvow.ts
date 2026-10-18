@@ -20,9 +20,13 @@ export interface LedgerEntry {
     rate?: number;
     targetRate?: number;
 }
+export interface LedgerCurrency {
+    currencyCode: string;
+    isoAlpha2?: string;
+}
 export interface LedgerData {
     entries: LedgerEntry[];
-    currencies: {currencyCode: string}[];
+    currencies: LedgerCurrency[];
     tags: string[];
 }
 
@@ -35,8 +39,14 @@ async function request<T>(path: string, method: string, body?: unknown, signal?:
     return response.json();
 }
 
-export const searchLedger = (fromDate: string, period: LedgerPeriod, currency: string, signal?: AbortSignal) =>
-    request<LedgerData>('/search', 'POST', {fromDate, period, tempTargetCurrency: currency}, signal);
+export type LedgerFilter = {kind: 'default'} | {kind: 'range'; from: string; to: string} | {kind: 'tag'; tag: string};
+export const searchLedger = (fromDate: string, period: LedgerPeriod, currency: string, signal?: AbortSignal, filter: LedgerFilter = {kind: 'default'}, init = true) =>
+    request<LedgerData>('/search', 'POST', {
+        fromDate: filter.kind === 'range' ? filter.from : fromDate,
+        ...(filter.kind === 'range' ? {toDate: filter.to} : {}),
+        ...(filter.kind === 'tag' ? {tag: filter.tag} : {}),
+        period, tempTargetCurrency: currency, init,
+    }, signal);
 export const saveLedgerEntry = (entry: LedgerEntry) => request('', 'PUT', entry);
 export const deleteLedgerEntry = (id: number) => request(`/${id}`, 'DELETE');
 
