@@ -1,3 +1,4 @@
+import DateInput from '../common/DateInput/DateInput';
 import ChatAttachButton from '../common/ChatAttachButton/ChatAttachButton';
 import {addToChat} from '../../utils/chatDraft';
 import {useState, type CSSProperties} from 'react';
@@ -16,22 +17,6 @@ const today = () => {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
-
-function TravelDateField({label, value, min, onChange}: {label: string; value: string; min?: string; onChange: (value: string) => void}) {
-    const {i18n} = useTranslation('main');
-    const formatted = value ? new Intl.DateTimeFormat(i18n.language, {
-        year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC',
-    }).format(Date.parse(value)) : '—';
-    return <label className="calc-studio-field">
-        {label}
-        <span className="quick-calculator-date">
-            <span aria-hidden="true">{formatted}</span>
-            <CalendarDays size={17} aria-hidden="true"/>
-            <input type="date" aria-label={label} value={value} min={min}
-                onChange={event => onChange(event.target.value)}/>
-        </span>
-    </label>;
-}
 
 export default function QuickCalculators({kind, onClose, style}: {kind: 'returns' | 'travel'; onClose: () => void; style?: CSSProperties}) {
     const {t, i18n} = useTranslation('main');
@@ -91,8 +76,8 @@ export default function QuickCalculators({kind, onClose, style}: {kind: 'returns
                 <p className="quick-calculator-hint">{t(`quickCalculators.${tabs[tab]}Hint`)}</p>
                 <div className={`calc-studio-fields quick-calculator-fields${travel ? ' quick-calculator-fields--travel' : ''}`}>
                     {travel ? <>
-                        <TravelDateField label={t('quickCalculators.start')} value={start} onChange={setStart}/>
-                        {tab === 0 ? <TravelDateField label={t('quickCalculators.end')} min={start} value={end} onChange={setEnd}/>
+                        <label className="calc-studio-field" onClick={event => {if (event.target === event.currentTarget) event.preventDefault();}}>{t('quickCalculators.start')}<DateInput label={t('quickCalculators.start')} value={start} onChange={setStart}/></label>
+                        {tab === 0 ? <label className="calc-studio-field" onClick={event => {if (event.target === event.currentTarget) event.preventDefault();}}>{t('quickCalculators.end')}<DateInput label={t('quickCalculators.end')} min={start} value={end} onChange={setEnd}/></label>
                             : <label className="calc-studio-field">{t('quickCalculators.days')}<input type="number" min={Number(inclusive)} step="1" value={days} onChange={event => setDays(event.target.value)}/></label>}
                         <label className="quick-calculator-checkbox"><input type="checkbox" checked={inclusive} onChange={event => setInclusive(event.target.checked)}/>{t('quickCalculators.includeStart')}</label>
                     </> : <>

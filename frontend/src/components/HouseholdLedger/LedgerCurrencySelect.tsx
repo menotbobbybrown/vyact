@@ -13,5 +13,5 @@ export default function LedgerCurrencySelect({value, currencies, onChange}: {
         return {value: code, label: [countryFlag(country), code].filter(Boolean).join(' '),
             description: country ? regionNames.of(country) : undefined};
     });
-    return <CustomSelect ariaLabel={t('vyvowLedger.currency')} searchable value={value} options={options} onChange={onChange}/>;
+    return <CustomSelect portal ariaLabel={t('vyvowLedger.currency')} searchable value={value} options={options} onChange={onChange}/>;
 }

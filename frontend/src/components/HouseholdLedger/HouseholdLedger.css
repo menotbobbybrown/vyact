@@ -57,7 +57,7 @@ button.ledger-group-header { cursor: pointer; }
 .household-ledger button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 @container (max-width: 360px) { .ledger-toolbar > .custom-select-wrap { width: 120px; } .ledger-header, .ledger-body { padding-inline: 12px; } .ledger-category-toggle, .ledger-entry { padding-inline: 10px; gap: 7px; } .ledger-group-breakdown { flex-wrap: wrap; } .ledger-period-nav { gap: 4px; font-size: 15px; } }
 .ledger-entry-form fieldset { display: flex; flex-direction: column; gap: 14px; border: 0; padding: 12px 0; margin: 0; min-width: 0; }
-.ledger-entry-form label { display: flex; flex-direction: column; gap: 7px; color: var(--text-secondary); font-size: 12px; min-width: 0; }
+.ledger-entry-form label, .ledger-entry-form .ledger-form-field { display: flex; flex-direction: column; gap: 7px; color: var(--text-secondary); font-size: 12px; min-width: 0; }
 .ledger-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .ledger-entry-form input, .ledger-entry-form .custom-select-trigger, .ledger-toolbar .custom-select-trigger { box-sizing: border-box; width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); font: inherit; font-size: 13px; }
 .ledger-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -92,3 +92,14 @@ button.ledger-group-header { cursor: pointer; }
 
 
 .ledger-header .chat-attach-button { padding: 7px 10px; font-size: 12px; }
+
+.ledger-type-tabs .modal-tabs-bar { gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface2); }
+.ledger-type-tabs .modal-tab { border: 0; border-radius: 6px; padding: 10px 12px; }
+.ledger-type-tabs .modal-tab:has(.ledger-expense) { --ledger-type-color: var(--del-fg); }
+.ledger-type-tabs .modal-tab:has(.ledger-income) { --ledger-type-color: var(--info); }
+.ledger-type-tabs .modal-tab.active { background: color-mix(in srgb, var(--ledger-type-color) 14%, var(--surface)); font-weight: 600; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ledger-type-color) 40%, transparent); }
+.ledger-type-tabs .modal-tab:hover:not(:disabled) { background: color-mix(in srgb, var(--ledger-type-color) 9%, var(--surface)); }
+.ledger-type-tabs .modal-tab.active:hover:not(:disabled) { background: color-mix(in srgb, var(--ledger-type-color) 20%, var(--surface)); }
+.ledger-type-tabs .modal-tab:focus-visible { outline: 2px solid var(--ledger-type-color); outline-offset: -2px; }
+
+.ledger-entry-modal:focus { outline: none; }

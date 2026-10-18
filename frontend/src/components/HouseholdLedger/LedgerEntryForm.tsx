@@ -1,3 +1,5 @@
+import ModalTabs from '../common/ModalTabs/ModalTabs';
+import DateInput from '../common/DateInput/DateInput';
 import {createPortal} from 'react-dom';
 import {X} from 'lucide-react';
 import ModalOverlay from '../common/ModalOverlay/ModalOverlay';
@@ -23,7 +25,7 @@ export default function LedgerEntryForm({entry, currency, currencies, tags, onSa
     const modalRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const previous = document.activeElement as HTMLElement | null;
-        modalRef.current?.querySelector<HTMLInputElement>('input')?.focus();
+        modalRef.current?.focus();
         return () => previous?.focus();
     }, []);
     const [draft, setDraft] = useState<LedgerEntry>(() => entry || {
@@ -48,7 +50,7 @@ export default function LedgerEntryForm({entry, currency, currencies, tags, onSa
     };
     return createPortal(<ModalOverlay className="ledger-entry-overlay" aria-labelledby={titleId}
         onClose={busy ? undefined : onCancel} closeOnBackdrop={!busy} captureEscape>
-        <div className="ledger-entry-modal" ref={modalRef} onKeyDown={event => {
+        <div className="ledger-entry-modal" ref={modalRef} tabIndex={-1} onKeyDown={event => {
             if (event.key !== 'Tab') return;
             const elements = modalRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]');
             if (!elements?.length) return;
@@ -60,17 +62,26 @@ export default function LedgerEntryForm({entry, currency, currencies, tags, onSa
             <button className="titlebar-btn" type="button" onClick={onCancel} disabled={busy} aria-label={t('windowControls.close')}><X size={18}/></button></header>
         <form className="ledger-entry-form" onSubmit={event => {event.preventDefault(); void submit();}}>
         <fieldset disabled={busy}>
-            <CustomSelect ariaLabel={t('vyvowLedger.type')} value={draft.txType} options={['EXPENSE', 'INCOME'].map(value => ({value, label: t(`vyvowLedger.${value}`)}))}
-                onChange={value => setDraft(previous => ({...previous, txType: value as LedgerEntry['txType'], houseLedgerOptionId: value === 'EXPENSE' ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]}))}/>
-            <div className="ledger-form-grid">
-                <label>{t('vyvowLedger.date')}<input type="date" required value={draft.createdAt.slice(0, 10)} onChange={event => update('createdAt', event.target.value)}/></label>
-                <label>{t('vyvowLedger.category')}<CustomSelect value={String(draft.houseLedgerOptionId)} options={categories.map(id => ({value: String(id), label: t(`vyvowLedger.categories.op${id}`)}))} onChange={value => update('houseLedgerOptionId', Number(value))}/></label>
-                <label>{t('vyvowLedger.amount')}<input type="number" min="0" max="100000000000000" step="any" required value={amount} onChange={event => setAmount(event.target.value)}/></label>
-                <label>{t('vyvowLedger.currency')}<LedgerCurrencySelect value={draft.currency} currencies={currencies} onChange={value => update('currency', value)}/></label>
+            <div className="ledger-type-tabs" role="group" aria-label={t('vyvowLedger.type')}>
+                <ModalTabs tabs={(['EXPENSE', 'INCOME'] as const).map(key => ({key, label: <span className={key === 'EXPENSE' ? 'ledger-expense' : 'ledger-income'}>{t(`vyvowLedger.${key}`)}</span>}))}
+                    activeKey={draft.txType} disabled={busy} onChange={txType => {
+                        if (txType === draft.txType) return;
+                        setDraft(previous => ({...previous, txType, houseLedgerOptionId: txType === 'EXPENSE' ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]}));
+                    }}/>
             </div>
-            <label>{t('vyvowLedger.memo')}<input maxLength={120} value={draft.memo || ''} onChange={event => update('memo', event.target.value)}/></label>
-            <label>{t('vyvowLedger.tag')}<input list="ledger-tags" maxLength={25} value={draft.tag || ''} onChange={event => update('tag', event.target.value)}/></label>
-            <datalist id="ledger-tags">{tags.map(tag => <option key={tag} value={tag}/>)}</datalist>
+            <div className="ledger-form-grid">
+                <div className="ledger-form-field"><span>{t('vyvowLedger.date')}</span><DateInput label={t('vyvowLedger.date')} required value={draft.createdAt.slice(0, 10)} onChange={value => update('createdAt', value)}/></div>
+                <div className="ledger-form-field"><span>{t('vyvowLedger.category')}</span><CustomSelect portal ariaLabel={t('vyvowLedger.category')} value={String(draft.houseLedgerOptionId)} options={categories.map(id => ({value: String(id), label: t(`vyvowLedger.categories.op${id}`)}))} onChange={value => update('houseLedgerOptionId', Number(value))}/></div>
+                <div className="ledger-form-field"><span>{t('vyvowLedger.amount')}</span><input aria-label={t('vyvowLedger.amount')} type="number" min="0" max="100000000000000" step="any" required value={amount} onChange={event => setAmount(event.target.value)}/></div>
+                <div className="ledger-form-field"><span>{t('vyvowLedger.currency')}</span><LedgerCurrencySelect value={draft.currency} currencies={currencies} onChange={value => update('currency', value)}/></div>
+            </div>
+            <div className="ledger-form-field"><span>{t('vyvowLedger.memo')}</span><input aria-label={t('vyvowLedger.memo')} maxLength={120} value={draft.memo || ''} onChange={event => update('memo', event.target.value)}/></div>
+            <div className="ledger-form-field"><span>{t('vyvowLedger.tag')}</span>
+                <CustomSelect portal searchable allowCustomValue searchMaxLength={25} clearable
+                    ariaLabel={t('vyvowLedger.tag')} placeholder={t('vyvowLedger.tag')}
+                    value={draft.tag || ''} options={tags.map(tag => ({value: tag, label: tag}))}
+                    onChange={value => update('tag', value)} onClear={() => update('tag', '')}/>
+            </div>
             {error && <p role="alert" className="ledger-error">{t(error)}</p>}
             <div className="ledger-form-actions">
                 {draft.id > 0 && <button type="button" className="modal-action-danger" onClick={() => setConfirmDelete(true)}>{t('vyvowLedger.delete')}</button>}

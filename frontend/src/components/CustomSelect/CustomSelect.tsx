@@ -19,6 +19,8 @@ interface CustomSelectProps {
     onChange: (value: string) => void;
     placeholder?: string;
     searchable?: boolean;
+    allowCustomValue?: boolean;
+    searchMaxLength?: number;
     searchPlaceholder?: string;
     disabled?: boolean;
     alignRight?: boolean;
@@ -50,6 +52,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                                        onChange,
                                                        placeholder,
                                                        searchable = false,
+                                                       allowCustomValue = false,
+                                                       searchMaxLength,
                                                        searchPlaceholder,
                                                        disabled = false,
                                                        alignRight = false,
@@ -85,14 +89,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const wrapRef = useRef<HTMLDivElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
-    const selectedLabel = options.find(o => o.value === value)?.label ?? '';
+    const selectedLabel = options.find(o => o.value === value)?.label ?? (allowCustomValue ? value : '');
     const isSelected = (optionValue: string) => selectedValues
         ? selectedValues.includes(optionValue)
         : optionValue === value;
     const showClearButton = clearable && Boolean(onClear) && Boolean(selectedValues?.length || value);
-    const filtered = searchable && search
+    const matchingOptions = searchable && search
         ? options.filter(o => `${o.label} ${o.description || ''}`.toLowerCase().includes(search.toLowerCase()))
         : options;
+    const customValue = search.trim();
+    const filtered = allowCustomValue && customValue && !options.some(option => option.value === customValue)
+        ? [...matchingOptions, {value: customValue, label: customValue}]
+        : matchingOptions;
 
     const optionKey = filtered.map(option => `${option.value}:${!!option.disabled}`).join('|');
     useEffect(() => {
@@ -228,6 +236,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             aria-expanded={open}
                             aria-controls={listId}
                             aria-activedescendant={activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined}
+                            maxLength={searchMaxLength}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onClick={e => e.stopPropagation()}
