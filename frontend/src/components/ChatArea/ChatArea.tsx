@@ -1,3 +1,4 @@
+import QuickCalculators, {RETURN_CALCULATOR_PANEL_ID, TRAVEL_CALCULATOR_PANEL_ID} from '../QuickCalculators/QuickCalculators';
 import HouseholdLedger from '../HouseholdLedger/HouseholdLedger';
 import {HOUSEHOLD_LEDGER_PANEL_ID} from '../../services/vyvow';
 import CalcStudio from '../CalcStudio/CalcStudio';
@@ -579,6 +580,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                     <CodePanel style={{width: `${panelWidth}%`}}/>
                 </React.Suspense>
             )}
+            {(panels.activePanel === RETURN_CALCULATOR_PANEL_ID || panels.activePanel === TRAVEL_CALCULATOR_PANEL_ID) && <QuickCalculators key={panels.activePanel} kind={panels.activePanel === RETURN_CALCULATOR_PANEL_ID ? 'returns' : 'travel'} style={{width: `${panelWidth}%`}} onClose={() => panels.close(panels.activePanel!)}/>}
             {panels.activePanel === WEALTH_LAB_PANEL_ID && <CalcStudio style={{width: `${panelWidth}%`}} onClose={() => panels.close(WEALTH_LAB_PANEL_ID)}/>}
             {panels.activePanel === HOUSEHOLD_LEDGER_PANEL_ID && <HouseholdLedger style={{width: `${panelWidth}%`}} onClose={() => panels.close(HOUSEHOLD_LEDGER_PANEL_ID)}/>}
             {panels.activePanel === 'logs' && <LogPanel model={selectedModel} style={{width: `${panelWidth}%`}}/>}

@@ -1578,5 +1578,32 @@
   "quickMenu": {
     "title": "Quick menu",
     "calculatorDescription": "Cash flow & wealth simulation"
+  },
+  "quickCalculators": {
+    "returnTitle": "Return calculator",
+    "travelTitle": "Travel date calculator",
+    "returnDescription": "Return & annualized return",
+    "travelDescription": "Trip duration & trip end date",
+    "change": "Return",
+    "annual": "Annualized return",
+    "duration": "Trip duration",
+    "arrival": "Trip end date",
+    "changeHint": "Compare the starting and current amounts.",
+    "annualHint": "Compound annual growth rate (CAGR), based on the investment period in years.",
+    "durationHint": "Choose departure and trip end dates to calculate the trip length.",
+    "arrivalHint": "Enter the trip length to find your trip end date.",
+    "base": "Starting amount",
+    "current": "Current amount",
+    "years": "Investment period (years)",
+    "start": "Departure date",
+    "end": "Trip end date",
+    "days": "Trip length (days)",
+    "includeStart": "Include departure day",
+    "dayCount": "{{count}} days",
+    "dayCount_one": "{{count}} day",
+    "dayCount_other": "{{count}} days"
+  },
+  "chatDraft": {
+    "defaultQuestion": "Analyze the attached data and results. Explain the key findings and points to consider."
   }
 }

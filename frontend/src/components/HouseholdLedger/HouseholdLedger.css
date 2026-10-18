@@ -89,3 +89,6 @@ button.ledger-group-header { cursor: pointer; }
 .ledger-filter-clear { margin-right: auto; display: inline-flex; gap: 5px; align-items: center; padding: 6px 0; color: var(--text-secondary); border: 0; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
 .ledger-filter-caption { font-size: inherit; overflow-wrap: anywhere; text-align: center; }
 .ledger-view-controls > .custom-select-wrap { flex: 1; min-width: 0; }
+
+
+.ledger-header .chat-attach-button { padding: 7px 10px; font-size: 12px; }

@@ -1579,5 +1579,30 @@
   "quickMenu": {
     "title": "Menu nhanh",
     "calculatorDescription": "Mô phỏng tài sản và dòng tiền"
+  },
+  "quickCalculators": {
+    "returnTitle": "Tính lợi nhuận",
+    "travelTitle": "Tính ngày du lịch",
+    "returnDescription": "Lợi nhuận & lợi nhuận hằng năm",
+    "travelDescription": "Thời gian & ngày kết thúc chuyến đi",
+    "change": "Lợi nhuận",
+    "annual": "Lợi nhuận năm",
+    "duration": "Thời gian đi",
+    "arrival": "Ngày kết thúc chuyến đi",
+    "changeHint": "So sánh số tiền ban đầu và hiện tại.",
+    "annualHint": "Tính tốc độ tăng trưởng kép hằng năm (CAGR) theo số năm đầu tư.",
+    "durationHint": "Chọn ngày đi và ngày kết thúc chuyến đi để tính thời gian chuyến đi.",
+    "arrivalHint": "Nhập số ngày để tính ngày kết thúc chuyến đi.",
+    "base": "Số tiền ban đầu",
+    "current": "Số tiền hiện tại",
+    "years": "Thời gian đầu tư (năm)",
+    "start": "Ngày đi",
+    "end": "Ngày kết thúc chuyến đi",
+    "days": "Thời gian (ngày)",
+    "includeStart": "Tính cả ngày đi",
+    "dayCount": "{{count}} ngày"
+  },
+  "chatDraft": {
+    "defaultQuestion": "Phân tích dữ liệu và kết quả đính kèm. Giải thích các điểm chính và những điều cần lưu ý."
   }
 }

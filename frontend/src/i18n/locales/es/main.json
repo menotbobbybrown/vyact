@@ -1578,5 +1578,32 @@
   "quickMenu": {
     "title": "Menú rápido",
     "calculatorDescription": "Simulación de patrimonio y flujo de caja"
+  },
+  "quickCalculators": {
+    "returnTitle": "Calculadora de rentabilidad",
+    "travelTitle": "Fechas de viaje",
+    "returnDescription": "Rentabilidad y rentabilidad anualizada",
+    "travelDescription": "Duración y fecha de fin del viaje",
+    "change": "Rentabilidad",
+    "annual": "Rentabilidad anualizada",
+    "duration": "Duración",
+    "arrival": "Fecha de fin del viaje",
+    "changeHint": "Compara el importe inicial con el actual.",
+    "annualHint": "Calcula la tasa de crecimiento anual compuesto (CAGR) según los años de inversión.",
+    "durationHint": "Elige las fechas de salida y fin del viaje para calcular la duración.",
+    "arrivalHint": "Introduce la duración para calcular la fecha de fin del viaje.",
+    "base": "Importe inicial",
+    "current": "Importe actual",
+    "years": "Plazo de inversión (años)",
+    "start": "Fecha de salida",
+    "end": "Fecha de fin del viaje",
+    "days": "Duración (días)",
+    "includeStart": "Incluir el día de salida",
+    "dayCount": "{{count}} días",
+    "dayCount_one": "{{count}} día",
+    "dayCount_other": "{{count}} días"
+  },
+  "chatDraft": {
+    "defaultQuestion": "Analiza los datos y resultados adjuntos. Explica los puntos clave y los aspectos a tener en cuenta."
   }
 }

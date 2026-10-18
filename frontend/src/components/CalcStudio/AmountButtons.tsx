@@ -12,7 +12,7 @@ export default function AmountButtons({fieldLabel, onAdjust}: AmountButtonsProps
     return <div className="calc-studio-amount-buttons" role="group" aria-label={fieldLabel}>
         {getAmountSteps(i18n.resolvedLanguage || i18n.language).map(({value, label}) =>
             <button key={value} type="button" className="modal-action-cancel" onClick={() => onAdjust(value)}>{label}</button>)}
-        <button type="button" className="modal-action-cancel" title={t('calcStudio.reset')} aria-label={`${fieldLabel}: ${t('calcStudio.reset')}`} onClick={() => onAdjust(null)}>
+        <button type="button" className="modal-action-cancel" aria-label={`${fieldLabel}: ${t('calcStudio.reset')}`} onClick={() => onAdjust(null)}>
             <RotateCcw size={13} aria-hidden="true"/>
         </button>
     </div>;

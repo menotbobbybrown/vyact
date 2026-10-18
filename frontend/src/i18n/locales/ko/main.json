@@ -1589,5 +1589,30 @@
   "quickMenu": {
     "title": "퀵메뉴",
     "calculatorDescription": "자산 흐름 시뮬레이션"
+  },
+  "quickCalculators": {
+    "returnTitle": "수익률 계산기",
+    "travelTitle": "여행 날짜 계산기",
+    "returnDescription": "수익률 · 연평균 수익률",
+    "travelDescription": "여행 기간 · 여행 종료일 계산",
+    "change": "수익률",
+    "annual": "연평균 수익률",
+    "duration": "여행 기간",
+    "arrival": "여행 종료일",
+    "changeHint": "기준 금액 대비 현재 금액의 변화를 확인하세요.",
+    "annualHint": "투자 기간을 기준으로 복리 연평균 수익률(CAGR)을 계산합니다.",
+    "durationHint": "출발일과 여행 종료일로 여행 일수를 계산하세요.",
+    "arrivalHint": "여행 일수를 입력하면 여행 종료일을 계산합니다.",
+    "base": "기준 금액",
+    "current": "현재 금액",
+    "years": "투자 기간 (년)",
+    "start": "출발일",
+    "end": "여행 종료일",
+    "days": "여행 일수",
+    "includeStart": "출발일 포함",
+    "dayCount": "{{count}}일"
+  },
+  "chatDraft": {
+    "defaultQuestion": "첨부한 데이터와 결과를 분석하고, 핵심 내용과 유의할 점을 설명해 주세요."
   }
 }

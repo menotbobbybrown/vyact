@@ -101,17 +101,17 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: color-mix(in srgb, var(--info) 16%, var(--surface));
-    border-color: color-mix(in srgb, var(--info) 55%, var(--border));
-    color: var(--info);
+    background: var(--surface2);
+    border-color: color-mix(in srgb, var(--text-secondary) 35%, var(--border));
+    color: var(--text);
     font-weight: 600;
 }
 .calc-studio .calc-studio-edit-button:hover {
-    background: color-mix(in srgb, var(--info) 25%, var(--surface));
-    border-color: var(--info);
-    color: var(--info);
+    background: var(--control-hover);
+    border-color: var(--text-secondary);
+    color: var(--text);
 }
-.calc-studio .calc-studio-edit-button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+.calc-studio .calc-studio-edit-button:focus-visible { outline: 2px solid var(--text-secondary); outline-offset: 2px; }
 
 .calc-studio-body--results { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 .calc-studio-summary-balance { border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); }

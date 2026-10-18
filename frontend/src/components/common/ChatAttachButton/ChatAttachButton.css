@@ -1,0 +1,4 @@
+.chat-attach-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--action-download-border-hover); border-radius: 8px; background: var(--action-download-bg-hover); color: var(--action-download); font: inherit; font-size: var(--modal-btn); font-weight: 600; white-space: nowrap; cursor: pointer; transition: background .15s, border-color .15s; }
+.chat-attach-button:hover:not(:disabled) { background: color-mix(in srgb, var(--action-download) 18%, transparent); border-color: var(--action-download); }
+.chat-attach-button:focus-visible { outline: 2px solid var(--action-download); outline-offset: 2px; }
+.chat-attach-button:disabled { opacity: .4; cursor: not-allowed; }

@@ -1,3 +1,5 @@
+import ChatAttachButton from '../common/ChatAttachButton/ChatAttachButton';
+import {addToChat} from '../../utils/chatDraft';
 import {useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import {useTranslation} from 'react-i18next';
 import {ChevronLeft, ChevronRight, Plus, RefreshCw, PiggyBank, X} from 'lucide-react';
@@ -66,8 +68,22 @@ export default function HouseholdLedger({onClose, style}: {onClose: () => void; 
         else date.setMonth(date.getMonth() + direction);
         setMonth(localDate(date).slice(0, 7));
     };
+    const exportToChat = () => {
+        if (loading || error || !data || !visibleEntries.length || editing !== undefined) return;
+        const title = t('vyvowLedger.title');
+        const snapshot = {
+            month, period, filter, excludeTagged, currency,
+            totals: totals.missing ? null : {income: totals.income, expense: totals.expense, balance: totals.balance},
+            missingExchangeRate: totals.missing,
+            entries: visibleEntries.map(({createdAt, txType, houseLedgerOptionId, currency: entryCurrency, amount, memo, tag, rate, targetRate}) => ({
+                date: createdAt, type: txType, category: t(`vyvowLedger.categories.op${houseLedgerOptionId}`), currency: entryCurrency, amount, memo, tag, rate, targetRate,
+            })),
+        };
+        addToChat({title, text: `## ${title}\n\n` + JSON.stringify(snapshot, null, 2)});
+    };
     return <aside className="household-ledger" style={style} aria-labelledby="household-ledger-title">
         <header className="ledger-header"><PiggyBank size={21} aria-hidden="true"/><h2 id="household-ledger-title">{t('vyvowLedger.title')}</h2>
+            <ChatAttachButton disabled={loading || !!error || !data || !visibleEntries.length || editing !== undefined} onClick={exportToChat}/>
             <button className="ledger-add-button" disabled={loading || !!error || editing !== undefined} onClick={() => setEditing(null)}><Plus size={15}/>{t('vyvowLedger.add')}</button>
             <button className="titlebar-btn" onClick={onClose} aria-label={t('windowControls.close')}><X size={18}/></button></header>
         <div className="ledger-body">
@@ -88,6 +104,7 @@ export default function HouseholdLedger({onClose, style}: {onClose: () => void; 
             {loading && <p role="status" className="ledger-status">{t('vyvowLedger.loading')}</p>}
             {error && <p role="alert" className="ledger-error">{t(error)}</p>}
             {!loading && !error && data && <>
+
                 <div className="ledger-summary">{(['income', 'expense', 'balance'] as const).map(key => <div key={key}><span>{t(`vyvowLedger.${key === 'balance' ? 'balance' : key === 'income' ? 'INCOME' : 'EXPENSE'}`)}</span><strong className={key === 'balance' ? ledgerBalanceClass(totals.balance, totals.missing) : `ledger-${key}`}>{totals.missing ? '—' : <LedgerMoney amount={totals[key]} currency={currency} currencies={data.currencies}/>}</strong></div>)}</div>
                 {totals.missing && <p className="ledger-status">{t('vyvowLedger.missingRate')}</p>}
                 {editing !== undefined && <LedgerEntryForm key={editing?.id || 'new'} entry={editing} currency={currency} currencies={data.currencies} tags={data.tags}

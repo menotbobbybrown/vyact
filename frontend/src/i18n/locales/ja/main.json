@@ -1579,5 +1579,30 @@
   "quickMenu": {
     "title": "クイックメニュー",
     "calculatorDescription": "資産とキャッシュフローのシミュレーション"
+  },
+  "quickCalculators": {
+    "returnTitle": "収益率計算",
+    "travelTitle": "旅行日程計算",
+    "returnDescription": "収益率・年平均収益率",
+    "travelDescription": "旅行日数・旅行終了日",
+    "change": "収益率",
+    "annual": "年平均収益率",
+    "duration": "旅行日数",
+    "arrival": "旅行終了日",
+    "changeHint": "基準額と現在額の変化を確認します。",
+    "annualHint": "投資期間から複利年平均成長率（CAGR）を計算します。",
+    "durationHint": "出発日と旅行終了日から旅行日数を計算します。",
+    "arrivalHint": "旅行日数から旅行終了日を計算します。",
+    "base": "基準額",
+    "current": "現在額",
+    "years": "投資期間（年）",
+    "start": "出発日",
+    "end": "旅行終了日",
+    "days": "旅行日数",
+    "includeStart": "出発日を含める",
+    "dayCount": "{{count}}日"
+  },
+  "chatDraft": {
+    "defaultQuestion": "添付のデータと結果を分析し、重要な点と注意点を説明してください。"
   }
 }

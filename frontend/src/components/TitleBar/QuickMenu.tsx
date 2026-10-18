@@ -1,5 +1,6 @@
+import {RETURN_CALCULATOR_PANEL_ID, TRAVEL_CALCULATOR_PANEL_ID} from '../QuickCalculators/QuickCalculators';
 import {useEffect, useRef, useState} from 'react';
-import {ChartNoAxesCombined, LayoutGrid, PiggyBank} from 'lucide-react';
+import {CalendarDays, Percent, ChartNoAxesCombined, LayoutGrid, PiggyBank} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import {usePanelManager} from '../../contexts/PanelManagerContext';
 import {WEALTH_LAB_PANEL_ID} from '../CalcStudio/chatExport';
@@ -74,6 +75,10 @@ export default function QuickMenu({onOpen}: {onOpen: () => void}) {
             }}>
                 <PiggyBank size={20} aria-hidden="true"/><span>{t('vyvowLedger.title')}<small>{t('vyvowLedger.description')}</small></span>
             </button>}
+            {[{id: RETURN_CALCULATOR_PANEL_ID, icon: Percent, title: 'returnTitle', description: 'returnDescription'},
+                {id: TRAVEL_CALCULATOR_PANEL_ID, icon: CalendarDays, title: 'travelTitle', description: 'travelDescription'}].map(({id, icon: Icon, title, description}) => <button key={id} className="quick-menu-item" onClick={() => {
+                    setOpen(false); triggerRef.current?.focus(); panels.open(id);
+                }}><Icon size={20} aria-hidden="true"/><span>{t(`quickCalculators.${title}`)}<small>{t(`quickCalculators.${description}`)}</small></span></button>)}
         </div>}
     </div>;
 }

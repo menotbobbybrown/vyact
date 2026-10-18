@@ -1,3 +1,4 @@
+import {CHAT_DRAFT_EVENT, type ChatDraft} from '../../utils/chatDraft';
 import {WEALTH_LAB_CHAT_DRAFT_EVENT} from '../CalcStudio/chatExport';
 import {getCustomMcpName} from '../../utils/mcpDisplayName';
 import React, {KeyboardEvent, useEffect, useLayoutEffect, useCallback, useRef, useState} from 'react';
@@ -282,6 +283,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
         window.addEventListener(WEALTH_LAB_CHAT_DRAFT_EVENT, appendWealthLabDraft);
         return () => window.removeEventListener(WEALTH_LAB_CHAT_DRAFT_EVENT, appendWealthLabDraft);
     }, [attach.addPastedText, t]);
+
+    useEffect(() => {
+        const appendDraft = (event: Event) => {
+            const draft = (event as CustomEvent<ChatDraft>).detail;
+            if (!draft || typeof draft.text !== 'string' || !draft.text.trim()) return;
+            attach.addPastedText(draft.text, draft.title);
+            textareaRef.current?.focus();
+        };
+        window.addEventListener(CHAT_DRAFT_EVENT, appendDraft);
+        return () => window.removeEventListener(CHAT_DRAFT_EVENT, appendDraft);
+    }, [attach.addPastedText]);
 
     // focusTrigger
     useEffect(() => {

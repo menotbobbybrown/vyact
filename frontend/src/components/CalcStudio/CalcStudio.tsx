@@ -1,3 +1,4 @@
+import ChatAttachButton from '../common/ChatAttachButton/ChatAttachButton';
 import {getVisibleResultColumns} from './resultColumns';
 import {formatProjectionAmount} from './resultFormat';
 import {getUserProfile, onUserProfileUpdated} from '../../services/userProfile';
@@ -167,9 +168,9 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                     {last && totals && <section key="wealth-results-without-tooltips" aria-live="polite" className="calc-studio-results" data-tooltip-disabled>
                         <div className="calc-studio-export">
                             <button type="button" className="modal-action-cancel calc-studio-edit-button" onClick={() => setResults(null)}><SlidersHorizontal size={15} aria-hidden="true"/>{t('calcStudio.editConditions')}</button>
-                            <button type="button" className="modal-action-submit" onClick={() => {
+                            <ChatAttachButton onClick={() => {
                                 window.dispatchEvent(new CustomEvent(WEALTH_LAB_CHAT_DRAFT_EVENT, {detail: {text: exportProjectionToChat(inputs, t)}}));
-                            }}>{t('calcStudio.addToChat')}</button>
+                            }}/>
                         </div>
                         <div className="calc-studio-summary">
                             {[['balance', last.balance], ['principal', last.principal], ['interest', totals.interest], ['withdrawal', totals.withdrawal], ['totalShortfall', totals.shortfall]].filter(([key]) => key !== 'totalShortfall' || totals.shortfall > 0).map(([key, value]) =>

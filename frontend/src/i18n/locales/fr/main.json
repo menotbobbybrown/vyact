@@ -1579,5 +1579,32 @@
   "quickMenu": {
     "title": "Accès rapide",
     "calculatorDescription": "Simulation de patrimoine et de trésorerie"
+  },
+  "quickCalculators": {
+    "returnTitle": "Calcul de rendement",
+    "travelTitle": "Dates de voyage",
+    "returnDescription": "Rendement et rendement annualisé",
+    "travelDescription": "Durée et date de fin du voyage",
+    "change": "Rendement",
+    "annual": "Rendement annualisé",
+    "duration": "Durée du voyage",
+    "arrival": "Date de fin du voyage",
+    "changeHint": "Comparez le montant initial au montant actuel.",
+    "annualHint": "Calculez le taux de croissance annuel composé (CAGR) sur la durée en années.",
+    "durationHint": "Choisissez les dates de départ et de fin du voyage pour calculer la durée.",
+    "arrivalHint": "Saisissez la durée pour calculer la date de fin du voyage.",
+    "base": "Montant initial",
+    "current": "Montant actuel",
+    "years": "Durée du placement (années)",
+    "start": "Date de départ",
+    "end": "Date de fin du voyage",
+    "days": "Durée (jours)",
+    "includeStart": "Inclure le jour du départ",
+    "dayCount": "{{count}} jours",
+    "dayCount_one": "{{count}} jour",
+    "dayCount_other": "{{count}} jours"
+  },
+  "chatDraft": {
+    "defaultQuestion": "Analysez les données et résultats joints. Expliquez les points clés et les éléments à prendre en compte."
   }
 }

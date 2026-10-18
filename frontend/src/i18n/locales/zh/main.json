@@ -1579,5 +1579,30 @@
   "quickMenu": {
     "title": "快捷菜单",
     "calculatorDescription": "资产与现金流模拟"
+  },
+  "quickCalculators": {
+    "returnTitle": "收益率计算器",
+    "travelTitle": "旅行日期计算器",
+    "returnDescription": "收益率 · 年化收益率",
+    "travelDescription": "旅行天数 · 旅行结束日期",
+    "change": "收益率",
+    "annual": "年化收益率",
+    "duration": "旅行天数",
+    "arrival": "旅行结束日期",
+    "changeHint": "比较初始金额与当前金额的变化。",
+    "annualHint": "按投资年限计算复合年增长率（CAGR）。",
+    "durationHint": "根据出发日期和旅行结束日期计算旅行天数。",
+    "arrivalHint": "输入旅行天数，计算旅行结束日期。",
+    "base": "初始金额",
+    "current": "当前金额",
+    "years": "投资期限（年）",
+    "start": "出发日期",
+    "end": "旅行结束日期",
+    "days": "旅行天数",
+    "includeStart": "包含出发当天",
+    "dayCount": "{{count}}天"
+  },
+  "chatDraft": {
+    "defaultQuestion": "请分析附件中的数据和结果，说明关键发现与注意事项。"
   }
 }
