@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Integración con Vyvow",
+    "token": "Token de Vyvow",
+    "saved": "Guardado",
+    "placeholder": "Introduce tu token de Vyvow",
+    "loadFailed": "No se pudo cargar el estado del token."
+  },
   "microsoft": {
     "folders": "Carpetas",
     "newFolder": "Nueva carpeta",

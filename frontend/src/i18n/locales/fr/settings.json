@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Intégration Vyvow",
+    "token": "Jeton Vyvow",
+    "saved": "Enregistré",
+    "placeholder": "Saisissez votre jeton Vyvow",
+    "loadFailed": "Impossible de charger le statut du jeton."
+  },
   "microsoft": {
     "folders": "Dossiers",
     "newFolder": "Nouveau dossier",

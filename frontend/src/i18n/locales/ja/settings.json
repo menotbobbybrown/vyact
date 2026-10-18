@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Vyvow連携",
+    "token": "Vyvowトークン",
+    "saved": "保存済み",
+    "placeholder": "Vyvowトークンを入力",
+    "loadFailed": "トークンの保存状態を読み込めませんでした。"
+  },
   "microsoft": {
     "folders": "フォルダー",
     "newFolder": "新しいフォルダー",

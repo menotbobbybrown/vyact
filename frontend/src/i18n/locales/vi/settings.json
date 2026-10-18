@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Kết nối Vyvow",
+    "token": "Token Vyvow",
+    "saved": "Đã lưu",
+    "placeholder": "Nhập token Vyvow",
+    "loadFailed": "Không thể tải trạng thái token."
+  },
   "microsoft": {
     "folders": "Thư mục",
     "newFolder": "Tạo thư mục mới",

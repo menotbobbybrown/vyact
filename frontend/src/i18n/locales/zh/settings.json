@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Vyvow 集成",
+    "token": "Vyvow 令牌",
+    "saved": "已保存",
+    "placeholder": "输入 Vyvow 令牌",
+    "loadFailed": "无法加载令牌保存状态。"
+  },
   "microsoft": {
     "folders": "文件夹",
     "newFolder": "新建文件夹",

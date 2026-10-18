@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "การเชื่อมต่อ Vyvow",
+    "token": "โทเค็น Vyvow",
+    "saved": "บันทึกแล้ว",
+    "placeholder": "ป้อนโทเค็น Vyvow",
+    "loadFailed": "ไม่สามารถโหลดสถานะโทเค็นได้"
+  },
   "microsoft": {
     "folders": "โฟลเดอร์",
     "newFolder": "สร้างโฟลเดอร์ใหม่",

@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Vyvow integration",
+    "token": "Vyvow token",
+    "saved": "Saved",
+    "placeholder": "Enter your Vyvow token",
+    "loadFailed": "Unable to load token status."
+  },
   "microsoft": {
     "folders": "Folders",
     "newFolder": "New folder",

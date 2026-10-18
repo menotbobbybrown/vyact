@@ -1,3 +1,5 @@
+import HouseholdLedger from '../HouseholdLedger/HouseholdLedger';
+import {HOUSEHOLD_LEDGER_PANEL_ID} from '../../services/vyvow';
 import CalcStudio from '../CalcStudio/CalcStudio';
 import {WEALTH_LAB_PANEL_ID} from '../CalcStudio/chatExport';
 import {getUnansweredQuestionIndex, isUnansweredResponse} from '../MainPage/chatRetry';
@@ -578,6 +580,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({selectedModel = '',
                 </React.Suspense>
             )}
             {panels.activePanel === WEALTH_LAB_PANEL_ID && <CalcStudio style={{width: `${panelWidth}%`}} onClose={() => panels.close(WEALTH_LAB_PANEL_ID)}/>}
+            {panels.activePanel === HOUSEHOLD_LEDGER_PANEL_ID && <HouseholdLedger style={{width: `${panelWidth}%`}} onClose={() => panels.close(HOUSEHOLD_LEDGER_PANEL_ID)}/>}
             {panels.activePanel === 'logs' && <LogPanel model={selectedModel} style={{width: `${panelWidth}%`}}/>}
             {panels.activePanel === 'document-preview' && <DocumentPreviewPanel style={{width: `${panelWidth}%`}}/>}
             <BrowserPanel style={{width: `${panelWidth}%`}}/>

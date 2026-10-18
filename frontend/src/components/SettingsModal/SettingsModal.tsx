@@ -23,6 +23,7 @@ import McpServersSection from './McpServersSection';
 import SkillsSection from './SkillsSection';
 import PromptProcessingSection, {type PromptNavigationGuard} from './PromptProcessing/PromptProcessingSection';
 import PluginsSection from './PluginsSection';
+import VyvowTokenSection from './VyvowTokenSection';
 import ExternalDataSection from './ExternalDataSection';
 import ApiServerSection from './ApiServerSection';
 import UserMemorySection from './UserMemorySection';
@@ -197,6 +198,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
         initialTab === 'plugins' ? DEFAULT_SETTINGS_TAB : (initialTab as Tab) || DEFAULT_SETTINGS_TAB
     );
     const [isPluginTabVisible, setIsPluginTabVisible] = useState(false);
+    const [isVyvowTokenVisible, setIsVyvowTokenVisible] = useState(false);
 
     useEffect(() => {
         if (!isKoreanLanguage && tab === 'externalData') setTab(DEFAULT_SETTINGS_TAB);
@@ -215,6 +217,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
         requestNavigation(() => {
             setTab(DEFAULT_SETTINGS_TAB);
             setIsPluginTabVisible(false);
+            setIsVyvowTokenVisible(false);
             onClose();
         });
     }, [onClose, requestNavigation]);
@@ -223,6 +226,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
     useEffect(() => {
         if (!isOpen) return;
         setIsPluginTabVisible(false);
+        setIsVyvowTokenVisible(false);
         setTab(initialTab === 'plugins' ? DEFAULT_SETTINGS_TAB : (initialTab as Tab) || DEFAULT_SETTINGS_TAB);
     }, [isOpen, initialTab]);
 
@@ -1038,7 +1042,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                         ))}
                     </nav>
 
-                    <div className={`settings-body${tab === 'promptProcessing' ? ' settings-body--prompt-processing' : ''}${tab === 'backup' ? ' settings-body--backup' : ''}`}>
+                    <div onDoubleClick={event => {
+                        if (tab === 'general' && (event.metaKey || event.ctrlKey) && event.shiftKey) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setIsVyvowTokenVisible(true);
+                        }
+                    }} className={`settings-body${tab === 'promptProcessing' ? ' settings-body--prompt-processing' : ''}${tab === 'backup' ? ' settings-body--backup' : ''}`}>
 
                         {tab === 'apiServer' && <ApiServerSection/>}
                         {tab === 'promptProcessing' && <PromptProcessingSection registerNavigationGuard={registerPromptNavigationGuard}/>}
@@ -1592,6 +1602,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
                                         </div>
                                     </div>
                                 </div>
+                                {isVyvowTokenVisible && <VyvowTokenSection/>}
                             </div>
                         )}
 

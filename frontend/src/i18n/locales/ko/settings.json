@@ -1,4 +1,11 @@
 {
+  "vyvow": {
+    "title": "Vyvow 연동",
+    "token": "Vyvow 토큰",
+    "saved": "저장됨",
+    "placeholder": "Vyvow 토큰을 입력하세요",
+    "loadFailed": "토큰 저장 상태를 불러오지 못했습니다."
+  },
   "microsoft": {
     "folders": "폴더",
     "newFolder": "새 폴더 만들기",

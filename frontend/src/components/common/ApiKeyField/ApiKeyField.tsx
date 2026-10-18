@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import {Check} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import './ApiKeyField.css';
 
 interface ApiKeyFieldProps {
+    label?: string;
+    compact?: boolean;
+    savedLabel?: string;
     hasKey: boolean;
     keyPreview: string;
     onSave: (key: string) => Promise<void>;
@@ -25,7 +29,7 @@ const EyeIcon = ({ off }: { off: boolean }) => (
     )
 );
 
-function ApiKeyField({ hasKey, keyPreview, onSave, placeholderEmpty, allowRemoval = false }: ApiKeyFieldProps) {
+function ApiKeyField({ compact = false, label, savedLabel, hasKey, keyPreview, onSave, placeholderEmpty, allowRemoval = false }: ApiKeyFieldProps) {
     const { t } = useTranslation('settings');
     const [draft, setDraft] = useState('');
     const [visible, setVisible] = useState(false);
@@ -52,14 +56,15 @@ function ApiKeyField({ hasKey, keyPreview, onSave, placeholderEmpty, allowRemova
     const isFailed = msg === t('apiKeyField.failedMsg');
 
     return (
-        <div className="settings-mcp-field">
-            <label className="settings-mcp-label">{t('apiKeyField.label')}</label>
-            {hasKey && !draft && (
-                <div className="api-key-saved">{t('apiKeyField.saved', { preview: keyPreview })}</div>
+        <div className={`settings-mcp-field${compact ? ' api-key-field--compact' : ''}`}>
+            {!compact && <label className="settings-mcp-label">{label || t('apiKeyField.label')}</label>}
+            {!compact && hasKey && !draft && (
+                <div className="api-key-saved">{savedLabel || t('apiKeyField.saved', { preview: keyPreview })}</div>
             )}
             <div className="api-key-row">
                 <div className="settings-mcp-input-wrap">
                     <input
+                        aria-label={label || t('apiKeyField.label')}
                         type={visible ? 'text' : 'password'}
                         className="settings-mcp-input"
                         placeholder={hasKey ? t('apiKeyField.changePlaceholder') : (placeholderEmpty || t('apiKeyField.defaultPlaceholder'))}
@@ -81,13 +86,14 @@ function ApiKeyField({ hasKey, keyPreview, onSave, placeholderEmpty, allowRemova
                     onClick={() => void handleSave()}
                     disabled={!draft.trim() || saving}
                     type="button"
+                    aria-label={compact && msg && !isFailed ? t('apiKeyField.savedMsg') : t('apiKeyField.save')}
                 >
-                    {saving ? t('apiKeyField.saving') : t('apiKeyField.save')}
+                    {compact && msg && !isFailed ? <Check size={16} aria-hidden="true"/> : saving ? t('apiKeyField.saving') : t('apiKeyField.save')}
                 </button>
                 {allowRemoval && hasKey && <button type="button" className="mcp-btn-ghost"
                     disabled={saving} onClick={() => void handleSave(true)}>{t('mcp.delete')}</button>}
             </div>
-            {msg && <span className={`api-key-msg${isFailed ? ' error' : ''}`}>{msg}</span>}
+            {msg && (!compact || isFailed) && <span role="status" className={`api-key-msg${isFailed ? ' error' : ''}`}>{msg}</span>}
         </div>
     );
 }

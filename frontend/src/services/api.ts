@@ -432,6 +432,10 @@ export const createWorkspaceApi = (workspace = 'google-workspace', accountId = '
         return response.json();
     };
     return ({
+    getVyvowTokenStatus: (): Promise<{has_token: boolean}> => fetchJson(`${API_BASE}/vyvow/token`),
+    saveVyvowToken: (token: string): Promise<{has_token: boolean}> => fetchJson(`${API_BASE}/vyvow/token`, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({token}),
+    }),
     async searchVyactModels(query: string, mlxOnly = false, role: 'llm' | 'jev' = 'llm'): Promise<VyactModelSearchResponse> {
         const params = new URLSearchParams({q: query, mlx_only: String(mlxOnly), role});
         const response = await fetch(`${API_BASE}/vyact/models/search?${params}`);
