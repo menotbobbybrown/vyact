@@ -9,7 +9,7 @@ import CustomSelect from '../CustomSelect/CustomSelect';
 import {useEffect, useRef, useState, type CSSProperties} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Asterisk, ChartNoAxesCombined, SlidersHorizontal, X} from 'lucide-react';
-import {calculateProjection, summarizeProjection, createEmptyProjection, MIN_START_YEAR, MAX_START_YEAR, loadProjection, MIN_WITHDRAWAL_YEAR, PROJECTION_STORAGE_KEY, type ProjectionField} from './projection';
+import {calculateProjection, calculateScenarios, summarizeProjection, createEmptyProjection, MIN_START_YEAR, MAX_START_YEAR, optionalFields, loadProjection, MIN_WITHDRAWAL_YEAR, PROJECTION_STORAGE_KEY, type ProjectionField} from './projection';
 import '../common/ModalOverlay/ModalActions.css';
 import './CalcStudio.css';
 import AmountButtons from './AmountButtons';
@@ -45,6 +45,15 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
         return () => {active = false; unsubscribe();};
     }, []);
     const [results, setResults] = useState<ReturnType<typeof calculateProjection> | null>(null);
+    const [selectedScenario, setSelectedScenario] = useState(0);
+    const [scenarios, setScenarios] = useState<ReturnType<typeof calculateScenarios>>([]);
+    const [incomeValidationAttempted, setIncomeValidationAttempted] = useState(false);
+    const missingIncomeAmount = inputs.incomeStartAge !== '' && inputs.monthlyIncome === '';
+    const missingIncomeAge = inputs.monthlyIncome !== '' && inputs.incomeStartAge === '';
+    const missingWithdrawalAge = Number(inputs.annualWithdrawal) > 0 && inputs.withdrawalAge === '';
+    const withdrawalAgeError = incomeValidationAttempted && missingWithdrawalAge;
+    const incomeAmountError = incomeValidationAttempted && missingIncomeAmount;
+    const incomeAgeError = incomeValidationAttempted && missingIncomeAge;
     const [error, setError] = useState('');
     const bodyRef = useRef<HTMLDivElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -64,7 +73,7 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
     }, []);
     useEffect(() => { bodyRef.current?.scrollTo({top: 0}); }, [results]);
     const totals = results ? summarizeProjection(results) : null;
-    const visibleColumns = getVisibleResultColumns((totals?.shortfall ?? 0) > 0);
+    const visibleColumns = getVisibleResultColumns((totals?.shortfall ?? 0) > 0, Number(inputs.monthlyIncome) > 0);
     const last = results?.[results.length - 1];
     return (
             <aside className="calc-studio" ref={panelRef} style={style} aria-labelledby="calc-studio-title">
@@ -75,8 +84,29 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                 <div className={`calc-studio-body${results ? ' calc-studio-body--results' : ''}`} ref={bodyRef}>
                     {!results && <form className="calc-studio-form" onSubmit={event => {
                         event.preventDefault();
+                        setIncomeValidationAttempted(true);
+                        if (missingWithdrawalAge) {
+                            setError('');
+                            const target = panelRef.current?.querySelector<HTMLElement>('.calc-studio-withdrawal-age .custom-select-trigger');
+                            target?.focus();
+                            target?.scrollIntoView({block: 'nearest'});
+                            return;
+                        }
+                        if (missingIncomeAmount || missingIncomeAge) {
+                            setError('');
+                            const options = panelRef.current?.querySelector<HTMLDetailsElement>('.calc-studio-options');
+                            if (options) {
+                                options.open = true;
+                                const target = options.querySelector<HTMLElement>(missingIncomeAge ? '.custom-select-trigger' : '#wealth-monthlyIncome');
+                                target?.focus();
+                                target?.scrollIntoView({block: 'nearest'});
+                            }
+                            return;
+                        }
                         try {
-                            const rows = calculateProjection(inputs);
+                            const nextScenarios = calculateScenarios(inputs);
+                            const rows = nextScenarios[0].rows;
+                            setScenarios(nextScenarios); setSelectedScenario(0);
                             setResults(rows); setError('');
                             try { localStorage.setItem(PROJECTION_STORAGE_KEY, JSON.stringify({...inputs, profileNameOverridden: nameOverriddenRef.current})); } catch { /* Calculation works without storage. */ }
                         } catch { setError(t('calcStudio.invalid')); }
@@ -131,8 +161,8 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                                         const value = String(currentAge + MIN_WITHDRAWAL_YEAR + index);
                                         return {value, label: t('calcStudio.ageAndYear', {age: Number(value), year: Number(inputs.birthYear) + Number(value)})};
                                     })}
-                                    searchable portal clearable ariaLabel={t('calcStudio.withdrawalAge')}
-                                    placeholder={t('calcStudio.withdrawalAge')}
+                                    searchable portal clearable className={`calc-studio-withdrawal-age${withdrawalAgeError ? ' calc-studio-control-error' : ''}`} ariaLabel={t(withdrawalAgeError ? 'calcStudio.selectWithdrawalAge' : 'calcStudio.withdrawalAge')}
+                                    placeholder={t(withdrawalAgeError ? 'calcStudio.selectWithdrawalAge' : 'calcStudio.withdrawalAge')}
                                     onClear={() => {setInputs(previous => ({...previous, withdrawalAge: ''})); setResults(null); setError('');}}
                                     onChange={value => {setInputs(previous => ({...previous, withdrawalAge: value})); setResults(null); setError('');}}
                                 /> : amountFields.has(field) ? <AmountInput
@@ -153,12 +183,33 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                                 }}/>}
                             </div>)}
                         </div>
+                        <details className="calc-studio-options" open={optionalFields.some(field => inputs[field] !== '')}>
+                            <summary>{t('calcStudio.optionalSettings')}</summary>
+                            <div className="calc-studio-fields">
+                                {(['monthlyIncome', 'incomeStartAge', 'comparisonReturn1', 'comparisonReturn2'] as const).map(field => <div className="calc-studio-field" key={field}>
+                                    <label htmlFor={`wealth-${field}`}>{t(`calcStudio.${field}`)}</label>
+                                    {field === 'incomeStartAge' ? <CustomSelect
+                                        value={inputs.incomeStartAge} disabled={!validAgeRange}
+                                        options={Array.from({length: validAgeRange ? endAge - currentAge : 0}, (_, index) => {
+                                            const age = currentAge + index + 1;
+                                            return {value: String(age), label: t('calcStudio.ageAndYear', {age, year: Number(inputs.birthYear) + age})};
+                                        })}
+                                        searchable portal clearable className={incomeAgeError ? 'calc-studio-control-error' : ''} ariaLabel={t(incomeAgeError ? 'calcStudio.selectIncomeAge' : 'calcStudio.incomeStartAge')} placeholder={t(incomeAgeError ? 'calcStudio.selectIncomeAge' : 'calcStudio.incomeStartAge')}
+                                        onClear={() => setInputs(previous => ({...previous, incomeStartAge: ''}))}
+                                        onChange={value => setInputs(previous => ({...previous, incomeStartAge: value}))}
+                                    /> : field === 'monthlyIncome' ? <AmountInput id={`wealth-${field}`} aria-invalid={incomeAmountError} placeholder={incomeAmountError ? t('calcStudio.enterMonthlyIncome') : undefined} value={inputs[field]} onChange={value => setInputs(previous => ({...previous, [field]: value}))}/> :
+                                        <input id={`wealth-${field}`} type="number" min={-100} max={1000} step="any" value={inputs[field]} onChange={event => setInputs(previous => ({...previous, [field]: event.target.value}))}/>}
+                                </div>)}
+                            </div>
+                            <p className="calc-studio-description">{t('calcStudio.incomeHelp')}</p>
+                        </details>
                         <p className="calc-studio-description">{t('calcStudio.timing')}</p>
                         {error && <p className="calc-studio-error" role="alert">{error}</p>}
                         </div>
                         <div className="modal-action-footer">
                             <button type="button" className="modal-action-cancel" onClick={() => {
                                 nameOverriddenRef.current = false;
+                                setIncomeValidationAttempted(false);
                                 setInputs({...createEmptyProjection(), profileName: profileNicknameRef.current}); setResults(null); setError('');
                                 try {localStorage.removeItem(PROJECTION_STORAGE_KEY);} catch { /* Storage may be unavailable. */ }
                             }}>{t('calcStudio.reset')}</button>
@@ -172,14 +223,30 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                                 window.dispatchEvent(new CustomEvent(WEALTH_LAB_CHAT_DRAFT_EVENT, {detail: {text: exportProjectionToChat(inputs, t)}}));
                             }}/>
                         </div>
+                        {scenarios.length > 1 && <div className="calc-studio-comparison">
+                            <table><thead><tr>{['annualReturn', 'balance', 'presentValue', 'depletionAge'].map(key => <th key={key}>{t(`calcStudio.${key}`)}</th>)}</tr></thead>
+                            <tbody>{scenarios.map((scenario, index) => {
+                                const final = scenario.rows[scenario.rows.length - 1];
+                                const summary = summarizeProjection(scenario.rows);
+                                return <tr key={scenario.annualReturn} aria-selected={selectedScenario === index} onClick={() => {setSelectedScenario(index); setResults(scenario.rows);}}>
+                                    <td><button type="button" className="modal-action-cancel" aria-pressed={selectedScenario === index}>{format(scenario.annualReturn)}%</button></td>
+                                    <td>{formatProjectionAmount(final.balance, i18n.language)}</td>
+                                    <td>{formatProjectionAmount(final.presentValue, i18n.language)}</td>
+                                    <td>{summary.depleted ? (summary.depleted.age !== undefined ? t('calcStudio.ageValue', {age: format(summary.depleted.age)}) : String(summary.depleted.calendarYear)) : t('calcStudio.fundedThroughEnd')}</td>
+                                </tr>;
+                            })}</tbody></table>
+                        </div>}
                         <div className="calc-studio-summary">
-                            {[['balance', last.balance], ['principal', last.principal], ['interest', totals.interest], ['withdrawal', totals.withdrawal], ['totalShortfall', totals.shortfall]].filter(([key]) => key !== 'totalShortfall' || totals.shortfall > 0).map(([key, value]) =>
+                            {[['balance', last.balance], ['presentValue', last.presentValue], ['principal', last.principal], ['interest', totals.interest], ['withdrawal', totals.withdrawal], ['totalShortfall', totals.shortfall]].filter(([key]) => (key !== 'totalShortfall' || totals.shortfall > 0) && (scenarios.length <= 1 || (key !== 'balance' && key !== 'presentValue'))).map(([key, value]) =>
                                 <div key={key} className={`calc-studio-summary-${key}${Number(value) < 0 ? ' calc-studio-summary-negative' : ''}`}><span>{t(`calcStudio.${key}`)}</span><strong>{formatProjectionAmount(Number(value), i18n.language)}</strong></div>)}
                         </div>
                         {totals.shortfall > 0 && totals.depleted && <p className="calc-studio-funding-status calc-studio-funding-status--depleted">
                             {t('calcStudio.depletedAt', {year: totals.depleted.calendarYear, age: totals.depleted.age})}
                         </p>}
-                        <h3 className="calc-studio-table-title" id="wealth-yearly-results">{t('calcStudio.yearlyResults')}</h3>
+                        <div className="calc-studio-table-heading">
+                            <h3 className="calc-studio-table-title" id="wealth-yearly-results">{t('calcStudio.yearlyResults')}</h3>
+                            <span className="calc-studio-table-assumptions">{t('calcStudio.resultAssumptions', {rate: format(scenarios[selectedScenario]?.annualReturn ?? Number(inputs.annualReturn)), inflation: format(Number(inputs.inflationRate || 0))})}</span>
+                        </div>
                         <div className="calc-studio-table"><table aria-labelledby="wealth-yearly-results">
                             <thead><tr>{visibleColumns.map(({key, label}) => <th key={key} className={`calc-studio-column-${key}`}>{t(`calcStudio.${label}`)}</th>)}</tr></thead>
                             <tbody>{results?.map(row => <tr key={row.year}>{visibleColumns.map(({key}) => {
