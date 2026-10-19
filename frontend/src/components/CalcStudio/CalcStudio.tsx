@@ -1,3 +1,7 @@
+import IncomeSources from './IncomeSources';
+import SavedPlanDialog from './SavedPlanDialog';
+import ConfirmModal from '../common/ConfirmModal/ConfirmModal';
+import {listSavedPlans, savePlan, deletePlan, type SavedPlan} from './savedPlans';
 import {persistProjection} from './projectionPersistence';
 import {toast} from '../common/ToastNotifications/ToastNotifications';
 import ChatAttachButton from '../common/ChatAttachButton/ChatAttachButton';
@@ -10,8 +14,8 @@ import AmountInput from './AmountInput';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import {useEffect, useRef, useState, type CSSProperties} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Asterisk, ChartNoAxesCombined, SlidersHorizontal, X} from 'lucide-react';
-import {calculateProjection, calculateScenarios, summarizeProjection, createEmptyProjection, MIN_START_YEAR, MAX_START_YEAR, optionalFields, loadProjection, MIN_WITHDRAWAL_YEAR, PROJECTION_STORAGE_KEY, type ProjectionField} from './projection';
+import {Asterisk, ChartNoAxesCombined, SlidersHorizontal, BookmarkPlus, Trash2, RefreshCw, X} from 'lucide-react';
+import {calculateProjection, calculateScenarios, summarizeProjection, createEmptyProjection, MIN_START_YEAR, MAX_START_YEAR, getIncomeSources, withIncomeSources, incomeSourceError, optionalFields, loadProjection, MIN_WITHDRAWAL_YEAR, PROJECTION_STORAGE_KEY, type ProjectionField} from './projection';
 import '../common/ModalOverlay/ModalActions.css';
 import './CalcStudio.css';
 import AmountButtons from './AmountButtons';
@@ -32,6 +36,24 @@ const rateFields = new Set(['annualReturn', 'inflationRate']);
 export default function CalcStudio({onClose, style}: {onClose: () => void; style?: CSSProperties}) {
     const {t, i18n} = useTranslation('main');
     const [inputs, setInputs] = useState(loadProjection);
+    const [plans, setPlans] = useState<SavedPlan[]>([]);
+    const [plansLoading, setPlansLoading] = useState(true);
+    const [plansFailed, setPlansFailed] = useState(false);
+    const [selectedPlanId, setSelectedPlanId] = useState('');
+    const [saveDialog, setSaveDialog] = useState(false);
+    const [deleteDialog, setDeleteDialog] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const selectedPlan = plans.find(plan => plan.id === selectedPlanId);
+    const refreshPlans = () => {
+        setPlansLoading(true); setPlansFailed(false);
+        return listSavedPlans().then(setPlans).catch(() => setPlansFailed(true)).finally(() => setPlansLoading(false));
+    };
+    useEffect(() => {
+        let active = true;
+        void listSavedPlans().then(value => {if (active) setPlans(value);})
+            .catch(() => {if (active) setPlansFailed(true);}).finally(() => {if (active) setPlansLoading(false);});
+        return () => {active = false;};
+    }, []);
     const [initialNameOverride] = useState(loadProfileNameOverride);
     const nameOverriddenRef = useRef(initialNameOverride);
     const profileNicknameRef = useRef('');
@@ -50,17 +72,15 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
     const [selectedScenario, setSelectedScenario] = useState(0);
     const [scenarios, setScenarios] = useState<ReturnType<typeof calculateScenarios>>([]);
     const [incomeValidationAttempted, setIncomeValidationAttempted] = useState(false);
-    const missingIncomeAmount = inputs.incomeStartAge !== '' && inputs.monthlyIncome === '';
-    const missingIncomeAge = inputs.monthlyIncome !== '' && inputs.incomeStartAge === '';
+    const incomeSources = getIncomeSources(inputs);
     const missingWithdrawalAge = Number(inputs.annualWithdrawal) > 0 && inputs.withdrawalAge === '';
     const withdrawalAgeError = incomeValidationAttempted && missingWithdrawalAge;
-    const incomeAmountError = incomeValidationAttempted && missingIncomeAmount;
-    const incomeAgeError = incomeValidationAttempted && missingIncomeAge;
     const [error, setError] = useState('');
     const bodyRef = useRef<HTMLDivElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const currentAge = Number(inputs.startYear) - Number(inputs.birthYear) - 1;
     const endAge = Number(inputs.endAge);
+    const invalidIncome = incomeSources.some(source => incomeSourceError(source, currentAge, endAge));
     const thisYear = new Date().getFullYear();
     const displayedAge = thisYear - Number(inputs.birthYear);
     const showCurrentAge = inputs.birthYear !== '' && Number.isInteger(Number(inputs.birthYear)) && Number(inputs.birthYear) >= 1
@@ -75,7 +95,7 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
     }, []);
     useEffect(() => { bodyRef.current?.scrollTo({top: 0}); }, [results]);
     const totals = results ? summarizeProjection(results) : null;
-    const visibleColumns = getVisibleResultColumns((totals?.shortfall ?? 0) > 0, Number(inputs.monthlyIncome) > 0);
+    const visibleColumns = getVisibleResultColumns((totals?.shortfall ?? 0) > 0, incomeSources.some(source => Number(source.monthlyAmount) > 0));
     const last = results?.[results.length - 1];
     return (
             <aside className="calc-studio" ref={panelRef} style={style} aria-labelledby="calc-studio-title">
@@ -94,14 +114,15 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                             target?.scrollIntoView({block: 'nearest'});
                             return;
                         }
-                        if (missingIncomeAmount || missingIncomeAge) {
+                        if (invalidIncome) {
                             setError('');
                             const options = panelRef.current?.querySelector<HTMLDetailsElement>('.calc-studio-options');
                             if (options) {
                                 options.open = true;
-                                const target = options.querySelector<HTMLElement>(missingIncomeAge ? '.custom-select-trigger' : '#wealth-monthlyIncome');
-                                target?.focus();
-                                target?.scrollIntoView({block: 'nearest'});
+                                requestAnimationFrame(() => {
+                                    const target = options.querySelector<HTMLElement>('input[aria-invalid="true"], .calc-studio-control-error .custom-select-trigger');
+                                    target?.focus(); target?.scrollIntoView({block: 'nearest'});
+                                });
                             }
                             return;
                         }
@@ -115,6 +136,26 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                         } catch { setError(t('calcStudio.invalid')); }
                     }}>
                         <div className="calc-studio-form-content">
+                        <div className="wealth-saved-plans">
+                            <div className="wealth-saved-plan-label"><BookmarkPlus size={15}/><span>{t('calcStudio.savedPlans')}</span></div>
+                            <div className="wealth-saved-plan-controls">
+                                <CustomSelect value={selectedPlanId} options={plans.map(plan => ({value: plan.id, label: plan.name}))}
+                                    disabled={plansLoading || plansFailed || plans.length === 0} searchable portal clearable
+                                    ariaLabel={t('calcStudio.savedPlans')}
+                                    placeholder={t(plansLoading ? 'calcStudio.loadingPlans' : plansFailed ? 'calcStudio.planError' : plans.length ? 'calcStudio.choosePlan' : 'calcStudio.noPlans')}
+                                    onClear={() => setSelectedPlanId('')}
+                                    onChange={id => {
+                                        const plan = plans.find(item => item.id === id);
+                                        if (!plan) return;
+                                        const next = withIncomeSources({...createEmptyProjection(), ...plan.inputs});
+                                        nameOverriddenRef.current = plan.profileNameOverridden;
+                                        setSelectedPlanId(id); setInputs(next); setError(''); setIncomeValidationAttempted(false);
+                                        try {localStorage.setItem(PROJECTION_STORAGE_KEY, JSON.stringify({...next, profileNameOverridden: plan.profileNameOverridden}));} catch { /* Keep the loaded inputs usable. */ }
+                                    }}/>
+                                {plansFailed && <button type="button" className="modal-action-cancel wealth-plan-icon" aria-label={t('calcStudio.retryPlans')} onClick={() => void refreshPlans()}><RefreshCw size={16}/></button>}
+                                {selectedPlan && <button type="button" className="modal-action-cancel wealth-plan-icon" aria-label={t('calcStudio.deletePlan')} onClick={() => setDeleteDialog(true)}><Trash2 size={16}/></button>}
+                            </div>
+                        </div>
                         <div className="calc-studio-profile">
                             <div className="calc-studio-fields">
                                 <div className="calc-studio-field">
@@ -186,24 +227,16 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                                 }}/>}
                             </div>)}
                         </div>
-                        <details className="calc-studio-options" open={optionalFields.some(field => inputs[field] !== '')}>
+                        <details className="calc-studio-options" open={incomeSources.length > 0 || optionalFields.some(field => inputs[field] !== '')}>
                             <summary>{t('calcStudio.optionalSettings')}</summary>
                             <div className="calc-studio-fields">
-                                {(['monthlyIncome', 'incomeStartAge', 'comparisonReturn1', 'comparisonReturn2'] as const).map(field => <div className="calc-studio-field" key={field}>
+                                {(['comparisonReturn1', 'comparisonReturn2'] as const).map(field => <div className="calc-studio-field" key={field}>
                                     <label htmlFor={`wealth-${field}`}>{t(`calcStudio.${field}`)}</label>
-                                    {field === 'incomeStartAge' ? <CustomSelect
-                                        value={inputs.incomeStartAge} disabled={!validAgeRange}
-                                        options={Array.from({length: validAgeRange ? endAge - currentAge : 0}, (_, index) => {
-                                            const age = currentAge + index + 1;
-                                            return {value: String(age), label: t('calcStudio.ageAndYear', {age, year: Number(inputs.birthYear) + age})};
-                                        })}
-                                        searchable portal clearable className={incomeAgeError ? 'calc-studio-control-error' : ''} ariaLabel={t(incomeAgeError ? 'calcStudio.selectIncomeAge' : 'calcStudio.incomeStartAge')} placeholder={t(incomeAgeError ? 'calcStudio.selectIncomeAge' : 'calcStudio.incomeStartAge')}
-                                        onClear={() => setInputs(previous => ({...previous, incomeStartAge: ''}))}
-                                        onChange={value => setInputs(previous => ({...previous, incomeStartAge: value}))}
-                                    /> : field === 'monthlyIncome' ? <AmountInput id={`wealth-${field}`} aria-invalid={incomeAmountError} placeholder={incomeAmountError ? t('calcStudio.enterMonthlyIncome') : undefined} value={inputs[field]} onChange={value => setInputs(previous => ({...previous, [field]: value}))}/> :
-                                        <input id={`wealth-${field}`} type="number" min={-100} max={1000} step="any" value={inputs[field]} onChange={event => setInputs(previous => ({...previous, [field]: event.target.value}))}/>}
+                                    <input id={`wealth-${field}`} type="number" min={-100} max={1000} step="any" value={inputs[field]} onChange={event => setInputs(previous => ({...previous, [field]: event.target.value}))}/>
                                 </div>)}
                             </div>
+                            <IncomeSources sources={incomeSources} currentAge={currentAge} endAge={endAge} birthYear={Number(inputs.birthYear)} validAgeRange={validAgeRange} showErrors={incomeValidationAttempted}
+                                onChange={sources => setInputs(previous => withIncomeSources(previous, sources))}/>
                             <p className="calc-studio-description">{t('calcStudio.incomeHelp')}</p>
                         </details>
                         <p className="calc-studio-description">{t('calcStudio.timing')}</p>
@@ -212,7 +245,7 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                         <div className="modal-action-footer">
                             <button type="button" className="modal-action-cancel" onClick={() => {
                                 nameOverriddenRef.current = false;
-                                setIncomeValidationAttempted(false);
+                                setIncomeValidationAttempted(false); setSelectedPlanId('');
                                 setInputs({...createEmptyProjection(), profileName: profileNicknameRef.current}); setResults(null); setError('');
                                 try {localStorage.removeItem(PROJECTION_STORAGE_KEY);} catch { /* Storage may be unavailable. */ }
                                 void persistProjection(null).catch(() => toast.warning(t('calcStudio.backupSaveFailed')));
@@ -223,9 +256,12 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                     {last && totals && <section key="wealth-results-without-tooltips" aria-live="polite" className="calc-studio-results" data-tooltip-disabled>
                         <div className="calc-studio-export">
                             <button type="button" className="modal-action-cancel calc-studio-edit-button" onClick={() => setResults(null)}><SlidersHorizontal size={15} aria-hidden="true"/>{t('calcStudio.editConditions')}</button>
+                            <div className="wealth-result-actions">
+                            <button type="button" className="modal-action-cancel wealth-save-button" onClick={() => setSaveDialog(true)}><BookmarkPlus size={15}/>{t('calcStudio.savePlan')}</button>
                             <ChatAttachButton onClick={() => {
                                 window.dispatchEvent(new CustomEvent(WEALTH_LAB_CHAT_DRAFT_EVENT, {detail: {text: exportProjectionToChat(inputs, t)}}));
                             }}/>
+                            </div>
                         </div>
                         {scenarios.length > 1 && <div className="calc-studio-comparison">
                             <table><thead><tr>{['annualReturn', 'balance', 'presentValue', 'depletionAge'].map(key => <th key={key}>{t(`calcStudio.${key}`)}</th>)}</tr></thead>
@@ -263,6 +299,23 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                         </table></div>
                     </section>}
                 </div>
+                {saveDialog && <SavedPlanDialog plan={selectedPlan} onClose={() => setSaveDialog(false)} onSave={async (name, overwrite) => {
+                    const plan = await savePlan(name, inputs, nameOverriddenRef.current, overwrite ? selectedPlanId : undefined);
+                    setPlans(previous => [plan, ...previous.filter(item => item.id !== plan.id)]);
+                    setSelectedPlanId(plan.id); toast.success(t('calcStudio.planSaved'));
+                }}/>}
+                {deleteDialog && selectedPlan && <ConfirmModal title={t('calcStudio.deletePlan')} description={t('calcStudio.deletePlanConfirm', {name: selectedPlan.name})}
+                    actionLayout="horizontal" loading={deleting} loadingValue="delete" options={[
+                        {label: t('calcStudio.cancelPlan'), value: 'cancel'},
+                        {label: t('calcStudio.deletePlan'), value: 'delete', variant: 'danger'},
+                    ]} onClose={() => setDeleteDialog(false)} onSelect={value => {
+                        if (value !== 'delete') {setDeleteDialog(false); return;}
+                        setDeleting(true);
+                        void deletePlan(selectedPlan.id).then(() => {
+                            setPlans(previous => previous.filter(plan => plan.id !== selectedPlan.id));
+                            setSelectedPlanId(''); setDeleteDialog(false);
+                        }).catch(() => toast.error(t('calcStudio.planError'))).finally(() => setDeleting(false));
+                    }}/>}
             </aside>
     );
 }

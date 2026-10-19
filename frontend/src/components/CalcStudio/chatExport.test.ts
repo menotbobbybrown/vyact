@@ -36,4 +36,16 @@ describe('Wealth Lab chat export', () => {
         expect(text).toContain('| 2 | 2027 | 0 | 0 | 0 | 0 | 0 |');
     });
 
+    it('exports each income source with its own amount and receipt period', async () => {
+        const i18n = createInstance();
+        await i18n.init({lng: 'en', defaultNS: 'main', resources: {en: {main: en}}});
+        const text = exportProjectionToChat({...emptyProjection, currentAge: '49', endAge: '65', initialAmount: '10000', annualReturn: '0', incomeSources: [
+            {id: 'a', name: 'Pension', monthlyAmount: '100', startAge: '60', endAge: ''},
+            {id: 'b', name: 'Private', monthlyAmount: '200', startAge: '50', endAge: '59'},
+        ]}, i18n.getFixedT('en', 'main'));
+        expect(text).toContain('Income 1 (Pension): Monthly income (present value): 100; Income start age: 60; Income end age: 65');
+        expect(text).toContain('Income 2 (Private): Monthly income (present value): 200; Income start age: 50; Income end age: 59');
+        expect(text).toContain('Regular income');
+    });
+
 });

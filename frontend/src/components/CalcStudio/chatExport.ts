@@ -1,6 +1,6 @@
 import {getVisibleResultColumns} from './resultColumns';
 import type {TFunction} from 'i18next';
-import {calculateScenarios, optionalFields, summarizeProjection, resolveProjectionInputs, profileFields, projectionFields, type ProjectionInputs} from './projection';
+import {calculateScenarios, getIncomeSources, optionalFields, summarizeProjection, resolveProjectionInputs, profileFields, projectionFields, type ProjectionInputs} from './projection';
 
 export const WEALTH_LAB_PANEL_ID = 'wealth-lab';
 export const WEALTH_LAB_CHAT_DRAFT_EVENT = 'vyact:wealth-lab-chat-draft';
@@ -9,20 +9,22 @@ export function exportProjectionToChat(inputs: ProjectionInputs, t: TFunction<'m
     const resolved = resolveProjectionInputs(inputs);
     const scenarios = calculateScenarios(inputs);
     const rows = scenarios[0].rows;
+    const incomeSources = getIncomeSources(inputs);
     const hasAges = resolved.currentAge !== '';
     return [
         `## ${t('calcStudio.title')}`,
         ...profileFields.filter(key => key !== 'startYear' && (key !== 'currentAge' || inputs.birthYear === '') && inputs[key] !== '').map(key => `- ${t(`calcStudio.${key}`)}: ${inputs[key]}`),
         `- ${t('calcStudio.startYear')}: ${rows[0].calendarYear}`,
         ...projectionFields.map(key => `- ${t(`calcStudio.${key}`)}: ${resolved[key] || '0'}`),
-        ...optionalFields.filter(key => inputs[key] !== '').map(key => `- ${t(`calcStudio.${key}`)}: ${inputs[key]}`),
-        ...(Number(inputs.monthlyIncome) > 0 ? [t('calcStudio.incomeHelp')] : []),
+        ...optionalFields.filter(key => key !== 'monthlyIncome' && key !== 'incomeStartAge' && inputs[key] !== '').map(key => `- ${t(`calcStudio.${key}`)}: ${inputs[key]}`),
+        ...incomeSources.map((source, index) => `- ${t('calcStudio.incomeNumber', {number: index + 1})}${source.name ? ` (${source.name})` : ''}: ${t('calcStudio.monthlyIncome')}: ${source.monthlyAmount}; ${t('calcStudio.incomeStartAge')}: ${source.startAge}; ${t('calcStudio.incomeEndAge')}: ${source.endAge || resolved.endAge || Number(resolved.currentAge) + Number(resolved.investmentYears)}`),
+        ...(incomeSources.length ? [t('calcStudio.incomeHelp')] : []),
         '', t('calcStudio.timing'), '',
         ...scenarios.flatMap(scenario => {
             const rows = scenario.rows;
             const last = rows[rows.length - 1];
             const totals = summarizeProjection(rows);
-            const columns = getVisibleResultColumns(totals.shortfall > 0, Number(inputs.monthlyIncome) > 0)
+            const columns = getVisibleResultColumns(totals.shortfall > 0, incomeSources.some(source => Number(source.monthlyAmount) > 0))
                 .filter(column => column.key !== 'calendarYear' && column.key !== 'age');
             return [
                 `### ${t('calcStudio.annualReturn')}: ${scenario.annualReturn}%`,

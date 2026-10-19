@@ -4,8 +4,25 @@ export const projectionFields = ['initialAmount', 'annualContribution', 'contrib
 export type ProjectionField = typeof projectionFields[number];
 export const optionalFields = ['monthlyIncome', 'incomeStartAge', 'comparisonReturn1', 'comparisonReturn2'] as const;
 export const profileFields = ['profileName', 'currentAge', 'endAge', 'withdrawalAge', 'startYear', 'birthYear'] as const;
-export type ProjectionInputs = Record<ProjectionField | typeof profileFields[number] | typeof optionalFields[number], string>;
-export const emptyProjection: ProjectionInputs = Object.fromEntries([...projectionFields, ...profileFields, ...optionalFields].map(key => [key, ''])) as ProjectionInputs;
+export const MAX_INCOME_SOURCES = 20;
+export interface IncomeSource {id: string; name: string; monthlyAmount: string; startAge: string; endAge: string}
+export type ProjectionInputs = {incomeSources?: IncomeSource[]} & Record<ProjectionField | typeof profileFields[number] | typeof optionalFields[number], string>;
+export const emptyProjection: ProjectionInputs = Object.fromEntries([...projectionFields, ...profileFields, ...optionalFields].map(key => [key, ''])) as Omit<ProjectionInputs, 'incomeSources'>;
+export function getIncomeSources(inputs: ProjectionInputs): IncomeSource[] {
+    if (inputs.incomeSources) return inputs.incomeSources;
+    return inputs.monthlyIncome !== '' || inputs.incomeStartAge !== ''
+        ? [{id: 'legacy', name: '', monthlyAmount: inputs.monthlyIncome, startAge: inputs.incomeStartAge, endAge: ''}] : [];
+}
+export function withIncomeSources(inputs: ProjectionInputs, incomeSources = getIncomeSources(inputs)): ProjectionInputs {
+    return {...inputs, monthlyIncome: '', incomeStartAge: '', ...(incomeSources.length || inputs.incomeSources ? {incomeSources} : {})};
+}
+export function incomeSourceError(source: IncomeSource, currentAge: number, endAge: number) {
+    if (!source.monthlyAmount) return 'monthlyAmount';
+    if (!Number.isFinite(Number(source.monthlyAmount)) || Number(source.monthlyAmount) < 0) return 'monthlyAmount';
+    if (!source.startAge || !Number.isInteger(Number(source.startAge)) || Number(source.startAge) < 0 || Number(source.startAge) > endAge) return 'startAge';
+    if (source.endAge !== '' && (!Number.isInteger(Number(source.endAge)) || Number(source.endAge) < Math.max(Number(source.startAge), currentAge + 1) || Number(source.endAge) > endAge)) return 'endAge';
+    return null;
+}
 export const MIN_START_YEAR = 1900;
 export const MAX_START_YEAR = 9999 - MAX_PROJECTION_YEARS;
 
@@ -18,13 +35,13 @@ export const PROJECTION_STORAGE_KEY = 'vyact:calc-studio';
 export function loadProjection(): ProjectionInputs {
     try {
         const saved = JSON.parse(localStorage.getItem(PROJECTION_STORAGE_KEY) || '{}');
-        const inputs = Object.fromEntries([...projectionFields, ...profileFields, ...optionalFields].map(key => [key, typeof saved?.[key] === 'string' ? saved[key] : ''])) as ProjectionInputs;
+        const inputs = Object.fromEntries([...projectionFields, ...profileFields, ...optionalFields].map(key => [key, typeof saved?.[key] === 'string' ? saved[key] : ''])) as Omit<ProjectionInputs, 'incomeSources'>;
         if (!inputs.startYear) inputs.startYear = String(new Date().getFullYear());
         if (!inputs.birthYear && inputs.currentAge !== '' && Number.isInteger(Number(inputs.currentAge)) && Number(inputs.currentAge) >= 0) {
             inputs.birthYear = String(Number(inputs.startYear) - Number(inputs.currentAge) - 1);
         }
         if (inputs.withdrawalStartYear && (!Number.isInteger(Number(inputs.withdrawalStartYear)) || Number(inputs.withdrawalStartYear) < MIN_WITHDRAWAL_YEAR)) inputs.withdrawalStartYear = '';
-        return inputs;
+        return withIncomeSources({...inputs, ...(Array.isArray(saved.incomeSources) ? {incomeSources: saved.incomeSources.filter((source: unknown) => source && typeof source === 'object' && ['id', 'name', 'monthlyAmount', 'startAge', 'endAge'].every(key => typeof (source as Record<string, unknown>)[key] === 'string'))} : {})});
     } catch { return createEmptyProjection(); }
 }
 
@@ -59,10 +76,8 @@ export function calculateProjection(inputValues: ProjectionInputs) {
         || !Number.isInteger(contributionYears) || contributionYears < 0
         || !Number.isInteger(withdrawalStartYear) || (inputs.withdrawalStartYear !== '' && withdrawalStartYear < MIN_WITHDRAWAL_YEAR)
         || (annualContribution > 0 && contributionYears < 1) || (annualWithdrawal > 0 && withdrawalStartYear < MIN_WITHDRAWAL_YEAR)) throw new Error('invalid');
-    const monthlyIncome = Number(inputs.monthlyIncome || 0);
-    const incomeStartAge = Number(inputs.incomeStartAge);
-    if ((inputs.monthlyIncome !== '') !== (inputs.incomeStartAge !== '') || !Number.isFinite(monthlyIncome) || monthlyIncome < 0 || (inputs.incomeStartAge !== '' && (!Number.isInteger(incomeStartAge) || incomeStartAge < 0))
-        || (monthlyIncome > 0 && (inputs.incomeStartAge === '' || inputs.currentAge === '' || incomeStartAge > Number(inputs.currentAge) + investmentYears))) throw new Error('invalid');
+    const incomeSources = getIncomeSources(inputs);
+    if (incomeSources.length > MAX_INCOME_SOURCES || incomeSources.some(source => inputs.currentAge === '' || incomeSourceError(source, Number(inputs.currentAge), Number(inputs.currentAge) + investmentYears))) throw new Error('invalid');
     let balance = initialAmount;
     let principal = initialAmount;
     let withdrawalAmount = annualWithdrawal;
@@ -71,8 +86,9 @@ export function calculateProjection(inputValues: ProjectionInputs) {
         const contribution = year > 1 && year <= contributionYears + 1 ? annualContribution : 0;
         const livingExpenses = withdrawalStartYear > 0 && year >= withdrawalStartYear
             ? (withdrawalAmount *= 1 + inflationRate / 100) : 0;
-        const income = monthlyIncome > 0 && Number(inputs.currentAge) + year >= incomeStartAge
-            ? monthlyIncome * 12 * (1 + inflationRate / 100) ** index : 0;
+        const age = Number(inputs.currentAge) + year;
+        const income = incomeSources.reduce((sum, source) => sum + (age >= Number(source.startAge) && age <= Number(source.endAge || Number(inputs.currentAge) + investmentYears)
+            ? Number(source.monthlyAmount) * 12 * (1 + inflationRate / 100) ** index : 0), 0);
         const plannedWithdrawal = Math.max(0, livingExpenses - income);
         const withdrawal = Math.min(balance, plannedWithdrawal);
         const shortfall = plannedWithdrawal - withdrawal;
