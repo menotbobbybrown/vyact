@@ -1526,6 +1526,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "backupSaveFailed": "Local conditions were updated, but saving for backup failed. Please try again.",
     "ageValue": "Age {{age}}",
     "resultAssumptions": "Annual return {{rate}}% · Inflation {{inflation}}%",
     "selectWithdrawalAge": "Select withdrawal start age",

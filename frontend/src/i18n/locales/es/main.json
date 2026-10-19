@@ -1526,6 +1526,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "backupSaveFailed": "Se actualizaron las condiciones locales, pero falló el guardado para la copia de seguridad. Inténtalo de nuevo.",
     "ageValue": "{{age}} años",
     "resultAssumptions": "Rendimiento anual {{rate}}% · Inflación {{inflation}}%",
     "selectWithdrawalAge": "Selecciona la edad de inicio de los retiros",

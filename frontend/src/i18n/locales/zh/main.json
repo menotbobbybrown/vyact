@@ -1527,6 +1527,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "backupSaveFailed": "本机条件已更新，但备份保存失败。请重试。",
     "ageValue": "{{age}}岁",
     "resultAssumptions": "年收益率{{rate}}% · 通胀率{{inflation}}%",
     "selectWithdrawalAge": "请选择开始提取年龄",

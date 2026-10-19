@@ -1,3 +1,4 @@
+import {restoreProjectionCache} from '../CalcStudio/projectionPersistence';
 import {getKokoroVoiceLanguage, KOKORO_LANGUAGE_DEFAULTS, resolveConfiguredKokoroVoice} from '../../services/tts/kokoroVoice';
 import {ensureJapaneseTtsDictionary, JapaneseTtsDictionaryCancelledError} from '../../services/tts/japaneseTtsDictionary';
 import {formatLocalizedNumber} from '../../utils/localizedNumber';
@@ -670,6 +671,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose, initialTa
             const data = await res.json();
             if (!res.ok) throw new Error(data.code ? translateBackendError(data.code, data.params) : t('main:backendErrors.request_failed'));
             const detail = data.detail || {};
+            if (detail.system_settings && !detail.system_settings.error) await restoreProjectionCache();
             const totalInserted = Object.values(detail).reduce((sum: number, v: any) => sum + (v.inserted ?? 0), 0);
             const totalSkipped = Object.values(detail).reduce((sum: number, v: any) => sum + (v.skipped ?? 0), 0);
             await loadStats();

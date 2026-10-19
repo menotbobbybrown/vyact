@@ -1527,6 +1527,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "backupSaveFailed": "Đã cập nhật điều kiện trên máy nhưng lưu để sao lưu thất bại. Vui lòng thử lại.",
     "ageValue": "{{age}} tuổi",
     "resultAssumptions": "Lợi nhuận năm {{rate}}% · Lạm phát {{inflation}}%",
     "selectWithdrawalAge": "Chọn tuổi bắt đầu rút tiền",

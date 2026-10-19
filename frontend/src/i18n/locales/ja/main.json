@@ -1527,6 +1527,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "backupSaveFailed": "端末の条件は更新しましたが、バックアップ用の保存に失敗しました。再試行してください。",
     "ageValue": "{{age}}歳",
     "resultAssumptions": "年間利回り{{rate}}%・インフレ率{{inflation}}%",
     "selectWithdrawalAge": "引出開始年齢を選択してください",

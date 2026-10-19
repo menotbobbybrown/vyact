@@ -1,3 +1,5 @@
+import {persistProjection} from './projectionPersistence';
+import {toast} from '../common/ToastNotifications/ToastNotifications';
 import ChatAttachButton from '../common/ChatAttachButton/ChatAttachButton';
 import {getVisibleResultColumns} from './resultColumns';
 import {formatProjectionAmount} from './resultFormat';
@@ -109,6 +111,7 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                             setScenarios(nextScenarios); setSelectedScenario(0);
                             setResults(rows); setError('');
                             try { localStorage.setItem(PROJECTION_STORAGE_KEY, JSON.stringify({...inputs, profileNameOverridden: nameOverriddenRef.current})); } catch { /* Calculation works without storage. */ }
+                            void persistProjection({inputs, profileNameOverridden: nameOverriddenRef.current}).catch(() => toast.warning(t('calcStudio.backupSaveFailed')));
                         } catch { setError(t('calcStudio.invalid')); }
                     }}>
                         <div className="calc-studio-form-content">
@@ -212,6 +215,7 @@ export default function CalcStudio({onClose, style}: {onClose: () => void; style
                                 setIncomeValidationAttempted(false);
                                 setInputs({...createEmptyProjection(), profileName: profileNicknameRef.current}); setResults(null); setError('');
                                 try {localStorage.removeItem(PROJECTION_STORAGE_KEY);} catch { /* Storage may be unavailable. */ }
+                                void persistProjection(null).catch(() => toast.warning(t('calcStudio.backupSaveFailed')));
                             }}>{t('calcStudio.reset')}</button>
                             <button type="submit" className="modal-action-submit">{t('calcStudio.calculate')}</button>
                         </div>

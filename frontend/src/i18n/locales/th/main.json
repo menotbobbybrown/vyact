@@ -1527,6 +1527,7 @@
   },
   "calcStudio": {
     "title": "Wealth Lab",
+    "backupSaveFailed": "อัปเดตเงื่อนไขในเครื่องแล้ว แต่บันทึกสำหรับสำรองข้อมูลไม่สำเร็จ โปรดลองอีกครั้ง",
     "ageValue": "อายุ {{age}} ปี",
     "resultAssumptions": "ผลตอบแทนต่อปี {{rate}}% · เงินเฟ้อ {{inflation}}%",
     "selectWithdrawalAge": "เลือกอายุเริ่มถอนเงิน",
