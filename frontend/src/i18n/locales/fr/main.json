@@ -1542,7 +1542,7 @@
     "presentValue": "Solde en monnaie de l’année de départ",
     "depletionAge": "Âge d’épuisement",
     "regularIncome": "Revenus réguliers",
-    "defaultQuestion": "Analysez les résultats Wealth Lab joints. Les fonds suffisent-ils jusqu’à la fin du plan ? Précisez quand et de combien ils manquent, puis proposez des ajustements des versements, retraits ou de la durée.",
+    "defaultQuestion": "Évaluez le réalisme du plan à partir des résultats Wealth Lab joints. Au lieu de répéter les chiffres, comparez sa sensibilité aux hypothèses de rendement, d’inflation et de revenus réguliers, puis classez par priorité les principaux risques absents des calculs et les améliorations possibles. N’inventez pas les informations manquantes ; précisez les données supplémentaires nécessaires.",
     "ageAndYear": "{{age}} ans · {{year}}",
     "plannedWithdrawal": "Retrait prévu",
     "actualWithdrawal": "Retrait réel",

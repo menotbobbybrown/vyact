@@ -1541,7 +1541,7 @@
     "presentValue": "Saldo en dinero del año inicial",
     "depletionAge": "Edad de agotamiento",
     "regularIncome": "Ingresos periódicos",
-    "defaultQuestion": "Analiza los resultados adjuntos de Wealth Lab. Explica si los fondos alcanzan hasta el final, cuándo y cuánto falta, y sugiere ajustes de aportaciones, retiros o duración.",
+    "defaultQuestion": "Revisa los resultados adjuntos de Wealth Lab para evaluar si el plan es realista. En lugar de repetir las cifras, compara su sensibilidad a los supuestos de rendimiento, inflación e ingresos periódicos y prioriza los principales riesgos no incluidos en los cálculos y las mejoras posibles. No inventes información ausente; indica qué datos adicionales necesitas.",
     "ageAndYear": "{{age}} años · {{year}}",
     "plannedWithdrawal": "Retiro previsto",
     "actualWithdrawal": "Retiro real",

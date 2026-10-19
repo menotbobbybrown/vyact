@@ -1542,7 +1542,7 @@
     "presentValue": "折算为起始年金额的余额",
     "depletionAge": "资金耗尽年龄",
     "regularIncome": "定期收入",
-    "defaultQuestion": "请分析附件中的Wealth Lab结果，说明资金能否维持到计划结束、何时出现缺口及金额，并提出追加金额、提取金额或期限的调整建议。",
+    "defaultQuestion": "请根据附件中的Wealth Lab结果评估计划是否现实。不要只重复表中数字，请比较计划对收益率、通胀和定期收入假设的敏感程度，并按优先级提出计算未涵盖的主要风险及改进方法。不要擅自假设缺失信息，请指出评估还需要哪些信息。",
     "ageAndYear": "{{age}}岁 · {{year}}年",
     "plannedWithdrawal": "计划提取",
     "actualWithdrawal": "实际提取",

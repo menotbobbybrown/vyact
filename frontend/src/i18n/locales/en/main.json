@@ -1541,7 +1541,7 @@
     "presentValue": "Balance in start-year money",
     "depletionAge": "Depletion age",
     "regularIncome": "Regular income",
-    "defaultQuestion": "Analyze the attached Wealth Lab results. Explain whether funds last through the plan, when and by how much they fall short, and suggest adjustments to contributions, withdrawals, or duration.",
+    "defaultQuestion": "Review the attached Wealth Lab results to assess how realistic this plan is. Rather than simply repeating the figures, compare its sensitivity to return, inflation, and regular-income assumptions, and prioritize the main risks omitted from the calculations and ways to improve the plan. Do not invent missing information; identify what else is needed to assess it.",
     "ageAndYear": "Age {{age}} · {{year}}",
     "plannedWithdrawal": "Planned withdrawal",
     "actualWithdrawal": "Actual withdrawal",

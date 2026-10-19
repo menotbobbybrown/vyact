@@ -1542,7 +1542,7 @@
     "presentValue": "Số dư quy đổi về số tiền năm bắt đầu",
     "depletionAge": "Tuổi cạn vốn",
     "regularIncome": "Thu nhập định kỳ",
-    "defaultQuestion": "Phân tích kết quả Wealth Lab đính kèm. Cho biết vốn có đủ đến hết kế hoạch không, khi nào thiếu và bao nhiêu, rồi đề xuất điều chỉnh đóng góp, rút tiền hoặc thời gian.",
+    "defaultQuestion": "Dựa trên kết quả Wealth Lab đính kèm, hãy đánh giá tính thực tế của kế hoạch. Đừng chỉ lặp lại số liệu trong bảng; hãy so sánh độ nhạy với các giả định về lợi nhuận, lạm phát và thu nhập định kỳ, rồi ưu tiên các rủi ro chính chưa được tính đến và cách cải thiện kế hoạch. Không tự giả định thông tin còn thiếu; hãy nêu dữ liệu bổ sung cần thiết để đánh giá.",
     "ageAndYear": "{{age}} tuổi · {{year}}",
     "plannedWithdrawal": "Dự kiến rút",
     "actualWithdrawal": "Thực tế rút",

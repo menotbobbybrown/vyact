@@ -22,4 +22,18 @@ describe('Wealth Lab chat export', () => {
         expect(text).toContain('| 3 | 2028 | 1320 | 0 | 132 | 0 | 1452 |');
         expect(inputs.initialAmount).toBe('1000');
     });
+    it('includes separate totals and every yearly row for all comparison returns', async () => {
+        const i18n = createInstance();
+        await i18n.init({lng: 'en', defaultNS: 'main', resources: {en: {main: en}}});
+        const text = exportProjectionToChat({...emptyProjection, startYear: '2026', initialAmount: '1000', annualReturn: '10', comparisonReturn1: '0', comparisonReturn2: '-100', investmentYears: '2'}, i18n.getFixedT('en', 'main'));
+        expect(text).toContain('### Annual return (%): 10%');
+        expect(text).toContain('### Annual return (%): 0%');
+        expect(text).toContain('### Annual return (%): -100%');
+        expect(text).toContain('Total earnings: 210');
+        expect(text).toContain('Total earnings: -1000');
+        expect(text).toContain('| 2 | 2027 | 1100 | 0 | 110 | 0 | 1210 |');
+        expect(text).toContain('| 2 | 2027 | 1000 | 0 | 0 | 0 | 1000 |');
+        expect(text).toContain('| 2 | 2027 | 0 | 0 | 0 | 0 | 0 |');
+    });
+
 });
