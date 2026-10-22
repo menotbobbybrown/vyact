@@ -6,7 +6,7 @@ import ImageViewer from '../ImageViewer/ImageViewer';
 import type {ArticleAttachment, KnowledgeCollection} from '../../types';
 import {api} from '../../services/api';
 import {useCodePanel} from '../../contexts/CodePanelContext';
-import {Check, Database, FileText, Settings, WandSparkles, Wrench, X} from 'lucide-react';
+import {Check, Database, FileText, Settings, Paperclip, WandSparkles, Wrench, X} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 
 import {useAttachments} from './useAttachments';
@@ -472,6 +472,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 : t('chatInput.imageGenPlaceholder')
             : t('chatInput.placeholder');
 
+    const hasAttachments = attach.images.length > 0 || attach.fileAttachments.length > 0
+        || attach.pastedTexts.length > 0 || articles.length > 0 || selectedMcps.length > 0
+        || selectedExternalDocuments.length > 0 || Boolean(codeInput);
+
+    const clearAllAttachments = () => {
+        attach.clearAll();
+        onArticleRemoveAll?.();
+        setSelectedMcps([]);
+        updateExternalDocumentSelections([]);
+        setCodeInput(null);
+    };
+
     return (
         <>
             <div
@@ -516,6 +528,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 )}
 
                 <div className={`chat-input-container${isImageMode ? ' image-mode' : ''}`}>
+                    {hasAttachments && <button type="button" className="btn-delete-all chat-input-clear-attachments" aria-label={t('uiAuditFinal.removeAll')} onClick={clearAllAttachments}>
+                        <span className="chat-input-clear-icon" aria-hidden="true">
+                            <Paperclip size={16}/>
+                            <X size={9} className="chat-input-clear-icon__cross"/>
+                        </span>
+                    </button>}
                     {/* 첨부 기사 목록 */}
                     <ArticleList
                         articles={articles}
@@ -541,14 +559,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     {(selectedMcps.length > 0 || selectedExternalDocuments.length > 0) && <div className="selected-mcp-chips">
                         {isKoreanLanguage && selectedExternalDocuments.map(document => <div className="selected-mcp-chip knowledge-source-chip is-external" key={`${document.source_id}:${document.document_id}`}>
                             <span className="selected-mcp-chip-icon"><FileText size={11}/></span><span>{document.title}</span>
-                            <button type="button" aria-label={t('mcpMenu.removeSelected')} onClick={() => updateExternalDocumentSelections(current => current.filter(item => item.source_id !== document.source_id || item.document_id !== document.document_id))}><X size={10}/></button>
+                            <button type="button" className="attachment-remove-btn" aria-label={t('mcpMenu.removeSelected')} onClick={() => updateExternalDocumentSelections(current => current.filter(item => item.source_id !== document.source_id || item.document_id !== document.document_id))}><X size={10}/></button>
                         </div>)}
                         {selectedMcps.map(server => {
                             const customName = typeof server.config?.name === 'string' ? server.config.name : server.type;
                             return <div className="selected-mcp-chip" key={server.id}>
                             <span className="selected-mcp-chip-icon"><Wrench size={12} aria-hidden="true"/></span>
                             <span>{getCustomMcpName(server) ?? t(`settings:mcpCatalog.servers.${server.type}`, {defaultValue: customName})}</span>
-                            <button type="button" aria-label={t('mcpMenu.removeSelected')} onClick={() => setSelectedMcps(current => current.filter(item => item.id !== server.id))}><X size={10}/></button>
+                            <button type="button" className="attachment-remove-btn" aria-label={t('mcpMenu.removeSelected')} onClick={() => setSelectedMcps(current => current.filter(item => item.id !== server.id))}><X size={10}/></button>
                         </div>})}
                     </div>}
                     <div className="chat-input-row">

@@ -56,7 +56,7 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({
                             <span className="pasted-text-preview__meta">{t('message.pastedText')} · {t('uiAuditFinal.characterCount', {count: p.content.length.toLocaleString(i18n.resolvedLanguage || i18n.language)})} · {t('attachmentPreview.analysis')}</span>
                         </div>
                     </div>
-                    <button className="pasted-text-preview__remove" onClick={e => { e.stopPropagation(); onRemovePastedText(p.id); }} aria-label={t('sidebar.delete')}>
+                    <button className="attachment-remove-btn" onClick={e => { e.stopPropagation(); onRemovePastedText(p.id); }} aria-label={t('sidebar.delete')}>
                         <X size={10}/>
                     </button>
                 </div>
