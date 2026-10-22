@@ -480,7 +480,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         attach.clearAll();
         onArticleRemoveAll?.();
         setSelectedMcps([]);
-        updateExternalDocumentSelections([]);
+        updateExternalDocumentSelections(() => []);
         setCodeInput(null);
     };
 
