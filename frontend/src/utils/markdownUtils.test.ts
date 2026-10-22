@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {groupContentParts, parseContent, renderMarkdown} from './markdownUtils';
+import {groupContentParts, parseContent, renderMarkdown, splitStreamSafe} from './markdownUtils';
 
 describe('renderMarkdown lists', () => {
     it('keeps expression meanings and examples inside their numbered item', () => {
@@ -137,5 +137,53 @@ describe('code file labels', () => {
 
         expect(files[0].code.trimEnd()).toBe('spring.application.name=DemoApplication\nserver.port=8080');
         expect(files[1].code.trimEnd()).toBe('class DemoApplication {\n    void run() {}\n}');
+    });
+});
+
+
+describe('fenced code boundaries', () => {
+    it('preserves nested fences and blank table rows inside a longer fence', () => {
+        const code = '```md\n| a | b |\n| - | - |\n\n| c | d |\n```\n';
+        expect(parseContent('Before\n````\n' + code + '````\nAfter')).toEqual([
+            {type: 'text', value: 'Before'},
+            {type: 'code', value: code, lang: 'code'},
+            {type: 'text', value: 'After'},
+        ]);
+    });
+    it('ignores inline fence mentions and code strings when finding the closing fence', () => {
+        const code = '// fences (``` or ~~~)\nconst pattern = /```.*?```/g;\n';
+        const response = 'Fences (```) are text.\n```js\n' + code + '```\nDone';
+        expect(parseContent(response)).toEqual([
+            {type: 'text', value: 'Fences (```) are text.'},
+            {type: 'code', value: code, lang: 'js'},
+            {type: 'text', value: 'Done'},
+        ]);
+        expect(splitStreamSafe(response).pending).not.toBe('code');
+    });
+    it('requires a matching marker with sufficient length, including during streaming', () => {
+        expect(parseContent('~~~~js\nhello\n~~~\n```\n~~~~~\nDone')[0]).toEqual({type: 'code', lang: 'js', value: 'hello\n~~~\n```\n'});
+        expect(splitStreamSafe('Before\n````md\n```\nexample\n```')).toEqual({safe: 'Before\n', pending: 'code'});
+    });
+    it('preserves project and legacy code extraction', () => {
+        expect(parseContent('```xml:vyproject\n<vyproject></vyproject>\n```')[0].type).toBe('project');
+        expect(parseContent('{code}hello{code}')[0]).toEqual({type: 'code', value: 'hello', lang: 'code'});
+    });
+});
+
+describe('inline code protection', () => {
+    it('does not let an unmatched inline fence consume following paragraphs', () => {
+        const html = renderMarkdown('Fences (```) are mentioned here.\n\n## Next heading\n\n`^[ \\t]*\\|[^\\r\\n]*\\|[ \\t]*$` matches **pipe rows**.\n\n- A `|` example');
+        expect(html).toContain('Fences (```) are mentioned here.');
+        expect(html).toMatch(/<h2[^>]*>Next heading<\/h2>/);
+        expect(html).toMatch(/<code[^>]*>\^\[ \\t\]\*\\\|\[\^\\r\\n\]\*\\\|\[ \\t\]\*\$<\/code>/);
+        expect(html).toContain('<strong>pipe rows</strong>');
+        expect(html).not.toContain('<em>');
+    });
+
+    it('preserves literal backticks, formatting symbols, HTML, and dollar signs in code spans', () => {
+        const html = renderMarkdown('``a `tick` **literal** <tag> $HOME`` and **bold**');
+        expect(html).toMatch(/<code[^>]*>a `tick` \*\*literal\*\* &lt;tag&gt; \$HOME<\/code>/);
+        expect(html).toContain('<strong>bold</strong>');
+        expect(html).not.toContain('katex');
     });
 });

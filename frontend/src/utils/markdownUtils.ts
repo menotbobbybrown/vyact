@@ -5,6 +5,47 @@ import type {ContentPart, FollowupsResult, RenderGroup, StreamSafeResult} from '
 
 export type {ContentPart, FollowupsResult, MessageProps, RenderGroup, StreamSafeResult} from './markdown/types';
 
+interface FencedCodeRange {
+    start: number;
+    end: number;
+    content: string;
+    lang: string;
+    closed: boolean;
+}
+
+// Only a standalone fence can close a block; shorter runs and inline examples are content.
+const findFencedCodeRanges = (text: string): FencedCodeRange[] => {
+    const ranges: FencedCodeRange[] = [];
+    const lines = /^[^\r\n]*(?:\r\n|\n|\r|$)/gm;
+    let opening: {start: number; contentStart: number; marker: string; length: number; lang: string} | null = null;
+    for (const match of text.matchAll(lines)) {
+        if (!match[0]) continue;
+        const line = match[0].replace(/[\r\n]+$/, '');
+        if (opening) {
+            const closing = line.match(/^ {0,3}(`{3,}|~{3,})[ \t]*$/);
+            if (closing && closing[1][0] === opening.marker && closing[1].length >= opening.length) {
+                ranges.push({
+                    start: opening.start, end: match.index + line.length,
+                    content: text.slice(opening.contentStart, match.index), lang: opening.lang, closed: true,
+                });
+                opening = null;
+            }
+            continue;
+        }
+        const fence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+        if (!fence || (fence[1][0] === '`' && fence[2].includes('`'))) continue;
+        opening = {
+            start: match.index, contentStart: match.index + match[0].length,
+            marker: fence[1][0], length: fence[1].length,
+            lang: fence[2].trim().split(/\s+/)[0] || 'code',
+        };
+    }
+    if (opening) {
+        ranges.push({start: opening.start, end: text.length, content: text.slice(opening.contentStart), lang: opening.lang, closed: false});
+    }
+    return ranges;
+};
+
 // 코드블록 사이 텍스트가 "구분자" 역할인지 판별
 // --- , ### 사용 예시, 헤딩 등이 있으면 새 그룹으로 분리
 // contentParts를 순회해서 코드블록을 렌더링 그룹으로 변환
@@ -298,25 +339,10 @@ export const splitStreamSafe = (buffer: string): StreamSafeResult => {
         }
     }
 
-    // 2) 코드블록 펜스(```/~~~) 홀짝 체크 — 홀수면 마지막 여는 펜스가 아직 안 닫힘
-    //    (project 블록은 위에서 이미 걸러졌으므로 여기 도달하면 일반 코드블록)
-    let fenceCount = 0;
-    let searchIdx = 0;
-    let lastFenceIdx = -1;
-    for (const fence of ['```', '~~~']) {
-        fenceCount = 0;
-        searchIdx = 0;
-        lastFenceIdx = -1;
-        while (true) {
-            const idx = buffer.indexOf(fence, searchIdx);
-            if (idx === -1) break;
-            fenceCount++;
-            lastFenceIdx = idx;
-            searchIdx = idx + fence.length;
-        }
-        if (fenceCount % 2 === 1 && lastFenceIdx !== -1) {
-            return {safe: buffer.slice(0, lastFenceIdx), pending: 'code'};
-        }
+    // Inline backticks and shorter fences inside an example do not open/close blocks.
+    const pendingCode = findFencedCodeRanges(buffer).find(block => !block.closed);
+    if (pendingCode) {
+        return {safe: buffer.slice(0, pendingCode.start), pending: 'code'};
     }
 
     // 3) 미완성 테이블 보류
@@ -500,9 +526,8 @@ export const parseContent = (text: string): ContentPart[] => {
 
     const projectBlocks = extractProjectBlocks(text);
 
-    // projectBlock 범위를 마스킹 → codeBlockRegex가 내부 ``` 에 반응하지 않도록
+    // projectBlock 범위를 마스킹 → 코드 펜스 탐색이 내부 ``` 에 반응하지 않도록
     // xml:project, json:vyproject 모두 제외
-    const codeBlockRegex = /```((?!(?:xml:)?vyproject|json:vyproject)[\w:]*)\n?([\s\S]*?)```|~~~([\w:]*)\n?([\s\S]*?)~~~|\{code\}([\s\S]*?)\{code\}/g;
     let lastIndex = 0;
 
     // text를 순서대로 순회하며 project블록과 일반 코드블록 병합
@@ -518,17 +543,21 @@ export const parseContent = (text: string): ContentPart[] => {
         allBlocks.push({start: pb.start, end: pb.end, type: 'project', content: pb.content});
     }
 
-    // projectBlock 범위를 공백으로 마스킹 → codeBlockRegex가 블록 내부 백틱에 반응하지 않도록
+    // projectBlock 범위를 공백으로 마스킹 → 코드 펜스 탐색이 블록 내부 백틱에 반응하지 않도록
     let maskedText = text;
     for (const pb of projectBlocks) {
         maskedText = maskedText.slice(0, pb.start) + ' '.repeat(pb.end - pb.start) + maskedText.slice(pb.end);
     }
 
-    let match;
-    while ((match = codeBlockRegex.exec(maskedText)) !== null) {
-        const codeContent = match[2] ?? match[4] ?? match[5];
-        const lang = match[1] || match[3] || 'code';
-        allBlocks.push({start: match.index, end: codeBlockRegex.lastIndex, type: 'code', content: codeContent, lang});
+    const fencedBlocks = findFencedCodeRanges(maskedText);
+    for (const block of fencedBlocks) {
+        if (!block.closed) continue;
+        allBlocks.push({start: block.start, end: block.end, type: 'code', content: block.content, lang: block.lang});
+    }
+    // Preserve the legacy {code} format without interpreting markers inside fenced code.
+    for (const match of maskedText.matchAll(/\{code\}([\s\S]*?)\{code\}/g)) {
+        if (fencedBlocks.some(block => match.index >= block.start && match.index < block.end)) continue;
+        allBlocks.push({start: match.index, end: match.index + match[0].length, type: 'code', content: match[1], lang: 'code'});
     }
 
     // start 기준 정렬
@@ -581,11 +610,12 @@ export const renderMarkdown = (text: string): string => {
     });
 
     // 인라인 코드 안의 '$'는 셸 변수/명령 치환일 수 있으므로 KaTeX보다 먼저 보호한다.
-    // 백틱까지 함께 보관했다가 수식 파싱 후 복원하면 기존 인라인 코드 렌더링을 그대로 탄다.
+    // HTML로 보관한 뒤 마지막에 복원해 코드 내부의 강조·링크·수식도 보호한다.
     const inlineCodeMarkdownTokens: string[] = [];
-    preprocessed = preprocessed.replace(/(?<!`)`([^`\n]+)`(?!`)/g, (markdownCode) => {
+    preprocessed = preprocessed.replace(/(?<!`)(`+)(?!`)([^\n]+?)(?<!`)\1(?!`)/g, (_match, _delimiter, code: string) => {
         const idx = inlineCodeMarkdownTokens.length;
-        inlineCodeMarkdownTokens.push(markdownCode);
+        const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        inlineCodeMarkdownTokens.push(`<code style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);padding:1.5px 6px;border-radius:5px;font-size:0.86em;font-family:'SF Mono',Menlo,Consolas,monospace;color:var(--code-color);white-space:normal;overflow-wrap:anywhere;">${escapedCode}</code>`);
         return `XINLINECODEMARKDOWN${idx}X`;
     });
 
@@ -608,10 +638,6 @@ export const renderMarkdown = (text: string): string => {
         mathPlaceholders.push(renderKatex(formula.trim(), false));
         return `XKATEXINLINE${idx}X`;
     });
-
-    preprocessed = preprocessed.replace(/XINLINECODEMARKDOWN(\d+)X/g, (_, i) =>
-        inlineCodeMarkdownTokens[Number(i)] || ''
-    );
 
     // ── 코드블록(```)을 먼저 추출하여 플레이스홀더로 보호
     const codeBlockTokens: string[] = [];
@@ -741,10 +767,7 @@ export const renderMarkdown = (text: string): string => {
                         : linkText
                 );
                 // backtick 인라인 코드: 이미 escape된 상태이므로 그대로 출력
-                const withCode = linked.replace(/`([^`]+)`/g, (_, code) =>
-                    `<code style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);padding:1px 5px;border-radius:5px;font-size:0.86em;font-family:'SF Mono',Menlo,Consolas,monospace;color:var(--code-color);white-space:nowrap;">${code}</code>`
-                );
-                return withCode
+                return linked
                     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
                     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -838,10 +861,7 @@ export const renderMarkdown = (text: string): string => {
                 isSafeUrl(href)
                     ? protect(`<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline;">${linkText}</a>`)
                     : linkText)
-            // 인라인 코드
-            .replace(/`([^`]+)`/g, (_m, code) =>
-                protect(`<code style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);padding:1.5px 6px;border-radius:5px;font-size:0.86em;font-family:'SF Mono',Menlo,Consolas,monospace;color:var(--code-color);white-space:normal;overflow-wrap: anywhere;">${code}</code>`)
-            );
+            ;
 
         html = html
             .replace(/[*]{3}(.+?)[*]{3}/g, '<strong><em>$1</em></strong>')
@@ -871,6 +891,7 @@ export const renderMarkdown = (text: string): string => {
         .replace(/(<br\/>)+$/g, '');
 
     finalHtml = finalHtml
+        .replace(/XINLINECODEMARKDOWN(\d+)X/g, (_, i) => inlineCodeMarkdownTokens[Number(i)] || '')
         .replace(/XKATEXBLOCK(\d+)X/g, (_, i) => mathPlaceholders[Number(i)] || '')
         .replace(/XKATEXINLINE(\d+)X/g, (_, i) => mathPlaceholders[Number(i)] || '')
         .replace(/CODEBLOCK(\d+)/g, (_, i) => codeBlockTokens[Number(i)] || '')
